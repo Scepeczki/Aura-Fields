@@ -2,7 +2,7 @@
 (()=>{
 'use strict';
 // wersja gry: podbija ją skrypt release.ps1 przy każdym wydaniu
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rand=n=>Math.floor(Math.random()*n), pick=a=>a[rand(a.length)];
@@ -895,7 +895,7 @@ function vKron(){
   let h=`<div class="sec"><div class="sechead"><h2>Kronika gospodarstwa</h2></div><div class="kpis">${st.map(([a,b])=>`<div class="kpi"><span>${a}</span><b>${b}</b></div>`).join('')}</div></div>
   <div class="sec"><div class="sechead"><h2>Osiągnięcia <span class="more num">${nA}/${ACH.length}</span></h2><p>Każde osiągnięcie wypłaca nagrodę od razu.</p></div><div class="achs">`;
   ACH.forEach(([id,n,d,,rw])=>{const on=!!S.ach[id];h+=`<div class="ach ${on?'':'off'}">${MEDAL(on)}<div class="at"><b>${esc(n)}</b>${esc(d)} · <span class="num">${rw} zł</span></div></div>`});
-  h+=`</div></div><div class="sec"><div class="sechead"><h2>Zapis gry</h2><p>Gra zapisuje się sama co kilka sekund. Gdy jej nie ma, gospodarstwo pracuje dalej przez maksymalnie 4 godziny. Kopia w pliku chroni postęp, gdy wyczyścisz dane przeglądarki albo przeniesiesz grę na inny komputer.</p></div>
+  h+=`</div></div><div class="sec"><div class="sechead"><h2>Zapis gry</h2><p>Gra zapisuje się sama co kilka sekund. Zminimalizowana dalej pracuje, a po zamknięciu czas w gospodarstwie stoi. Kopia w pliku chroni postęp, gdy wyczyścisz dane przeglądarki albo przeniesiesz grę na inny komputer.</p></div>
    <div class="toolbar"><button class="btn pri" data-act="export">Zapisz kopię do pliku</button><button class="btn" data-act="import">Wczytaj kopię z pliku</button></div></div>
    <div class="sec"><div class="sechead"><h2>Ustawienia</h2><span class="more">Aura Fields · wersja ${VERSION}</span></div><div class="toolbar">
    <button class="btn" data-act="sound">${S.sound?'Wycisz dźwięki':'Włącz dźwięki'}</button>
@@ -1172,8 +1172,9 @@ function skyLoop(ts){ if(!document.hidden&&S) drawSky(ts); if(reduce) setTimeout
 
 // ---------- PĘTLA ----------
 let lastCheck=0;
-// Czas gry liczony jest z zegara ściennego, więc gdy przeglądarka zwalnia timery w ukrytej karcie
-// (albo komputer usypia), przy następnym tyknięciu gra nadrabia cały upływ, do 4 godzin naraz.
+// Póki gra jest otwarta (także zminimalizowana), czas liczy się z zegara ściennego: gdy przeglądarka
+// zwalnia timery w tle, przy następnym tyknięciu gra nadrabia upływ, do 4 godzin naraz.
+// Po zamknięciu gry czas stoi (start() niczego nie nadrabia).
 let lastSave=Date.now();
 function loop(){const wall=Date.now(),now=performance.now();const dt=Math.min(14400,Math.max(0,(wall-lastReal)/1000));lastReal=wall;
   if(dt>10){silent=true;advance(dt,true);silent=false;dirty=true} else advance(dt);
@@ -1190,12 +1191,8 @@ function start(data){
   if(S._arrange){delete S._arrange;placeItems()}
   silent=true;
   if(S.day<0) advance(0.01,true);
-  const off=Math.min(14400,Math.max(0,(Date.now()-(S.seen||Date.now()))/1000));
-  const before=S.st.harv, cb=S.earned, mb=S.st.crafted;
-  if(off>5&&!(data&&data.state)) advance(off,true);
+  // po zamknięciu gry czas stoi: nie nadrabiamy przerwy między uruchomieniami
   silent=false;
-  if(off>60&&!(data&&data.state)){const parts=[];if(S.st.harv>before)parts.push(`zebrano ${S.st.harv-before} szt. plonów`);if(S.st.crafted>mb)parts.push(`maszyny skończyły ${S.st.crafted-mb} ${plural(S.st.crafted-mb,'partię','partie','partii')}`);if(S.earned>cb)parts.push(`zarobek ${fmtZ(S.earned-cb)}`);
-    toast(`Nie było cię ${fmtT(off)}.${parts.length?' W tym czasie '+parts.join(', ')+'.':''}`,'gold');}
   if(S._refund){toast(`Targ działa teraz inaczej: sklep, zamówienia i renoma. Za wycofane usprawnienia dostajesz zwrot ${fmtZ(S._refund)}.`,'gold');delete S._refund}
   lastReal=Date.now();render();
   startTicker();

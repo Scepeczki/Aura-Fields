@@ -2,6 +2,13 @@
 
 Każde wydanie ma tag `vX.Y.Z` i paczkę `.zip` na stronie Releases.
 
+## 1.0.1 — 2026-10-06
+
+- Gra liczy czas tylko, gdy jest otwarta (także zminimalizowana)
+- po zamknięciu czas w gospodarstwie stoi
+- Mniejsze okienka linii produkcyjnych
+- Strzałka zwija linię, ✕ ją usuwa, obie opcje także pod prawym przyciskiem
+
 ## 1.0.0 — 2026-10-06
 
 Pierwsze wydanie Aura Fields.
