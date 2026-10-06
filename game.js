@@ -2,7 +2,7 @@
 (()=>{
 'use strict';
 // wersja gry: podbija ją skrypt release.ps1 przy każdym wydaniu
-const VERSION='1.0.1';
+const VERSION='1.1.0';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rand=n=>Math.floor(Math.random()*n), pick=a=>a[rand(a.length)];
@@ -473,6 +473,17 @@ const WXI={ // małe ikony pogody 24×24
  upal:'<circle cx="12" cy="11" r="6" fill="#f08a3c"/><g stroke="#e3734a" stroke-width="1.6" fill="none"><path d="M5 20q2-2 4 0t4 0 4 0 4 0"/></g>',
  snieg:'<ellipse cx="13" cy="10" rx="8" ry="5" fill="#cfd5db"/><g fill="#fff"><circle cx="8" cy="18" r="1.6"/><circle cx="13" cy="20" r="1.6"/><circle cx="18" cy="18" r="1.6"/></g>',
  mroz:'<g stroke="#8fd0c4" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M4 7.5l16 9M4 16.5l16-9"/></g>'};
+const SEAICO=[
+ '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z" fill="#8cc45a"/><path d="M5 19l9-9" stroke="#2f4a1c" stroke-width="1.4" stroke-linecap="round"/>',
+ WXI.slonce,
+ '<path d="M12 2.5l1.8 4 4.2-1.2-1.1 4.2 4.1 1.9-4.1 1.9 1.1 4.2-4.2-1.2-1.8 4-1.8-4-4.2 1.2 1.1-4.2-4.1-1.9 4.1-1.9-1.1-4.2 4.2 1.2z" fill="#d9813a"/><path d="M12 11v10.5" stroke="#7a3e14" stroke-width="1.4" stroke-linecap="round"/>',
+ '<g stroke="#cfe8f6" stroke-width="1.9" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/><path d="M9.3 3.6L12 6l2.7-2.4M9.3 20.4L12 18l2.7 2.4"/></g>'];
+const seaIcon=k=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true">${SEAICO[k]}</svg>`;
+const lico=p=>`<svg class="bico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICO={sprout:'<path d="M12 21V11M12 11c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/>',
+ sickle:'<path d="M4 20l5-5M9 15c-2-6 2-11 9-11-4 2-6 5-5 10"/>',
+ bag:'<path d="M8 6h8l-1 3c2 1.5 3 4 3 6.5C18 19 15.5 21 12 21s-6-2-6-5.5C6 13 7 10.5 9 9z"/><path d="M9 6l1-2h4l1 2"/>',
+ clock:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'};
 const wxIcon=w=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true">${WXI[w]}</svg>`;
 const TABICO={ // ikony zakładek, rysowane kolorem tekstu
  pola:'<path d="M12 21V11M12 11c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/><path d="M4 21h16"/>',
@@ -533,7 +544,7 @@ const resAvail=id=>{const r=resDef(id);return res(id)<r[3]&&S.lvl>=resReq(id)&&S
 
 function hudTick(){
   $('#coins').textContent=fmtZ(S.coins);
-  $('#clock').innerHTML=`Rok ${yearN()} · <strong>${SEASONS[seasonN()].n}</strong>, dzień ${dayN()%SD+1} z ${SD} · ${clock()} · ${WEATHER[S.wx].n}`;
+  $('#clock').innerHTML=`<b>${SEASONS[seasonN()].n}, dzień ${dayN()%SD+1}/${SD}</b><span>${clock()} · ${WEATHER[S.wx].n} · rok ${yearN()}</span>`;
   $('#lvlLbl').textContent='Poziom '+S.lvl; $('#xpTxt').textContent=`${Math.floor(S.xp)} / ${xpNeed(S.lvl)} PD`;
   $('#xpbar').style.width=Math.min(100,S.xp/xpNeed(S.lvl)*100)+'%';
   $('#coll').textContent=nMade()+'/'+FLOURS.length; $('#achc').textContent=Object.keys(S.ach).length+'/'+ACH.length;
@@ -551,11 +562,12 @@ function render(){
   const g=GOALS[S.goal];
   document.querySelectorAll('.hud [data-v]').forEach(b=>b.classList.toggle('on',S.tab===b.dataset.v));
   const gm=goalMin();
-  $('#goal').innerHTML=g?`<div class="goal ${gm?'min':''}"><button class="gl" data-act="goalmin" title="${gm?'Pokaż cel':'Zwiń'}">Cel ${S.goal+1} z ${GOALS.length}<span aria-hidden="true">${gm?'▴':'▾'}</span></button><span class="gt">${esc(g[0])}</span><span class="gr">${COIN}+${g[2]} zł</span></div>`:'';
+  $('#goal').innerHTML=g?`<div class="goal ${gm?'min':''}"><span class="gico">${lico(ICO.sprout)}</span><button class="gl" data-act="goalmin" title="${gm?'Pokaż cel':'Zwiń'}">Cel ${S.goal+1} z ${GOALS.length}<span aria-hidden="true">${gm?'▴':'▾'}</span></button><span class="gt">${esc(g[0])}</span><span class="gr">${COIN}+${g[2]} zł</span></div>`:'';
   const sy=window.scrollY;
   // zachowaj fokus klawiatury mimo przebudowy widoku
   const ae=document.activeElement, fk=ae&&ae.dataset&&ae.dataset.act&&$('#view').contains(ae)?'[data-act]'+Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(v)}"]`).join(''):null;
   $('#view').innerHTML=({pola:vPola,prz:vPrz,spiz:vSpiz,targ:vTarg,ulep:vUlep,ksiega:vKsiega,kron:vKron})[S.tab]();
+  {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
   if(fk){const el=$('#view').querySelector(fk);if(el)el.focus({preventScroll:true})}
   if(Math.abs(window.scrollY-sy)>2) window.scrollTo(0,sy);
   if(sheetMode==='plot') drawSheet(); else if(sheetMode==='list') drawList(); else if(sheetMode==='lineadd') drawLineAdd();
@@ -584,11 +596,11 @@ function ioTxt(obj){return Object.entries(obj).map(([k,q])=>`${q}× <em>${esc(IT
 
 function calendar(){
   const s=seasonN(), d=dayN();
-  const segs=SEASONS.map((x,k)=>`<div class="seg s${k} ${k===s?'now':''}"><b>${x.n}</b><span>${k===3?'pole stoi':x.m===1?'normalnie':(x.m>1?'+':'−')+Math.round(Math.abs(x.m-1)*100)+'% wzrostu'}</span></div>`).join('');
+  const segs=SEASONS.map((x,k)=>`<div class="seg s${k} ${k===s?'now':''}">${seaIcon(k)}<span class="st"><b>${x.n}</b><span>${k===3?'pole stoi':x.m===1?'normalnie':(x.m>1?'+':'−')+Math.round(Math.abs(x.m-1)*100)+'% wzrostu'}</span></span></div>`).join('');
   const fc=[S.wx,...S.fc].slice(0,4).map((w,k)=>`<div class="fcd ${k?'':'now'}">${wxIcon(w)}<span><b>${k===0?'Dziś':k===1?'Jutro':k===2?'Pojutrze':'Za 3 dni'}</b>${WEATHER[w].n}</span></div>`).join('');
   const next=(s+1)%4;
   return `<div class="cal"><div class="year"><div class="segs">${segs}</div><i class="mark" data-yr></i></div>
-   <div class="calinfo"><span>${SEASONS[s].n}, dzień ${d%SD+1} z ${SD}. ${SEASONS[next].n} za <b class="num" data-ts="${next}"></b>.</span>${s!==3?`<span class="${s===2?'warn':''}">Zima za <b class="num" data-ts="3"></b>.</span>`:`<span class="warn">Na polu nie można siać. Wiosna za <b class="num" data-ts="0"></b>.</span>`}</div>
+   <div class="calinfo"><span>${seaIcon(s)}${SEASONS[s].n}, dzień ${d%SD+1} z ${SD}. ${SEASONS[next].n} za <b class="num" data-ts="${next}"></b>.</span>${s!==3?`<span class="${s===2?'warn':''}">${seaIcon(3)}Zima za <b class="num" data-ts="3"></b>.</span>`:`<span class="warn">${seaIcon(0)}Na polu nie można siać. Wiosna za <b class="num" data-ts="0"></b>.</span>`}</div>
    <div class="fcs">${fc}</div>
    ${WEATHER[S.wx].d?`<p class="more">${WEATHER[S.wx].d}</p>`:''}</div>`;
 }
@@ -598,18 +610,18 @@ function vPola(){
   const canRe=S.plots.some(p=>!p.crop&&p.last&&CR[p.last]&&compatible(CR[p.last],p.env)&&!frozen(p)&&S.coins>=seedCost(CR[p.last]));
   let h=`<div class="sec"><div class="sechead"><h2>Poletka</h2><p>Pole przyjmuje uprawy z naszego klimatu i zimą stoi. Pole ryżowe jest zalane wodą. W szklarni rośnie wszystko poza roślinami wodnymi, przez cały rok.</p></div>
   ${calendar()}
-  <div class="toolbar"><button class="btn pri" data-act="harvestall" ${ready?'':'disabled'}>Zbierz wszystko${ready?` (${ready})`:''}</button>
-   <button class="btn" data-act="replant" ${canRe?'':'disabled'}>Obsiej wolne tym, co rosło</button>
-   <span class="sp">${empty} ${plural(empty,'wolne','wolne','wolnych')} z ${S.plots.length}${working('parobek')?' · parobek zbiera':''}${working('siewca')?' · siewca sieje':''}</span></div><div class="plots">`;
+  <div class="toolbar"><button class="btn pri harv" data-act="harvestall" ${ready?'':'disabled'}>${lico(ICO.sickle)}Zbierz wszystko${ready?` (${ready})`:''}</button>
+   <button class="btn" data-act="replant" ${canRe?'':'disabled'}>${lico(ICO.bag)}Obsiej wolne tym, co rosło</button>
+   <span class="sp">${lico(ICO.sprout)}${empty} ${plural(empty,'wolne','wolne','wolnych')} z ${S.plots.length}${working('parobek')?' · parobek zbiera':''}${working('siewca')?' · siewca sieje':''}</span></div><div class="plots">`;
   S.plots.forEach((p,i)=>{const fz=frozen(p);
-    if(!p.crop){h+=`<button class="plot empty env-${p.env} ${fz?'winter':''}" data-act="plot" data-i="${i}"><span class="ptop"><span class="tag">${ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${fz?'<svg class="flake" viewBox="0 0 24 24" aria-hidden="true">'+WXI.mroz+'</svg>':'<span class="plus">+</span>'}</span><span class="pfoot"><span class="pn">${fz?'Zima':'Wolne'}</span><span class="ps">${fz?'Siew dopiero wiosną':p.last?'Ostatnio: '+esc(CR[p.last].n):'Kliknij, by zasiać'}</span></span></button>`;return}
+    if(!p.crop){h+=`<button class="plot empty env-${p.env} ${fz?'winter':''}" data-act="plot" data-i="${i}"><span class="ptop"><span class="tag">${ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${fz?'<svg class="flake" viewBox="0 0 24 24" aria-hidden="true">'+WXI.mroz+'</svg>':'<span class="plus">+</span>'}</span><span class="pfoot"><span class="pn">${lico(ICO.sprout)}${fz?'Zima':'Wolne'}</span><span class="ps">${fz?'Siew dopiero wiosną':p.last?'Ostatnio: '+esc(CR[p.last].n):'Kliknij, by zasiać'}</span></span></button>`;return}
     const c=CR[p.crop],s=stage(p),rd=isReady(p);
     h+=`<button class="plot env-${p.env} ${rd?'ready':''} ${fz&&!rd?'winter':''}" data-act="plot" data-i="${i}" aria-label="${esc(c.n)}${rd?', gotowe do zbioru':''}">
       <span class="ptop"><span class="tag">${c.r?KIND[c.kind]:ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${fz&&!rd?art(c.kind,s,c.col).replace('</svg>',SNOWCAP+'</svg>'):art(c.kind,s,c.col)}</span>
-      <span class="pfoot"><span class="pn">${esc(c.n)}</span>
+      <span class="pfoot"><span class="pn">${lico(ICO.sprout)}${esc(c.n)}</span>
       <span class="ps">${rd?`<span>Zbierz ${plotYield(p)}×</span>`:`<span>${fz?'uśpione':p.h?'owocuje':'rośnie'}</span><span class="num" data-pl="${i}"></span>`}</span>
       <span class="pbar"><i data-pp="${i}" style="width:${Math.min(100,p.prog/p.need*100)}%"></i></span></span></button>`;});
-  const pc=plotCost(); if(S.plots.length<24) h+=`<button class="plot buy" data-act="buyplot" ${S.coins<pc?'disabled':''}><span class="plus">+</span><strong>Nowe poletko</strong><span class="num">${fmtZ(pc)}</span><span class="more">${S.plots.length} z 24</span></button>`;
+  const pc=plotCost(); if(S.plots.length<24) h+=`<button class="plot buy" data-act="buyplot" ${S.coins<pc?'disabled':''}><span class="plus">+</span><strong>Nowe poletko</strong><span class="num price">${COIN}${fmtZ(pc)}</span><span class="more">${S.plots.length} z 24</span></button>`;
   return h+`</div></div>`;
 }
 
@@ -1105,13 +1117,12 @@ function bgImg(name){if(name in BG) return BG[name]; BG[name]=null; const ext=['
   return null;}
 BG_SEASON.forEach(s=>{bgImg(s+'-dzien');bgImg(s+'-noc')});
 // rysuje obraz jak background-size:cover; pas nagłówka celuje w wiatrak (BG_FY wysokości obrazu)
-const BG_FY=0.52;
+const BG_FY=0.5;
 function drawCover(im,W,H,a){const s=Math.max(W/im.width,H/im.height),w=im.width*s,h=im.height*s;
   const y=Math.min(0,Math.max(H-h,H/2-BG_FY*h));
   sx.globalAlpha=a; sx.drawImage(im,(W-w)/2,y,w,h); sx.globalAlpha=1;}
 function drawBg(W,H,L,dusk,wet){const s=BG_SEASON[seasonN()],day=BG[s+'-dzien'],night=BG[s+'-noc'];
   if(!day&&!night) return false;
-  if(!sky.parentNode.classList.contains('hasbg')) sky.parentNode.classList.add('hasbg');
   if(day) drawCover(day,W,H,1); else drawCover(night,W,H,1);
   if(day&&L<1){ if(night) drawCover(night,W,H,1-L); else {sx.fillStyle=`rgba(8,10,26,${(1-L)*0.72})`;sx.fillRect(0,0,W,H)} }
   if(dusk>0){sx.fillStyle=`rgba(236,130,60,${dusk*0.22})`;sx.fillRect(0,0,W,H)}
@@ -1168,7 +1179,11 @@ function drawWeather(ts,dt,W,H){
       if(snow){sx.fillRect(p.x,p.y,2,2)}else{sx.beginPath();sx.moveTo(p.x,p.y);sx.lineTo(p.x-3,p.y+9);sx.stroke()}});}
   else parts=[];
 }
-function skyLoop(ts){ if(!document.hidden&&S) drawSky(ts); if(reduce) setTimeout(()=>requestAnimationFrame(skyLoop),1000); else requestAnimationFrame(skyLoop);}
+let lastSkyDraw=0;
+function skyLoop(ts){const anim=!reduce&&(S&&(S.wx==='deszcz'||S.wx==='snieg')),gap=anim?33:500;
+  if(!document.hidden&&S&&ts-lastSkyDraw>=gap){lastSkyDraw=ts;drawSky(ts)}
+  requestAnimationFrame(skyLoop);}
+addEventListener('resize',()=>{lastSkyDraw=0});
 
 // ---------- PĘTLA ----------
 let lastCheck=0;

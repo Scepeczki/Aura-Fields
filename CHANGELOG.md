@@ -2,6 +2,14 @@
 
 Każde wydanie ma tag `vX.Y.Z` i paczkę `.zip` na stronie Releases.
 
+## 1.1.0 — 2026-10-06
+
+- Nowy wygląd: tło z porą roku i doby na cały ekran, półprzezroczyste panele ze złotą obwódką
+- Jeden górny pasek: zakładki, kalendarz, poziom, Księga, Kronika i kasa
+- Kalendarz z kafelkami pór roku i prognozą z ikonami
+- Karty poletek z zaoraną ziemią w perspektywie
+- Ikony przy nagłówkach działów, przyciskach i celu
+
 ## 1.0.1 — 2026-10-06
 
 - Gra liczy czas tylko, gdy jest otwarta (także zminimalizowana)

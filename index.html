@@ -946,24 +946,142 @@ select{font:inherit;color:var(--chaff);background:var(--loam2);border:1px solid 
   .rcard .rside{align-items:stretch;width:100%}
   .rb{justify-content:flex-start}
 }
+
+/* ===================== MOTYW: szkło na krajobrazie =====================
+   Tło (obrazy z bg/) wypełnia cały ekran, interfejs to półprzezroczyste panele
+   ze złotą obwódką. Ta warstwa nadpisuje wcześniejsze style. */
+:root{
+  --soil:rgba(16,12,9,.72); --loam:rgba(29,23,17,.78); --loam2:rgba(44,34,25,.72); --loam3:rgba(58,46,33,.7);
+  --furrow:rgba(236,188,76,.15); --furrow2:rgba(236,188,76,.26); --gl-bd:rgba(236,188,76,.26);
+  --card:linear-gradient(180deg,rgba(38,29,20,.82),rgba(22,17,12,.86));
+  --shadow:0 16px 36px -18px rgba(0,0,0,.95);
+}
+html{background:#130f0b}
+body{background:none!important}
+#sky{position:fixed;inset:0;width:100vw;height:100vh;z-index:-2;display:block}
+.bgshade{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(120% 95% at 50% 45%,rgba(14,10,7,.18),rgba(14,10,7,.6)),linear-gradient(180deg,rgba(14,10,7,.5),rgba(14,10,7,.12) 28%,rgba(14,10,7,.3))}
+
+/* górny pasek: zakładki + kalendarz, poziom, księga, kronika, kasa */
+.bar-top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,rgba(24,18,13,.9),rgba(24,18,13,.78));backdrop-filter:blur(10px) saturate(1.1);-webkit-backdrop-filter:blur(10px) saturate(1.1);border-bottom:1px solid var(--gl-bd);box-shadow:0 12px 30px -18px rgba(0,0,0,.95)}
+.barin{max-width:1240px;gap:12px 16px;flex-wrap:wrap}
+nav.tabs{gap:4px}
+nav.tabs button{padding:16px 14px 13px;font-size:1rem;gap:9px}
+nav.tabs button.on{text-shadow:0 0 14px rgba(236,188,76,.35)}
+nav.tabs .tico{width:20px;height:20px}
+.status{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.clockchip{display:flex;flex-direction:column;line-height:1.2;font-size:.74rem;color:var(--husk);text-align:right;padding-right:4px;white-space:nowrap}
+.clockchip b{color:var(--chaff);font-weight:700;font-size:.82rem}
+.status .chipstat{background:rgba(255,236,200,.04);border:1px solid var(--gl-bd);border-radius:10px;padding:5px 10px}
+.status .chipstat.lvl{min-width:116px}
+.status .chipstat span{font-size:.58rem}
+.status .chipstat strong{font-size:.78rem;white-space:nowrap}
+.status .xp{height:4px;margin-top:3px}
+.status .chipstat.icob{grid-template-rows:auto;padding:6px 10px 6px 8px;column-gap:7px}
+.status .chipstat.icob .icl{display:none}
+.status .chipstat.icob .tico{grid-row:auto;width:19px;height:19px}
+.cash{background:linear-gradient(180deg,rgba(66,48,22,.9),rgba(38,28,14,.9));border-color:rgba(236,188,76,.55);padding:6px 14px 6px 8px}
+
+/* nagłówki działów */
+main{padding-top:26px}
+.sechead h2{display:flex;align-items:center;gap:12px;font-size:2.15rem;text-shadow:0 2px 14px rgba(0,0,0,.7)}
+.h2ico{width:30px;height:30px;color:var(--grain);flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.sechead p{color:#ddd0b8;text-shadow:0 1px 8px rgba(0,0,0,.85)}
+.more{text-shadow:0 1px 6px rgba(0,0,0,.7)}
+h3{text-shadow:0 1px 8px rgba(0,0,0,.5)}
+
+/* panele szklane */
+.cal,.kpi,.item,.ware,.lrow,.fame,.tray,.pbar-sel,.plan,.plot,.ach,.fc,.lpick,.empty-note,.hot,.panel,#ctx{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.kpi,.item,.ware,.lrow,.plan,.ach,.fc{border-color:var(--gl-bd)}
+.empty-note{background:rgba(16,12,9,.6);border-color:var(--gl-bd)}
+.panel{background:linear-gradient(180deg,rgba(34,26,18,.95),rgba(22,17,12,.96))!important;border:1px solid var(--gl-bd)}
+#ctx{background:rgba(26,20,14,.94)}
+
+/* przyciski */
+.btn{background:linear-gradient(180deg,rgba(58,45,31,.88),rgba(34,26,18,.9));border-color:var(--gl-bd);border-radius:10px}
+.btn:hover:not(:disabled){border-color:rgba(236,188,76,.55)}
+.btn .bico{width:18px;height:18px;vertical-align:-4px;margin-right:7px}
+.btn.harv{background:linear-gradient(180deg,rgba(104,140,56,.55),rgba(54,80,28,.6));border-color:rgba(147,203,95,.65);color:#eef7e0;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 0 rgba(0,0,0,.35)}
+.btn.harv .bico{color:#b8e08a}
+.btn.harv:disabled{opacity:.5}
+.toolbar{gap:10px}
+.toolbar .sp{display:inline-flex;align-items:center;gap:7px;color:#ddd0b8;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.toolbar .sp .bico{width:17px;height:17px;color:var(--grain)}
+
+/* kalendarz: kafelki pór roku i prognoza */
+.cal{padding:16px 18px;border-radius:18px;gap:12px;border:1px solid var(--gl-bd);background:linear-gradient(180deg,rgba(30,23,16,.84),rgba(20,15,11,.88))}
+.year{padding-top:8px}
+.segs{gap:8px}
+.seg{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;border:1px solid;border-top-width:1px;font-size:.8rem}
+.seg .wxi{width:30px;height:30px;flex:none}
+.seg .st{min-width:0}
+.seg b{font-family:var(--f-display);font-size:1.08rem}
+.seg.s0{border-color:rgba(140,196,90,.5);background:linear-gradient(90deg,rgba(140,196,90,.2),rgba(140,196,90,.04))}
+.seg.s1{border-color:rgba(234,185,74,.5);background:linear-gradient(90deg,rgba(234,185,74,.2),rgba(234,185,74,.04))}
+.seg.s2{border-color:rgba(217,129,58,.5);background:linear-gradient(90deg,rgba(217,129,58,.2),rgba(217,129,58,.04))}
+.seg.s3{border-color:rgba(168,212,236,.45);background:linear-gradient(90deg,rgba(168,212,236,.16),rgba(168,212,236,.03))}
+.seg.now{box-shadow:0 0 0 1px rgba(255,236,200,.4),0 0 22px -6px rgba(236,188,76,.55)}
+.mark{background:var(--grain2);width:3px;height:calc(100% + 6px);box-shadow:0 0 10px rgba(246,210,122,.8)}
+.mark::before{border-top-color:var(--grain2)}
+.calinfo{gap:6px 24px;font-size:.9rem}
+.calinfo span{display:inline-flex;align-items:center;gap:8px}
+.calinfo .wxi{width:18px;height:18px}
+.fcs{gap:10px}
+.fcd{padding:10px 14px;border-radius:12px;background:rgba(10,8,6,.45);border:1px solid var(--gl-bd);gap:12px;font-size:.86rem}
+.fcd .wxi{width:30px;height:30px}
+.fcd.now{border-color:rgba(236,188,76,.6);background:linear-gradient(90deg,rgba(236,188,76,.14),rgba(10,8,6,.4));box-shadow:none}
+
+/* karty poletek: zaorana ziemia w perspektywie */
+.plots{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+.plot,.plot.env-mokre,.plot.env-szklarnia,.plot.winter{height:224px;border-radius:14px;border:1px solid var(--gl-bd);background:linear-gradient(180deg,rgba(30,23,16,.92),rgba(18,14,10,.94))}
+.plot.env-mokre{border-color:rgba(90,163,204,.5)} .plot.env-szklarnia{border-color:rgba(143,208,196,.55)} .plot.winter{border-color:rgba(168,212,236,.45)}
+.plot:hover{border-color:rgba(236,188,76,.6)}
+.plot .ptop{padding:9px 12px 8px;background:rgba(10,8,6,.4);border-bottom:1px solid rgba(236,188,76,.14)}
+.plot .tag{font-size:.66rem;color:#d9ccb4}
+.soil i{width:5px;height:11px}
+.plot .art{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,rgba(40,30,20,.9),rgba(70,50,30,.6))}
+.plot .art::before{content:"";position:absolute;left:-60%;right:-60%;top:-160%;bottom:0;z-index:-2;
+  background:repeating-linear-gradient(90deg,#634529 0 11px,#3c2a17 11px 22px);transform:perspective(320px) rotateX(58deg);transform-origin:50% 100%}
+.plot .art::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(18,14,10,.55),rgba(18,14,10,0) 40%,rgba(18,14,10,.2))}
+.plot.env-mokre .art::before{background:repeating-linear-gradient(90deg,#2f5263 0 10px,#1c3443 10px 20px)}
+.plot.env-szklarnia .art::after{background:linear-gradient(90deg,rgba(143,208,196,.18) 1px,transparent 1px) 0 0/25% 100%,linear-gradient(180deg,rgba(18,14,10,.65),rgba(143,208,196,.1) 45%,rgba(18,14,10,.25))}
+.plot.winter .art::before{background:repeating-linear-gradient(90deg,#c9d5de 0 10px,#9aabb8 10px 20px)}
+.plot.empty .art{align-items:center}
+.plot .plus{margin:0;width:54px;height:54px;border:1.5px solid rgba(255,236,200,.6);background:rgba(10,8,6,.35);color:var(--chaff);font-size:1.9rem;font-weight:300;backdrop-filter:blur(2px)}
+.plot .art .flake{margin:0}
+.plot .pfoot{padding:8px 12px 11px;background:rgba(14,11,8,.86);border-top:1px solid rgba(236,188,76,.14)}
+.plot .pn{display:flex;align-items:center;gap:6px}
+.plot .pn .bico{width:15px;height:15px;color:var(--grain);flex:none}
+.plot.buy{background:rgba(16,12,9,.55);border:1.5px dashed rgba(236,188,76,.4)}
+.plot.buy .plus{margin-bottom:6px}
+.plot .price{display:inline-flex;align-items:center;gap:6px;color:var(--chaff)}
+.plot .price svg{width:18px;height:18px}
+
+/* cel i pasek zdobyczy */
+#goal .goal:not(.min){display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:center}
+#goal .gico{grid-row:1/4;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(147,203,95,.14);border:1px solid rgba(147,203,95,.45);color:var(--sprout)}
+#goal .gico .bico{width:20px;height:20px}
+#goal .goal.min .gico{display:none}
+#goal .goal{border-color:var(--gl-bd);backdrop-filter:blur(8px)}
+.fd{backdrop-filter:blur(8px);border-color:var(--gl-bd)}
+
+@media (max-width:1100px){.clockchip{display:none}}
+@media (max-width:860px){.status{margin-left:0;width:100%;justify-content:flex-end;padding-bottom:8px}.barin{gap:0 10px}}
+@media (max-width:560px){.segs .seg .st{display:block}.segs .seg .st>span{display:none}.seg{padding:7px 4px;gap:3px;flex-direction:column;text-align:center}.seg b{font-size:.82rem!important}.seg .wxi{width:22px;height:22px}.seg b{font-size:.9rem}.fcd{padding:8px 9px;gap:7px}.fcd .wxi{width:22px;height:22px}.sechead h2{font-size:1.7rem}.h2ico{width:24px;height:24px}.status .chipstat.lvl{min-width:96px}}
+
 </style>
 </head>
 <body>
-<header>
-  <div class="skyband">
-    <canvas id="sky" aria-hidden="true"></canvas>
-    <div class="topin">
-      <div class="brand glass"><small id="clock">Rok 1 · Wiosna</small></div>
-      <div class="hud">
-        <div class="chipstat lvl glass"><span id="lvlLbl">Poziom 1</span><strong class="num" id="xpTxt">0 / 70 PD</strong><span class="xp"><i id="xpbar"></i></span></div>
-        <button class="chipstat icob glass" data-act="tab" data-v="ksiega" title="Księga mąk" aria-label="Księga mąk"><svg class="tico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v14"/></svg><span class="icl">Księga</span><strong class="num" id="coll">0/70</strong></button>
-        <button class="chipstat icob glass" data-act="tab" data-v="kron" title="Kronika: osiągnięcia, zapis gry, ustawienia" aria-label="Kronika"><svg class="tico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M9 3h6l-1 5h-4zM12 11v3l2 1"/></svg><span class="icl">Kronika</span><strong class="num" id="achc">0</strong></button>
-      </div>
-    </div>
-  </div>
-  <div class="bar-top">
-    <div class="barin">
-      <nav class="tabs" id="tabs" aria-label="Działy gospodarstwa"></nav>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="bgshade" aria-hidden="true"></div>
+<header class="bar-top">
+  <div class="barin">
+    <nav class="tabs" id="tabs" aria-label="Działy gospodarstwa"></nav>
+    <div class="status">
+      <span class="clockchip" id="clock"></span>
+      <div class="chipstat lvl"><span id="lvlLbl">Poziom 1</span><strong class="num" id="xpTxt">0 / 70 PD</strong><span class="xp"><i id="xpbar"></i></span></div>
+      <button class="chipstat icob" data-act="tab" data-v="ksiega" title="Księga mąk" aria-label="Księga mąk"><svg class="tico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v14"/></svg><span class="icl">Księga</span><strong class="num" id="coll">0/70</strong></button>
+      <button class="chipstat icob" data-act="tab" data-v="kron" title="Kronika: osiągnięcia, zapis gry, ustawienia" aria-label="Kronika"><svg class="tico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M9 3h6l-1 5h-4zM12 11v3l2 1"/></svg><span class="icl">Kronika</span><strong class="num" id="achc">0</strong></button>
       <div class="cash" title="Kasa"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="17" r="12" fill="#8a6418"/><circle cx="16" cy="15.5" r="12" fill="#ecbc4c" stroke="#8a6418" stroke-width="1.5"/><circle cx="16" cy="15.5" r="8.5" fill="none" stroke="#c99a30" stroke-width="1.2"/></svg><b id="coins">0 zł</b></div>
     </div>
   </div>
