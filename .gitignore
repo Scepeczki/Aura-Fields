@@ -1,0 +1,5 @@
+dist/
+site/
+*.zip
+Thumbs.db
+desktop.ini

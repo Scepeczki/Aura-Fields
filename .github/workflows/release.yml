@@ -1,0 +1,26 @@
+# Każdy tag vX.Y.Z (tworzy go release.ps1) staje się wydaniem na GitHubie z paczką .zip gry
+# i notatkami z CHANGELOG.md.
+name: Wydanie
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Paczka gry
+        run: |
+          mkdir -p dist/aura-fields
+          cp -r index.html data.js game.js sw.js manifest.webmanifest icon.svg icon-192.png icon-512.png icon.ico bg dist/aura-fields/
+          cd dist && zip -qr "../aura-fields-${GITHUB_REF_NAME}.zip" aura-fields
+      - name: Notatki z CHANGELOG
+        run: |
+          awk -v v="## ${GITHUB_REF_NAME#v} " 'index($0,"## ")==1{p=(index($0,v)==1)} p' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Aura Fields ${GITHUB_REF_NAME}" > notes.md
+      - name: Wydanie
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "aura-fields-${GITHUB_REF_NAME}.zip" --title "Aura Fields $GITHUB_REF_NAME" --notes-file notes.md
