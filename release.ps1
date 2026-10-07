@@ -53,8 +53,13 @@ function Publish-Release($ver) {
   $dir = "dist/v$ver"
   if (-not (Test-Path "$dir/$Setup")) { throw "Brak $dir/$Setup. Najpierw zbuduj wydanie." }
   if (-not (git tag --list "v$ver")) { throw "Brak tagu v$ver" }
-  Invoke-Native { git push origin main } 'git push main'
-  Invoke-Native { git push origin "v$ver" } 'git push tag'
+  # token HTTPS z gh bez uprawnienia „workflow” nie wyśle zmian w .github/workflows; wtedy przez SSH
+  git push origin main "v$ver"
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Push przez origin odrzucony, próbuję przez SSH...' -ForegroundColor Yellow
+    Invoke-Native { git push "git@github.com:$Repo.git" main "v$ver" } 'git push'
+    git fetch -q origin
+  }
   $assets = @("$dir/$Setup", "$dir/$Setup.sig", "$dir/latest.json", "$dir/aura-fields-v$ver.zip")
   Invoke-Native { gh release create "v$ver" @assets -R $Repo --title "Aura Fields v$ver" --notes-file "$dir/notes.md" } 'gh release create'
   Write-Host "Opublikowano v${ver}: https://github.com/$Repo/releases/tag/v$ver" -ForegroundColor Green
