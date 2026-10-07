@@ -132,10 +132,10 @@ const isReady=p=>p.crop&&p.prog>=p.need;
 const ENVIMG={pole:'pole',mokre:'mokre',szklarnia:'szklarnia'};
 function plotImgSrc(p){
   if(!p.crop) return 'plots/'+ENVIMG[p.env]+(seasonN()===3?'-zima':'')+'.webp';
-  const c=CR[p.crop],st=isReady(p)?3:(c.r&&p.h>0)?4:p.prog/p.need<0.5?1:2;
-  return 'plots/'+c.id+'-'+st+'.webp';}
+  const c=CR[p.crop],st=isReady(p)?3:(c.r&&p.h>0)?4:p.prog/p.need<0.3?1:2;
+  return 'plots/'+c.id+'-'+st+(seasonN()===3&&p.env!=='szklarnia'?'-zima':'')+'.webp';}
 const plotImg=p=>`<img class="pimg" src="${plotImgSrc(p)}" alt="" decoding="async" draggable="false">`;
-const cropThumb=(id,st)=>`<img class="pimg" src="plots/${id}-${st||3}.webp" alt="" loading="lazy" decoding="async" draggable="false">`;
+const cropThumb=id=>`<img class="pimg sasz" src="items/sasz_${id}.webp" alt="" loading="lazy" decoding="async" draggable="false">`;
 function stage(p){if(isReady(p))return 3;if(p.h>0)return 2;const f=p.prog/p.need;return f<.15?0:f<.5?1:2}
 
 function plant(i,cid,quiet){const p=S.plots[i],c=CR[cid]; if(!p||!c||p.crop||!compatible(c,p.env)||!unlocked(c)||frozen(p)) return false;
@@ -459,7 +459,9 @@ function sack(col){return svgw(`<ellipse cx="16" cy="29.5" rx="10" ry="1.8" fill
 // ikona przedmiotu dobrana do tego, czym on jest
 const SHAPE_WET=/Mleczko|Masa ryżowa|amoczon|Nixtamal$|Nixtamal wypłukany|odgoryczona/;
 const SHAPE_SLICE=/Plastry|Wiórki|Różyczki|Susz |Miąższ/;
-function itemSvg(id){const it=ITEMS[id],c=it.col;
+const imgSvg=src=>`<svg viewBox="0 0 32 32" aria-hidden="true"><image href="${src}" width="32" height="32"/></svg>`;
+const itemSvg=id=>imgSvg('items/'+id+'.webp');
+function itemSvgOld(id){const it=ITEMS[id],c=it.col;
   if(it.kind==='flour') return sack(c);
   if(it.kind==='raw') return art(CR[it.crop].kind,3,c);
   if(it.kind==='supply') return svgw(`<ellipse cx="16" cy="29" rx="9" ry="1.8" fill="#000" opacity=".3"/><rect x="10" y="6" width="12" height="4" rx="1.5" fill="#8a6a40"/><path d="M8 10h16v15a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3z" fill="${c}" stroke="rgba(0,0,0,.4)"/><rect x="11" y="15" width="10" height="7" rx="1" fill="#fff" opacity=".55"/>`,'0 0 32 32');
@@ -485,13 +487,15 @@ const SEAICO=[
  WXI.slonce,
  '<path d="M12 2.5l1.8 4 4.2-1.2-1.1 4.2 4.1 1.9-4.1 1.9 1.1 4.2-4.2-1.2-1.8 4-1.8-4-4.2 1.2 1.1-4.2-4.1-1.9 4.1-1.9-1.1-4.2 4.2 1.2z" fill="#d9813a"/><path d="M12 11v10.5" stroke="#7a3e14" stroke-width="1.4" stroke-linecap="round"/>',
  '<g stroke="#cfe8f6" stroke-width="1.9" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/><path d="M9.3 3.6L12 6l2.7-2.4M9.3 20.4L12 18l2.7 2.4"/></g>'];
-const seaIcon=k=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true">${SEAICO[k]}</svg>`;
+const SEAFILE=['wiosna','lato','jesien','zima'];
+const seaIcon=k=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true"><image href="ui/pora-${SEAFILE[k]}.webp" width="24" height="24"/></svg>`;
 const lico=p=>`<svg class="bico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICO={sprout:'<path d="M12 21V11M12 11c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/>',
  sickle:'<path d="M4 20l5-5M9 15c-2-6 2-11 9-11-4 2-6 5-5 10"/>',
  bag:'<path d="M8 6h8l-1 3c2 1.5 3 4 3 6.5C18 19 15.5 21 12 21s-6-2-6-5.5C6 13 7 10.5 9 9z"/><path d="M9 6l1-2h4l1 2"/>',
  clock:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'};
-const wxIcon=w=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true">${WXI[w]}</svg>`;
+const WXFILE={slonce:'pogodnie',pochm:'pochmurno',deszcz:'deszcz',upal:'upal',snieg:'snieg',mroz:'mroz'};
+const wxIcon=w=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true"><image href="ui/pogoda-${WXFILE[w]}.webp" width="24" height="24"/></svg>`;
 const TABICO={ // ikony zakładek, rysowane kolorem tekstu
  pola:'<path d="M12 21V11M12 11c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/><path d="M4 21h16"/>',
  prz:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
@@ -517,8 +521,9 @@ const MART={
  pre:`<rect x="8" y="4" width="4" height="40" fill="#4a2e1a"/><rect x="36" y="4" width="4" height="40" fill="#4a2e1a"/><rect x="8" y="4" width="32" height="5" fill="#6a4a2e"/><g class="press"><rect x="23" y="2" width="2.5" height="14" fill="#9aa0a6"/><rect x="13" y="16" width="22" height="5" fill="#8a6a40"/></g><rect x="13" y="28" width="22" height="12" fill="#7a3a7a"/><rect x="12" y="40" width="24" height="4" fill="#6a4a2e"/>`,
  mbg:`<ellipse cx="24" cy="36" rx="19" ry="7" fill="#4f6a48"/><ellipse cx="24" cy="33" rx="19" ry="7" fill="#6a8a5a"/><g class="spin" style="transform-origin:24px 24px"><circle cx="24" cy="24" r="15" fill="#c8d8b8" stroke="#4f6a48" stroke-width="2"/><path d="M24 9v30M9 24h30" stroke="#8aa878" stroke-width="1.2"/></g><path d="M18 30L30 18" stroke="#2f5a2a" stroke-width="2.5"/><path d="M24 15c-3 4-3 8 0 13 3-5 3-9 0-13z" fill="#e0b53a" opacity=".9"/>`,
 };
-const mart=(id,cls)=>`<span class="mart ${cls||''}"><svg viewBox="0 0 48 48" aria-hidden="true">${MART[id]}</svg></span>`;
-const MILLER_ART=`<span class="mart"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="15" r="8" fill="#e8c8a0"/><path d="M15 12q9-9 18 0z" fill="#f1e7d4"/><rect x="15" y="9" width="18" height="4" rx="2" fill="#f1e7d4"/><path d="M10 44q2-18 14-18t14 18z" fill="#f1e7d4"/><path d="M18 30l6 6 6-6" stroke="#c9b597" stroke-width="2" fill="none"/><circle cx="21" cy="15" r="1" fill="#3a2a1a"/><circle cx="27" cy="15" r="1" fill="#3a2a1a"/></svg></span>`;
+const mart=(id,cls,on)=>`<span class="mart ${cls||''}"><img src="machines/${id}${on?'-praca':''}.webp" alt="" decoding="async" draggable="false"></span>`;
+const person=id=>`<span class="mart pers"><img src="people/${id}.webp" alt="" decoding="async" draggable="false"></span>`;
+const MILLER_ART=person('mlynarz');
 
 // ---------- PASEK ZDOBYCZY ----------
 // Każda zdobycz pojawia się z boku ekranu; te same zdobycze z tego samego źródła sumują się w jednym kafelku.
@@ -674,7 +679,7 @@ function vPrz(){syncLines();
     // stanowiska maszyny: zielone = ten etap (z postępem), szare = inna partia, puste = wolne
     const sta=sl>1?`<span class="lsta" title="Stanowiska maszyny: ${m.run.length} z ${sl} zajęte">${Array.from({length:sl},(_,i)=>{const j=m.run[i];return j?(j.r===r.id?`<i class="on"><b data-rjw="${r.m}:${i}" style="width:${jobPct(r.m,i)*100}%"></b></i>`:'<i class="other"></i>'):'<i></i>'}).join('')}</span>`:'';
     return `<span class="lstep ${own?'':'miss'} ${k>=0?'busy':''}">
-      <span class="lm" title="${esc(M[r.m].n)}: ${esc(r.verb)}">${k>=0?`<span class="ringwrap sm">${ring(jobPct(r.m,k),`data-rj="${r.m}:${k}"`)}${mart(r.m)}${runs.length>1?`<em class="lmx">×${runs.length}</em>`:''}</span>`:mart(r.m)}</span>${sta}
+      <span class="lm" title="${esc(M[r.m].n)}: ${esc(r.verb)}">${k>=0?`<span class="ringwrap sm">${ring(jobPct(r.m,k),`data-rj="${r.m}:${k}"`)}${mart(r.m,'',true)}${runs.length>1?`<em class="lmx">×${runs.length}</em>`:''}</span>`:mart(r.m)}</span>${sta}
       <small>${esc(M[r.m].n)}${extra.map(x=>` + ${r.in[x]}× ${esc(ITEMS[x].n)}`).join('')}</small>
       ${k>=0||q?`<small class="lq">${runs.map(i=>`<b class="num" data-mj="${r.m}:${i}">${fmtT((r.t-m.run[i].prog)/mSpeed(r.m))}</b>`).join(' · ')}${q?` · ${q} w kolejce <button class="lx" data-act="lunq" data-r="${r.id}" title="Wyjmij z kolejki i zwróć surowce">✕</button>`:''}</small>`:''}
       ${own?`<span class="lbtn"><button class="btn sm" data-act="enq" data-r="${r.id}" data-n="1" ${n?'':'disabled'}>+1</button><button class="btn sm" data-act="enq" data-r="${r.id}" data-n="5" ${n?'':'disabled'}>+5</button><button class="btn sm" data-act="enq" data-r="${r.id}" data-n="999" ${n?'':'disabled'}>max${n>1?' '+n:''}</button></span>`:`<span class="req">brak maszyny</span>`}</span>`};
@@ -872,10 +877,10 @@ function lvdots(l,mx){return `<span class="lvdots ${mx>10?'dense':''}">${Array.f
 function vUlep(){
   let h=`<div class="sec"><div class="sechead"><h2>Pracownicy</h2><p>Zatrudnieni raz pracują na stałe. Każdego możesz wysłać na wolne i z powrotem wezwać do pracy.</p></div><div class="shop">`;
   WORK.forEach(([id,n,d,c,lv])=>{const has=S.work[id],on=working(id);
-    h+=`<div class="item ${has?'has':''}"><h3>${n}</h3><p>${d}</p><div class="ft">${has?`<span class="owned">${on?'Pracuje':'Ma wolne'}</span><button class="btn sm ${on?'':'ok'}" data-act="toggleW" data-w="${id}">${on?'Daj wolne':'Wezwij do pracy'}</button>`
+    h+=`<div class="item ${has?'has':''}"><div class="ih">${person(id)}<h3>${n}</h3></div><p>${d}</p><div class="ft">${has?`<span class="owned">${on?'Pracuje':'Ma wolne'}</span><button class="btn sm ${on?'':'ok'}" data-act="toggleW" data-w="${id}">${on?'Daj wolne':'Wezwij do pracy'}</button>`
       :S.lvl<lv?`<span class="req">Od poziomu ${lv}</span><span class="num">${fmtZ(c)}</span>`:`<span class="num">${fmtZ(c)}</span><button class="btn sm pri" data-act="hire" data-w="${id}" ${S.coins<c?'disabled':''}>Zatrudnij</button>`}</div></div>`});
   const mk=S.millers.length, mc=millerCost(mk), mr=millerReq(mk);
-  h+=`<div class="item ${mk?'has':''}"><div class="ih"><h3>Młynarze</h3><span style="margin-left:auto">${lvdots(mk,MILLER_MAX)}</span></div><p>Każdy młynarz prowadzi jedno zlecenie: wybraną mąkę w wybranej ilości albo bez końca. Zlecenia dajesz w Przetwórni albo w Księdze mąk.</p>
+  h+=`<div class="item ${mk?'has':''}"><div class="ih">${MILLER_ART}<h3>Młynarze</h3><span style="margin-left:auto">${lvdots(mk,MILLER_MAX)}</span></div><p>Każdy młynarz prowadzi jedno zlecenie: wybraną mąkę w wybranej ilości albo bez końca. Zlecenia dajesz w Przetwórni albo w Księdze mąk.</p>
     <div class="ft">${mk>=MILLER_MAX?'<span class="owned">Komplet</span>':S.lvl<mr?`<span class="req">${mk?'Kolejny':'Pierwszy'} od poziomu ${mr}</span><span class="num">${fmtZ(mc)}</span>`:`<span class="num">${fmtZ(mc)}</span><button class="btn sm pri" data-act="hireMiller" ${S.coins<mc?'disabled':''}>Zatrudnij ${mk?'kolejnego':''}</button>`}</div></div>`;
   h+=`</div></div><div class="sec"><div class="sechead"><h2>Usprawnienia</h2><p>Działają na całe gospodarstwo. Każdy kolejny stopień kosztuje więcej i wymaga wyższego poziomu gospodarza.</p></div><div class="shop">`;
   RES.forEach(([id,n,d,mx])=>{const l=res(id),c=resCost(id),rq=resReq(id);
@@ -883,7 +888,7 @@ function vUlep(){
     <div class="ft">${l>=mx?'<span class="owned">Ukończone</span>':S.lvl<rq?`<span class="req">Następny stopień od poziomu ${rq}</span><span class="num">${fmtZ(c)}</span>`:`<span class="num">${fmtZ(c)}</span><button class="btn sm pri" data-act="research" data-r="${id}" ${S.coins<c?'disabled':''}>Wdroż stopień ${l+1}</button>`}</div></div>`});
   h+=`</div></div><div class="sec"><div class="sechead"><h2>Maszyny</h2><p>Każda maszyna ma ${MLVMAX} poziomów: +20% tempa na poziom, drugie stanowisko od poziomu 4, trzecie od poziomu 8.</p></div><div class="shop">`;
   MACH.forEach(([id])=>{const mm=M[id],m=S.m[id],lk=S.lvl<mm.lv;
-    h+=`<div class="item ${m.owned?'has':''}"><div class="ih">${mart(id)}<div><h3>${mm.n}</h3>${m.owned?lvdots(m.lvl,MLVMAX)+`<small class="more">${mSlots(id)} ${plural(mSlots(id),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(id).toFixed(2)}</small>`:''}</div></div><p>${mm.d}</p>
+    h+=`<div class="item ${m.owned?'has':''}"><div class="ih">${mart(id,'',m.owned&&m.run.length>0)}<div><h3>${mm.n}</h3>${m.owned?lvdots(m.lvl,MLVMAX)+`<small class="more">${mSlots(id)} ${plural(mSlots(id),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(id).toFixed(2)}</small>`:''}</div></div><p>${mm.d}</p>
     <div class="ft">${!m.owned?(lk?`<span class="req">Od poziomu ${mm.lv}</span><span class="num">${fmtZ(mm.p)}</span>`:`<span class="num">${fmtZ(mm.p)}</span><button class="btn sm" data-act="buym" data-m="${id}" ${S.coins<mm.p?'disabled':''}>Kup</button>`):m.lvl<MLVMAX?`<span class="num">${fmtZ(mUpCost(id))}</span><button class="btn sm" data-act="upm" data-m="${id}" ${S.coins<mUpCost(id)?'disabled':''}>Ulepsz do poz. ${m.lvl+1}</button>`:'<span class="owned">Poziom maksymalny</span>'}</div></div>`});
   const pc=plotCost();
   h+=`</div></div><div class="sec"><div class="sechead"><h2>Ziemia</h2></div><div class="shop">
@@ -943,7 +948,7 @@ function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('
       CROPS.filter(c=>c.grp===g).forEach(c=>{const ok=compatible(c,p.env),lk=!unlocked(c),cost=seedCost(c),af=S.coins>=cost;
         const emptyCompat=S.plots.filter(q=>!q.crop&&compatible(c,q.env)&&!frozen(q)).length;
         const est=c.g/plotRate({...p,crop:c.id}), late=ok&&!lk&&est>tW;
-        h+=`<div class="seed ${lk?'lock':ok?'':'off'}"><span class="sv">${cropThumb(c.id,3)}</span><div class="si"><b>${esc(c.n)}</b>
+        h+=`<div class="seed ${lk?'lock':ok?'':'off'}"><span class="sv">${cropThumb(c.id)}</span><div class="si"><b>${esc(c.n)}</b>
         <span>${lk?`odblokujesz na poziomie ${c.lvl}`:ok?`${fmtT(est)} · ${plotYield(p,c.id)}× plon${c.r?' · wieloletnia':''}`:`wymaga: ${ENV[c.env].toLowerCase()}`}</span>${late?'<br><span class="down">nie zdąży przed zimą, przezimuje uśpiona</span>':''}<br><span>→ ${c.flours.length} ${plural(c.flours.length,'mąka','mąki','mąk')} · ${price(c.out)} zł/szt. surowo</span></div>
         <div class="sb"><button class="btn sm ${ok&&af&&!lk?'pri':''}" data-act="plant" data-c="${c.id}" ${ok&&af&&!lk?'':'disabled'}>${cost} zł</button>
         ${ok&&!lk&&!c.r&&emptyCompat>1?`<button class="btn sm" data-act="plantall" data-c="${c.id}" ${af?'':'disabled'} title="Zasiej na wszystkich wolnych pasujących poletkach">×${emptyCompat}</button>`:''}</div></div>`;});

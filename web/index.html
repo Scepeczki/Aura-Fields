@@ -7,8 +7,9 @@
 <meta name="theme-color" content="#14100c">
 <meta name="description" content="Gra o gospodarstwie i młynie: uprawiaj, przetwarzaj i zbierz wszystkie 70 mąk.">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1091,6 +1092,26 @@ h3{text-shadow:0 1px 8px rgba(0,0,0,.5)}
 .lsta i.on b{display:block;height:100%;background:var(--sprout)}
 .lstep .ringwrap{position:relative}
 .lmx{position:absolute;right:-8px;top:-6px;font-style:normal;font-family:var(--f-mono);font-size:.62rem;font-weight:700;padding:0 4px;border-radius:6px;background:var(--sprout);color:#1a2410;line-height:14px}
+
+/* ===== GRAFIKI MALOWANE: maszyny, ludzie, pory roku, zima ===== */
+.mart img{width:118%;height:118%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));pointer-events:none}
+.mart.pers{border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 40%,#3a2d20,#15100b)}
+.mart.pers img{width:100%;height:100%;filter:none}
+.ringwrap .mart img{width:112%;height:112%}
+.item .ih .mart{width:56px;height:56px}
+.seg{position:relative;overflow:hidden}
+.seg>*{position:relative}
+.seg::before{content:"";position:absolute;inset:0;background-size:cover;background-position:center;opacity:.55;transition:opacity .3s}
+.seg.now::before{opacity:.9}
+.seg.s0::before{background-image:linear-gradient(90deg,rgba(10,8,5,.7),rgba(10,8,5,.1)),url(ui/pora-wiosna-tlo.webp)}
+.seg.s1::before{background-image:linear-gradient(90deg,rgba(10,8,5,.7),rgba(10,8,5,.1)),url(ui/pora-lato-tlo.webp)}
+.seg.s2::before{background-image:linear-gradient(90deg,rgba(10,8,5,.7),rgba(10,8,5,.1)),url(ui/pora-jesien-tlo.webp)}
+.seg.s3::before{background-image:linear-gradient(90deg,rgba(10,8,5,.7),rgba(10,8,5,.1)),url(ui/pora-zima-tlo.webp)}
+.seg b,.seg span{text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.plot.winter:not(.empty) .art .pimg{filter:none}
+.plot.winter:not(.empty) .art::after{background:none}
+.plot .art .pimg{object-position:center 45%}
+.seed .sv .pimg.sasz{object-fit:contain;padding:4px}
 </style>
 </head>
 <body>
