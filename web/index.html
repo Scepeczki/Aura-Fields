@@ -1128,6 +1128,21 @@ body[data-tab="prz"] .bgshade{background:linear-gradient(180deg,rgba(14,10,6,.35
 .pausebar b{font-family:var(--f-display);font-size:1.05rem;color:#ffd9c8}
 .pausebar span{flex:1;min-width:200px;color:#f3d6c8}
 .tray p .bad{color:#ff9d84}
+.volr{display:inline-flex;align-items:center;gap:8px;font-size:.9rem;color:var(--husk)}.volr input{width:140px;accent-color:#ecbc4c}
+/* ===== TRYB SIEWU ===== */
+.sowbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:4px 0 14px;padding:10px 14px;border-radius:14px;border:1px solid rgba(236,188,76,.55);background:linear-gradient(90deg,rgba(70,52,22,.92),rgba(36,27,14,.9));box-shadow:0 0 24px -8px rgba(236,188,76,.45)}
+.sowbar .sv{width:52px;height:52px;flex:none;position:relative;overflow:hidden}.sowbar .sv .pimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.sowbar .si{flex:1;min-width:200px;display:flex;flex-direction:column}.sowbar .si b{font-family:var(--f-display);font-size:1.1rem;color:#ffe3a0}.sowbar small{color:var(--husk)}
+.sowbar .sbtns{display:flex;gap:8px;flex-wrap:wrap}
+.plots.sowing .plot:not(.sowok):not(.sown){opacity:.6;filter:saturate(.7)}
+.plots.sowing .plot.sowok{cursor:copy;box-shadow:0 0 0 2px rgba(236,188,76,.6),0 0 18px -4px rgba(236,188,76,.6)}
+.plots.sowing .plot.sowok:hover{transform:translateY(-2px);box-shadow:0 0 0 2px #ecbc4c,0 0 26px -2px rgba(236,188,76,.8)}
+.plots.sowing .plot.sowok .plus{animation:sowpulse 1.4s ease-in-out infinite}
+@keyframes sowpulse{50%{transform:scale(1.12);opacity:.75}}
+.plot.sown{animation:sown .5s ease-out}
+@keyframes sown{0%{transform:scale(.96);box-shadow:0 0 0 3px #ecbc4c,0 0 30px rgba(236,188,76,.9)}100%{transform:none}}
+.plots.sowing{user-select:none}
+.seed.on{box-shadow:0 0 0 2px #ecbc4c}
 </style>
 </head>
 <body>
@@ -1154,6 +1169,7 @@ body[data-tab="prz"] .bgshade{background:linear-gradient(180deg,rgba(14,10,6,.35
 <div id="feed" aria-live="polite"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="data.js"></script>
+<script src="sound.js"></script>
 <script src="game.js"></script>
 <script src="desktop.js"></script>
 </body>

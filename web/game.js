@@ -255,7 +255,7 @@ function customer(){const ws=wares(); if(!ws.length) return;
   const x=ws[j],it=ITEMS[x.k],q=Math.min(x.q,1+rand(custMaxQ())),v=shopPrice(x.k,x.pm)*q;
   x.q-=q; earn(v,'Sklep: '+it.n); S.st.sold+=q; S.st.cust++; if(it.kind==='flour') S.st.flourSold+=q; gainXP(Math.ceil(v/15));
   const g=Math.min((it.kind==='flour'?0.12:0.04)*(popL()<2?1.7:1),shopCap()-S.pop.sd); if(g>0){S.pop.sd+=g;popAdd(g,'Zadowoleni klienci')}
-  if(!silent){SALES.unshift({k:x.k,q,v,t:S.t});if(SALES.length>6)SALES.pop()}
+  if(!silent){SALES.unshift({k:x.k,q,v,t:S.t});if(SALES.length>6)SALES.pop();if(S.tab==='targ')snd('sale')}
   if(!x.q&&!silent&&S.tab!=='targ') toast(`Wyprzedane w sklepie: ${it.n}`);
   dirty=true;}
 function shopStep(d){const r=custRate(); if(!r) return;
@@ -412,15 +412,10 @@ function advance(total,quiet){let left=total; placeItems(); while(left>1e-9){if(
 
 // ---------- DŹWIĘK ----------
 let AC=null, gest=false;
-function snd(type){ if(!S||!S.sound||!gest||silent) return; try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume();
-  const now=AC.currentTime; const tone=(f,t0,dur,vol,wave)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=wave||'triangle';o.frequency.setValueAtTime(f,now+t0);
-    g.gain.setValueAtTime(0.0001,now+t0);g.gain.exponentialRampToValueAtTime(vol,now+t0+0.01);g.gain.exponentialRampToValueAtTime(0.0001,now+t0+dur);o.connect(g);g.connect(AC.destination);o.start(now+t0);o.stop(now+t0+dur+0.02);};
-  if(type==='pop'){tone(520,0,.09,.12);tone(780,.05,.1,.08)}
-  else if(type==='coin'){tone(1320,0,.08,.08,'square');tone(1760,.07,.18,.06,'square')}
-  else if(type==='plant'){tone(220,0,.12,.12,'sine');tone(330,.06,.1,.06,'sine')}
-  else if(type==='level'){[523,659,784,1047].forEach((f,i)=>tone(f,i*.08,.22,.08))}
-  else if(type==='click'){tone(400,0,.04,.05,'sine')}
-}catch(e){}}
+// odgłosy akcji i tło każdego miejsca są w sound.js
+function snd(type){ if(!S||!S.sound||!gest||silent) return; if(window.AuraSound) AuraSound.fx(type);}
+function sndUpdate(){if(!window.AuraSound||!gest||!S)return;const run={};for(const id in S.m){const n=S.m[id].owned?S.m[id].run.length:0;if(n)run[id]=n}
+  AuraSound.update({on:!!S.sound,amb:S.amb!==false,vol:S.vol==null?.7:S.vol,tab:S.tab,wx:S.wx,season:seasonN(),hour:hourF(),run})}
 
 // ---------- GRAFIKA ----------
 const G='#6fa64a',D='#4c7d33',BR='#6a4a2e';
@@ -584,7 +579,7 @@ function render(){
   {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
   if(fk){const el=$('#view').querySelector(fk);if(el)el.focus({preventScroll:true})}
   if(Math.abs(window.scrollY-sy)>2) window.scrollTo(0,sy);
-  if(sheetMode==='plot') drawSheet(); else if(sheetMode==='list') drawList(); else if(sheetMode==='lineadd') drawLineAdd();
+  if(sheetMode==='plot') drawSheet(); else if(sheetMode==='seeds') drawSeeds(); else if(sheetMode==='list') drawList(); else if(sheetMode==='lineadd') drawLineAdd();
   progress();
 }
 function progress(){
@@ -619,16 +614,20 @@ function calendar(){
    ${WEATHER[S.wx].d?`<p class="more">${WEATHER[S.wx].d}</p>`:''}</div>`;
 }
 
+function sowBar(){if(!sowSel)return '';const c=CR[sowSel],free=sowFree(sowSel),cost=seedCost(c);
+  return `<div class="sowbar"><span class="sv">${cropThumb(c.id)}</span><div class="si"><b>Siejesz: ${esc(c.n)}</b><small>${cost} zł za poletko · ${free?`${free} ${plural(free,'wolne poletko pasuje','wolne poletka pasują','wolnych poletek pasuje')}. Kliknij je albo przeciągnij po nich myszą.`:'Nie ma wolnych pasujących poletek.'}</small></div>
+    <div class="sbtns">${free>1&&!c.r?`<button class="btn sm pri" data-act="plantall" data-c="${c.id}" ${S.coins<cost?'disabled':''}>Na wszystkie wolne ×${free}</button>`:''}<button class="btn sm" data-act="sowpick">Zmień nasiona</button><button class="btn sm" data-act="sowend">Gotowe</button></div></div>`}
 function vPola(){
   const ready=S.plots.filter(isReady).length, empty=S.plots.filter(p=>!p.crop).length;
   const canRe=S.plots.some(p=>!p.crop&&p.last&&CR[p.last]&&compatible(CR[p.last],p.env)&&!frozen(p)&&S.coins>=seedCost(CR[p.last]));
   let h=`<div class="sec"><div class="sechead"><h2>Poletka</h2></div>
   ${calendar()}
   <div class="toolbar"><button class="btn pri harv" data-act="harvestall" ${ready?'':'disabled'}>${lico(ICO.sickle)}Zbierz wszystko${ready?` (${ready})`:''}</button>
-   <button class="btn" data-act="replant" ${canRe?'':'disabled'}>${lico(ICO.bag)}Obsiej wolne tym, co rosło</button>
-   <span class="sp">${lico(ICO.sprout)}${empty} ${plural(empty,'wolne','wolne','wolnych')} z ${S.plots.length}${working('parobek')?' · parobek zbiera':''}${working('siewca')?' · siewca sieje':''}</span></div><div class="plots">`;
+   <button class="btn ${sowSel?'on':''}" data-act="sowpick">${lico(ICO.bag)}Siew</button>
+   <button class="btn" data-act="replant" ${canRe?'':'disabled'}>${lico(ICO.sprout)}Obsiej wolne tym, co rosło</button>
+   <span class="sp">${lico(ICO.sprout)}${empty} ${plural(empty,'wolne','wolne','wolnych')} z ${S.plots.length}${working('parobek')?' · parobek zbiera':''}${working('siewca')?' · siewca sieje':''}</span></div>${sowBar()}<div class="plots ${sowSel?'sowing':''}">`;
   S.plots.forEach((p,i)=>{const fz=frozen(p);
-    if(!p.crop){h+=`<button class="plot empty env-${p.env} ${fz?'winter':''}" data-act="plot" data-i="${i}"><span class="ptop"><span class="tag">${ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${plotImg(p)}${fz?'<svg class="flake" viewBox="0 0 24 24" aria-hidden="true">'+WXI.mroz+'</svg>':'<span class="plus">+</span>'}</span><span class="pfoot"><span class="pn">${lico(ICO.sprout)}${fz?'Zima':'Wolne'}</span><span class="ps">${fz?'Siew dopiero wiosną':p.last?'Ostatnio: '+esc(CR[p.last].n):'Kliknij, by zasiać'}</span></span></button>`;return}
+    if(!p.crop){h+=`<button class="plot empty env-${p.env} ${fz?'winter':''} ${sowSel?(sowable(p,sowSel)?'sowok':'sowno'):''}" data-act="plot" data-i="${i}"><span class="ptop"><span class="tag">${ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${plotImg(p)}${fz?'<svg class="flake" viewBox="0 0 24 24" aria-hidden="true">'+WXI.mroz+'</svg>':'<span class="plus">+</span>'}</span><span class="pfoot"><span class="pn">${lico(ICO.sprout)}${fz?'Zima':'Wolne'}</span><span class="ps">${fz?'Siew dopiero wiosną':p.last?'Ostatnio: '+esc(CR[p.last].n):'Kliknij, by zasiać'}</span></span></button>`;return}
     const c=CR[p.crop],s=stage(p),rd=isReady(p);
     h+=`<button class="plot env-${p.env} ${rd?'ready':''} ${fz&&!rd?'winter':''}" data-act="plot" data-i="${i}" aria-label="${esc(c.n)}${rd?', gotowe do zbioru':''}">
       <span class="ptop"><span class="tag">${c.r?KIND[c.kind]:ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${plotImg(p)}</span>
@@ -738,7 +737,7 @@ const pantryStuck=()=>{ensureShelfPos();return overflowItems().length>0};
 function trash(k){const q=inv(k);if(!q)return;S.inv[k]=0;delete S.rot[k];
   const i=S.shelf.indexOf(k);if(i>=0&&rule(i)!=='pin')S.shelf[i]=null;const j=S.tray.indexOf(k);if(j>=0)S.tray[j]=null;
   if(pSel===k){pSel=null;pMove=false}
-  feed('trash|'+k,itemSvg(k),-q,ITEMS[k].n,'Wyrzucone do kosza',false,'spend');placeItems();dirty=true;save()}
+  feed('trash|'+k,itemSvg(k),-q,ITEMS[k].n,'Wyrzucone do kosza',false,'spend');snd('trash');placeItems();dirty=true;save()}
 let lastFloorWarn=0;
 function spoilFloor(d){const on=placed();let any=false;
   for(const k of Object.keys(S.inv)){if(on.has(k)||S.inv[k]<=0){delete S.rot[k];continue}
@@ -935,6 +934,8 @@ function vKron(){
    <div class="toolbar"><button class="btn pri" data-act="export">Zapisz kopię do pliku</button><button class="btn" data-act="import">Wczytaj kopię z pliku</button></div></div>
    <div class="sec"><div class="sechead"><h2>Ustawienia</h2><span class="more">Aura Fields · wersja ${VERSION}</span></div><div class="toolbar">
    <button class="btn" data-act="sound">${S.sound?'Wycisz dźwięki':'Włącz dźwięki'}</button>
+   <button class="btn" data-act="amb" ${S.sound?'':'disabled'}>${S.amb!==false?'Wyłącz odgłosy otoczenia':'Włącz odgłosy otoczenia'}</button>
+   <label class="volr">Głośność <input type="range" id="volr" min="0" max="100" value="${Math.round((S.vol==null?.7:S.vol)*100)}" ${S.sound?'':'disabled'}></label>
    <button class="btn warn" data-act="reset">${resetArm?'Kliknij jeszcze raz, by skasować postęp':'Zacznij od nowa'}</button></div></div>`;
   return h;
 }
@@ -943,6 +944,35 @@ function vKron(){
 let sheetPlot=-1, sheetMode=null, clearArm=false, resetArm=false, draft=null;
 function openPlot(i){sheetPlot=i;sheetMode='plot';clearArm=false;drawSheet();$('#sheet').hidden=false;$('#panel').scrollTop=0}
 function closeSheet(){$('#sheet').hidden=true;sheetPlot=-1;sheetMode=null}
+// tryb siewu: wybrane nasiona sieje się klikaniem albo przeciąganiem po poletkach
+let sowSel=null, sowPaint=false;
+const sowable=(p,cid)=>!p.crop&&compatible(CR[cid],p.env)&&!frozen(p);
+const sowFree=cid=>S.plots.filter(p=>sowable(p,cid)).length;
+function sowAt(i,el){const p=S.plots[i];if(!sowSel||!p||p.crop)return false;const c=CR[sowSel];
+  if(!compatible(c,p.env)){toast(`${c.n}: wymaga ${ENV[c.env].toLowerCase()}.`);return false}
+  if(frozen(p)){toast('Ziemia jest zamarznięta, siew od wiosny.');return false}
+  if(S.coins<seedCost(c)){toast('Brakuje pieniędzy na nasiona.');return false}
+  if(!plant(i,sowSel,true))return false;snd('sow');
+  if(el){el.classList.remove('sowok');el.classList.add('sown');const im=el.querySelector('.pimg');if(im)im.src=plotImgSrc(p);const pn=el.querySelector('.pn');if(pn)pn.lastChild.textContent=c.n}
+  dirty=true;return true}
+function sowStart(cid){sowSel=cid;closeSheet();S.tab='pola';render()}
+function sowEnd(){sowSel=null;sowPaint=false;render()}
+// karta nasiona; ref = poletko, do którego liczymy czas i plon (w oknie siewu: pierwsze pasujące)
+function seedCard(c,ref,pick){const lk=!unlocked(c),cost=seedCost(c),af=S.coins>=cost,free=sowFree(c.id);
+  const ok=pick?!!ref:compatible(c,ref.env),tW=ref&&outdoor(ref)&&seasonN()!==3?toSeason(3):Infinity;
+  const est=ref?c.g/plotRate({...ref,crop:c.id}):c.g, late=ok&&!lk&&est>tW;
+  const info=lk?`odblokujesz na poziomie ${c.lvl}`:!ok?`wymaga: ${ENV[c.env].toLowerCase()}`:`${fmtT(est)} · ${plotYield(ref,c.id)}× plon${c.r?' · wieloletnia':''}${pick?` · wolne pasujące: ${free}`:''}`;
+  const btns=pick?`<button class="btn sm ${!lk&&free?'pri':''}" data-act="sowsel" data-c="${c.id}" ${lk?'disabled':''} title="Wybierz i klikaj albo przeciągaj po poletkach">${cost} zł</button>${!lk&&!c.r&&free>1?`<button class="btn sm" data-act="plantall" data-c="${c.id}" ${af?'':'disabled'} title="Zasiej na wszystkich wolnych pasujących poletkach">×${free}</button>`:''}`
+    :`<button class="btn sm ${ok&&af&&!lk?'pri':''}" data-act="plant" data-c="${c.id}" ${ok&&af&&!lk?'':'disabled'}>${cost} zł</button>${ok&&!lk&&free>1?`<button class="btn sm" data-act="sowsel" data-c="${c.id}" data-here="1" ${af?'':'disabled'} title="Zasiej tutaj i wybierz kolejne poletka">wiele</button>`:''}`;
+  return `<div class="seed ${lk?'lock':ok?'':'off'} ${sowSel===c.id?'on':''}"><span class="sv">${cropThumb(c.id)}</span><div class="si"><b>${esc(c.n)}</b>
+    <span>${info}</span>${late?'<br><span class="down">nie zdąży przed zimą, przezimuje uśpiona</span>':''}<br><span>→ ${c.flours.length} ${plural(c.flours.length,'mąka','mąki','mąk')} · ${price(c.out)} zł/szt. surowo</span></div>
+    <div class="sb">${btns}</div></div>`}
+function openSeeds(){sheetMode='seeds';sheetPlot=-1;drawSeeds();$('#sheet').hidden=false;$('#panel').scrollTop=0}
+function drawSeeds(){const panel=$('#panel'),sc=panel.scrollTop;
+  let h=`<div class="ph"><div><h2>Siew</h2><p>Wybierz nasiona, a potem klikaj wolne poletka albo przeciągnij po nich myszą. Przycisk ×N sieje od razu na wszystkich wolnych pasujących. W kasie ${fmtZ(S.coins)}.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
+  CROP_GROUPS.forEach(gr=>{h+=`<div class="grp">${gr}</div><div class="seeds">`;
+    CROPS.filter(c=>c.grp===gr).forEach(c=>{const ref=S.plots.find(p=>sowable(p,c.id))||S.plots.find(p=>compatible(c,p.env));h+=seedCard(c,ref,true)});h+='</div>'});
+  panel.innerHTML=h;panel.scrollTop=sc}
 function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('#panel'),sc=panel.scrollTop;let h='';
   const fz=frozen(p);
   if(p.crop){const c=CR[p.crop],rate=plotRate(p);
@@ -953,15 +983,9 @@ function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('
   } else {
     const tW=outdoor(p)&&seasonN()!==3?toSeason(3):Infinity;
     h=`<div class="ph"><div><h2>${fz?'Zima na polu':'Co zasiać?'}</h2><p>Poletko ${i+1} · ${ENV[p.env]} · gleba ${p.soil}/${SOILMAX}${p.spr?' · nawadniane':''} · w kasie ${fmtZ(S.coins)}</p></div><button class="btn sm" data-act="close">Zamknij</button></div>
-    ${fz?`<p class="empty-note">Ziemia jest zamarznięta. Siać pod gołym niebem możesz od wiosny, czyli za <b class="num" data-ts="0"></b>. W tym czasie możesz użyźnić glebę albo przebudować poletko na szklarnię.</p>`:''}<p class="more">Glebę, nawadnianie i przebudowę poletka znajdziesz pod prawym przyciskiem na poletku.</p>`;
+    ${fz?`<p class="empty-note">Ziemia jest zamarznięta. Siać pod gołym niebem możesz od wiosny, czyli za <b class="num" data-ts="0"></b>. W tym czasie możesz użyźnić glebę albo przebudować poletko na szklarnię.</p>`:''}<p class="more">Glebę, nawadnianie i przebudowę poletka znajdziesz pod prawym przyciskiem na poletku. „Wiele” sieje tutaj i pozwala od razu klikać kolejne poletka.</p>`;
     if(!fz) CROP_GROUPS.forEach(g=>{h+=`<div class="grp">${g}</div><div class="seeds">`;
-      CROPS.filter(c=>c.grp===g).forEach(c=>{const ok=compatible(c,p.env),lk=!unlocked(c),cost=seedCost(c),af=S.coins>=cost;
-        const emptyCompat=S.plots.filter(q=>!q.crop&&compatible(c,q.env)&&!frozen(q)).length;
-        const est=c.g/plotRate({...p,crop:c.id}), late=ok&&!lk&&est>tW;
-        h+=`<div class="seed ${lk?'lock':ok?'':'off'}"><span class="sv">${cropThumb(c.id)}</span><div class="si"><b>${esc(c.n)}</b>
-        <span>${lk?`odblokujesz na poziomie ${c.lvl}`:ok?`${fmtT(est)} · ${plotYield(p,c.id)}× plon${c.r?' · wieloletnia':''}`:`wymaga: ${ENV[c.env].toLowerCase()}`}</span>${late?'<br><span class="down">nie zdąży przed zimą, przezimuje uśpiona</span>':''}<br><span>→ ${c.flours.length} ${plural(c.flours.length,'mąka','mąki','mąk')} · ${price(c.out)} zł/szt. surowo</span></div>
-        <div class="sb"><button class="btn sm ${ok&&af&&!lk?'pri':''}" data-act="plant" data-c="${c.id}" ${ok&&af&&!lk?'':'disabled'}>${cost} zł</button>
-        ${ok&&!lk&&!c.r&&emptyCompat>1?`<button class="btn sm" data-act="plantall" data-c="${c.id}" ${af?'':'disabled'} title="Zasiej na wszystkich wolnych pasujących poletkach">×${emptyCompat}</button>`:''}</div></div>`;});
+      CROPS.filter(c=>c.grp===g).forEach(c=>{h+=seedCard(c,p,false)});
       h+=`</div>`;});
   }
   panel.innerHTML=h; panel.scrollTop=sc; progress();}
@@ -1006,13 +1030,16 @@ function importSave(){const inp=document.createElement('input');inp.type='file';
   inp.click();}
 
 // ---------- AKCJE ----------
-function pay(c,src){if(S.coins<c)return false;S.coins-=c;dirty=true;if(src&&c)spendFeed(c,src);return true}
+function pay(c,src){if(S.coins<c)return false;S.coins-=c;dirty=true;if(src&&c){spendFeed(c,src);snd('buy')}return true}
 const ACT={
- tab:d=>{S.tab=d.v;closeSheet();render();window.scrollTo(0,0)},
- plot:d=>{const i=+d.i,p=S.plots[i];if(isReady(p)){harvest(i);render()}else openPlot(i)},
+ tab:d=>{S.tab=d.v;if(d.v!=='pola')sowSel=null;closeSheet();render();window.scrollTo(0,0);if(d.v==='ksiega'||d.v==='kron')snd('page')},
+ plot:(d,b)=>{const i=+d.i,p=S.plots[i];if(isReady(p)){harvest(i);render()}else if(sowSel&&!p.crop){if(sowAt(i,b))sowPaint=true}else openPlot(i)},
+ sowpick:()=>openSeeds(),
+ sowend:()=>sowEnd(),
+ sowsel:d=>{const here=d.here&&sheetPlot>=0?sheetPlot:-1;sowSel=d.c;if(here>=0)sowAt(here);closeSheet();S.tab='pola';render()},
  harvest1:()=>{harvest(sheetPlot);closeSheet();render()},
  plant:d=>{if(plant(sheetPlot,d.c)){closeSheet();render()}},
- plantall:d=>{let n=0;S.plots.forEach((p,i)=>{if(!p.crop&&compatible(CR[d.c],p.env)&&plant(i,d.c,n>0))n++});toast(`Zasiano ${n}× ${CR[d.c].n}`);closeSheet();render()},
+ plantall:d=>{let n=0;S.plots.forEach((p,i)=>{if(!p.crop&&compatible(CR[d.c],p.env)&&plant(i,d.c,true))n++});if(n)snd('sow');toast(n?`Zasiano ${n}× ${CR[d.c].n}`:'Brak wolnych pasujących poletek albo pieniędzy.');sowSel=null;closeSheet();render()},
  replant:()=>{let n=0;S.plots.forEach((p,i)=>{if(!p.crop&&p.last&&plant(i,p.last,n>0))n++});if(n)toast(`Obsiano ${n} ${plural(n,'poletko','poletka','poletek')}`);render()},
  clear:()=>{if(!clearArm){clearArm=true;drawSheet();return}const p=S.plots[sheetPlot];p.crop=null;p.h=0;closeSheet();render()},
  env:d=>{const p=S.plots[sheetPlot];if(p.crop||S.lvl<ENVREQ[d.e]||!pay(ENVCOST[d.e],'Przebudowa: '+ENV[d.e].toLowerCase()))return;p.env=d.e;render()},
@@ -1078,7 +1105,8 @@ const ACT={
    toast(`Młynarz ${draft.k+1}: ${draft.inf?'bez końca':draft.n+'×'} ${ITEMS[draft.f].n}`);closeSheet();render()},
  planstop:d=>{const ml=S.millers[+d.k];if(ml)ml.plan=null;if(sheetMode==='plan')closeSheet();render()},
  millerOff:d=>{const ml=S.millers[+d.k];ml.off=!ml.off;render()},
- sound:()=>{S.sound=!S.sound;render()},
+ sound:()=>{S.sound=!S.sound;sndUpdate();render()},
+ amb:()=>{S.amb=S.amb===false;sndUpdate();render()},
  export:exportSave, import:importSave,
  reset:()=>{if(!resetArm){resetArm=true;render();setTimeout(()=>{resetArm=false;if(S.tab==='kron')render()},4000);return}
    resetArm=false;silent=true;S=repair(newState());if(S._arrange)delete S._arrange;stageCache=[];advance(0.01,true);silent=false;save();render();toast('Nowa gra')},
@@ -1091,7 +1119,8 @@ document.addEventListener('pointerdown',e=>{gest=true;ptrDown=true;
   if(e.target.id==='sheet'){closeSheet();lastMouseAct=performance.now();return}
   const b=e.target.closest('[data-act]'); if(b&&b.dataset.click) return; // półki: zwykły klik, żeby dało się przeciągać
   if(handle(e)) lastMouseAct=performance.now();});
-addEventListener('pointerup',()=>{ptrDown=false}); addEventListener('pointercancel',()=>{ptrDown=false});
+addEventListener('pointerup',()=>{ptrDown=false;if(sowPaint){sowPaint=false;save();render()}});
+document.addEventListener('pointerover',e=>{if(!sowSel||!sowPaint||!(e.buttons&1))return;const b=e.target.closest&&e.target.closest('.plot.sowok');if(b)sowAt(+b.dataset.i,b)}); addEventListener('pointercancel',()=>{ptrDown=false});
 // przeciąganie towarów: między półkami, „Do rozłożenia” i tym, co leży obok
 document.addEventListener('dragstart',e=>{const b=e.target.closest&&e.target.closest('.pslot[data-dk]');if(!b)return;dragKey=b.dataset.dk;dragging=true;hideCtx();
   e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragKey)}catch(_){}});
@@ -1126,7 +1155,9 @@ document.addEventListener('click',e=>{
   if(e.detail!==0&&performance.now()-lastMouseAct<800) return;
   if(e.target.id==='sheet'){closeSheet();return}
   handle(e);});
-document.addEventListener('keydown',e=>{gest=true;if(e.key==='Escape'&&sheetMode)closeSheet()});
+document.addEventListener('input',e=>{if(e.target.id==='volr'){S.vol=+e.target.value/100;sndUpdate();dirty=false}});
+document.addEventListener('change',e=>{if(e.target.id==='volr'){save();snd('coin')}});
+document.addEventListener('keydown',e=>{gest=true;if(e.key==='Escape'){if(sheetMode)closeSheet();else if(sowSel)sowEnd()}});
 
 // ---------- NIEBO ----------
 const sky=$('#sky'), sx=sky.getContext('2d');
@@ -1223,6 +1254,7 @@ function loop(){const wall=Date.now(),now=performance.now();const dt=Math.min(14
   if(now-lastCheck>1000){lastCheck=now;checkProgress()}
   if(wall-lastSave>4000){lastSave=wall;save()}
   if(document.hidden) return; // w tle tylko liczymy, bez rysowania
+  sndUpdate();
   if(dirty&&now-lastRender>150&&!dragging&&!ptrDown) render(); else {progress();hudTick()}}
 // tyknięcia z osobnego wątku: timery workera są w tle dławione dużo słabiej niż strony
 function startTicker(){try{const src='setInterval(()=>postMessage(0),500)';
