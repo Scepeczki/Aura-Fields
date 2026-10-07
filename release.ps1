@@ -6,6 +6,8 @@
 #   .\release.ps1 -Notes "Mniejsze okienka linii; Zwijanie linii strzałką"
 #   .\release.ps1 -Bump minor -Notes "Nowy targ" -Push
 #   .\release.ps1 -Publish            # publikuje ostatnie zbudowane wydanie (np. zrobione bez -Push)
+#   .\release.ps1 -CI -Notes "..." -Push   # bez budowania tutaj: instalator buduje i publikuje GitHub
+#                                           (workflow „Wydanie aplikacji”, klucz w sekretach repozytorium)
 #
 # -Notes: punkty zmian oddzielone średnikiem.
 # Klucz podpisu aktualizacji: ~/.tauri/aura-fields.key (albo zmienna TAURI_SIGNING_PRIVATE_KEY).
@@ -16,6 +18,7 @@ param(
   [Parameter(ParameterSetName = 'release', Mandatory = $true)][string]$Notes,
   [Parameter(ParameterSetName = 'release')][switch]$Push,
   [Parameter(ParameterSetName = 'release')][string]$Trailer = '',
+  [Parameter(ParameterSetName = 'release')][switch]$CI,
   [Parameter(ParameterSetName = 'publish', Mandatory = $true)][switch]$Publish
 )
 $ErrorActionPreference = 'Stop'
@@ -28,6 +31,30 @@ function Write-Text($p, $t) { [IO.File]::WriteAllText((Join-Path $PSScriptRoot $
 function Invoke-Native([scriptblock]$cmd, [string]$what) {
   & $cmd
   if ($LASTEXITCODE -ne 0) { throw "$what (kod $LASTEXITCODE)" }
+}
+function Set-Versions($ver) {
+  Write-Text 'web/game.js' ((Read-Text 'web/game.js') -replace "const VERSION='[\d.]+'", "const VERSION='$ver'")
+  Write-Text 'web/sw.js' ((Read-Text 'web/sw.js') -replace "const CACHE='aura-fields-[\d.]+'", "const CACHE='aura-fields-$ver'")
+  Write-Text 'package.json' ((Read-Text 'package.json') -replace '(?m)^(  "version": ")[^"]+', "`${1}$ver")
+  Write-Text 'package-lock.json' ((Read-Text 'package-lock.json') -replace '(?s)^(\{\s*"name": "aura-fields",\s*"version": ")[^"]+(.*?"packages": \{\s*"": \{\s*"name": "aura-fields",\s*"version": ")[^"]+', "`${1}$ver`${2}$ver")
+  Write-Text 'src-tauri/Cargo.toml' ((Read-Text 'src-tauri/Cargo.toml') -replace '(?m)^version = "[^"]+"', "version = `"$ver`"")
+  Write-Text 'src-tauri/Cargo.lock' ((Read-Text 'src-tauri/Cargo.lock') -replace '(name = "aura-fields"\r?\nversion = ")[^"]+', "`${1}$ver")
+}
+function Add-Changelog($ver, $date, $points) {
+  $log = Read-Text 'CHANGELOG.md'
+  $entry = "## $ver — $date`n`n$points`n`n"
+  $i = $log.IndexOf('## ')
+  $log = if ($i -ge 0) { $log.Substring(0, $i) + $entry + $log.Substring($i) } else { $log + "`n" + $entry }
+  Write-Text 'CHANGELOG.md' $log
+}
+function Push-Tag($ver) {
+  # token HTTPS bez uprawnienia „workflow” nie wyśle zmian w .github/workflows; wtedy przez SSH
+  git push origin main "v$ver"
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Push przez origin odrzucony, próbuję przez SSH...' -ForegroundColor Yellow
+    Invoke-Native { git push "git@github.com:$Repo.git" main "v$ver" } 'git push'
+    git fetch -q origin
+  }
 }
 function Current-Version {
   if ((Read-Text 'web/game.js') -notmatch "const VERSION='(\d+\.\d+\.\d+)'") { throw 'Nie znalazłem VERSION w web/game.js' }
@@ -54,12 +81,7 @@ function Publish-Release($ver) {
   if (-not (Test-Path "$dir/$Setup")) { throw "Brak $dir/$Setup. Najpierw zbuduj wydanie." }
   if (-not (git tag --list "v$ver")) { throw "Brak tagu v$ver" }
   # token HTTPS z gh bez uprawnienia „workflow” nie wyśle zmian w .github/workflows; wtedy przez SSH
-  git push origin main "v$ver"
-  if ($LASTEXITCODE -ne 0) {
-    Write-Host 'Push przez origin odrzucony, próbuję przez SSH...' -ForegroundColor Yellow
-    Invoke-Native { git push "git@github.com:$Repo.git" main "v$ver" } 'git push'
-    git fetch -q origin
-  }
+  Push-Tag $ver
   $assets = @("$dir/$Setup", "$dir/$Setup.sig", "$dir/latest.json", "$dir/aura-fields-v$ver.zip")
   Invoke-Native { gh release create "v$ver" @assets -R $Repo --title "Aura Fields v$ver" --notes-file "$dir/notes.md" } 'gh release create'
   Write-Host "Opublikowano v${ver}: https://github.com/$Repo/releases/tag/v$ver" -ForegroundColor Green
@@ -75,6 +97,23 @@ switch ($Bump) { 'major' { $maj++; $min = 0; $pat = 0 } 'minor' { $min++; $pat =
 $ver = "$maj.$min.$pat"
 if (git tag --list "v$ver") { throw "Tag v$ver już istnieje" }
 
+if ($CI) {
+  # wydanie budowane na GitHubie: tutaj tylko wersja, notatki, commit, tag i (z -Push) wysyłka
+  $date = Get-Date -Format 'yyyy-MM-dd'
+  $points = (($Notes -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) | ForEach-Object { "- $_" }) -join "`n"
+  Set-Versions $ver
+  Add-Changelog $ver $date $points
+  Invoke-Native { git add -A } 'git add'
+  $msg = "Wydanie v$ver`n`n$points"
+  if ($Trailer) { $msg += "`n`n$Trailer" }
+  Invoke-Native { git commit -q -m $msg } 'git commit'
+  Invoke-Native { git tag -a "v$ver" -m "Aura Fields v$ver" } 'git tag'
+  Write-Host "Utworzono wydanie v$ver (commit i tag)." -ForegroundColor Green
+  if ($Push) { Push-Tag $ver; Write-Host "Wysłano. GitHub buduje instalator: https://github.com/$Repo/actions" -ForegroundColor Green }
+  else { Write-Host "Aby wysłać: git push origin main v$ver" }
+  return
+}
+
 $key = $env:TAURI_SIGNING_PRIVATE_KEY
 if (-not $key) { $key = Join-Path $HOME '.tauri/aura-fields.key' }
 if (-not ($env:TAURI_SIGNING_PRIVATE_KEY) -and -not (Test-Path $key)) { throw "Brak klucza podpisu aktualizacji: $key" }
@@ -86,18 +125,8 @@ $points = ($items | ForEach-Object { "- $_" }) -join "`n"
 # --- wersja wszędzie tam, gdzie jest zapisana ---
 $bumped = 'web/game.js', 'web/sw.js', 'package.json', 'package-lock.json', 'src-tauri/Cargo.toml', 'src-tauri/Cargo.lock', 'CHANGELOG.md'
 try {
-  Write-Text 'web/game.js' ((Read-Text 'web/game.js') -replace "const VERSION='[\d.]+'", "const VERSION='$ver'")
-  Write-Text 'web/sw.js' ((Read-Text 'web/sw.js') -replace "const CACHE='aura-fields-[\d.]+'", "const CACHE='aura-fields-$ver'")
-  Write-Text 'package.json' ((Read-Text 'package.json') -replace '(?m)^(  "version": ")[^"]+', "`${1}$ver")
-  Write-Text 'package-lock.json' ((Read-Text 'package-lock.json') -replace '(?s)^(\{\s*"name": "aura-fields",\s*"version": ")[^"]+(.*?"packages": \{\s*"": \{\s*"name": "aura-fields",\s*"version": ")[^"]+', "`${1}$ver`${2}$ver")
-  Write-Text 'src-tauri/Cargo.toml' ((Read-Text 'src-tauri/Cargo.toml') -replace '(?m)^version = "[^"]+"', "version = `"$ver`"")
-  Write-Text 'src-tauri/Cargo.lock' ((Read-Text 'src-tauri/Cargo.lock') -replace '(name = "aura-fields"\r?\nversion = ")[^"]+', "`${1}$ver")
-
-  $log = Read-Text 'CHANGELOG.md'
-  $entry = "## $ver — $date`n`n$points`n`n"
-  $i = $log.IndexOf('## ')
-  $log = if ($i -ge 0) { $log.Substring(0, $i) + $entry + $log.Substring($i) } else { $log + "`n" + $entry }
-  Write-Text 'CHANGELOG.md' $log
+  Set-Versions $ver
+  Add-Changelog $ver $date $points
 
   # --- aplikacja i instalator ---
   Write-Host "Budowanie Aura Fields $ver..."

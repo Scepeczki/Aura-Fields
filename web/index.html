@@ -1069,6 +1069,28 @@ h3{text-shadow:0 1px 8px rgba(0,0,0,.5)}
 @media (max-width:860px){.status{margin-left:0;width:100%;justify-content:flex-end;padding-bottom:8px}.barin{gap:0 10px}}
 @media (max-width:560px){.segs .seg .st{display:block}.segs .seg .st>span{display:none}.seg{padding:7px 4px;gap:3px;flex-direction:column;text-align:center}.seg b{font-size:.82rem!important}.seg .wxi{width:22px;height:22px}.seg b{font-size:.9rem}.fcd{padding:8px 9px;gap:7px}.fcd .wxi{width:22px;height:22px}.sechead h2{font-size:1.7rem}.h2ico{width:24px;height:24px}.status .chipstat.lvl{min-width:96px}}
 
+
+/* ---- grafiki zagonów (web/plots) ---- */
+.plot .art{background:#2a1d12}
+.plot .art::before{content:none}
+.plot .art::after{background:linear-gradient(180deg,rgba(14,10,7,.35),rgba(14,10,7,0) 30%,rgba(14,10,7,0) 75%,rgba(14,10,7,.3))}
+.plot .art .pimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform .4s ease}
+.plot:hover .art .pimg{transform:scale(1.04)}
+.plot.winter:not(.empty) .art .pimg{filter:saturate(.45) brightness(.85) hue-rotate(-8deg)}
+.plot.winter:not(.empty) .art::after{background:linear-gradient(180deg,rgba(220,236,246,.28),rgba(220,236,246,.08))}
+.plot .art .flake{position:relative;z-index:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+.seed .sv,.cur .sv{position:relative;overflow:hidden;border-radius:9px;border:1px solid var(--gl-bd);background:#2a1d12}
+.seed .sv{width:52px;height:52px}.cur .sv{width:96px;height:96px}
+.sv .pimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.seed.lock .sv .pimg,.seed.off .sv .pimg{filter:grayscale(.7) brightness(.7)}
+/* ---- stanowiska maszyn w liniach ---- */
+.lsta{display:flex;gap:3px;justify-content:center;margin-top:1px}
+.lsta i{display:block;width:22px;height:6px;border-radius:3px;background:rgba(255,236,200,.1);border:1px solid rgba(255,236,200,.18);overflow:hidden}
+.lsta i.other{background:rgba(255,236,200,.28)}
+.lsta i.on{border-color:rgba(147,203,95,.7);background:rgba(147,203,95,.18)}
+.lsta i.on b{display:block;height:100%;background:var(--sprout)}
+.lstep .ringwrap{position:relative}
+.lmx{position:absolute;right:-8px;top:-6px;font-style:normal;font-family:var(--f-mono);font-size:.62rem;font-weight:700;padding:0 4px;border-radius:6px;background:var(--sprout);color:#1a2410;line-height:14px}
 </style>
 </head>
 <body>

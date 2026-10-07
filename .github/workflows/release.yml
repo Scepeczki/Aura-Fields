@@ -1,0 +1,94 @@
+# Wydanie aplikacji na GitHubie: wypchnięty tag vX.Y.Z (np. przez .\release.ps1 -CI) buduje tu instalator,
+# podpisuje aktualizację kluczem z sekretu TAURI_SIGNING_PRIVATE_KEY i publikuje wydanie z latest.json,
+# z którego zainstalowane gry biorą aktualizacje. Gdy wydanie dla tagu już istnieje
+# (zrobione lokalnie przez .\release.ps1 -Push), workflow niczego nie robi.
+#
+# Jednorazowo: Settings → Secrets and variables → Actions → New repository secret
+#   TAURI_SIGNING_PRIVATE_KEY           zawartość pliku ~/.tauri/aura-fields.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  hasło klucza (pomiń, jeśli klucz nie ma hasła)
+name: Wydanie aplikacji
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.exists.outputs.skip }}
+    steps:
+      - id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Wydanie $GITHUB_REF_NAME już istnieje, pomijam budowanie."; echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+  build:
+    needs: check
+    if: needs.check.outputs.skip != '1'
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Klucz podpisu
+        shell: bash
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::Brak sekretu TAURI_SIGNING_PRIVATE_KEY (Settings → Secrets and variables → Actions). Bez niego aktualizacje nie będą podpisane."; exit 1
+          fi
+      - name: Wersja z tagu zgadza się z package.json
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$v" -ne $env:TAG) { throw "Tag $env:TAG, a package.json ma wersję $v" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Budowanie aplikacji i instalatora
+        run: npx tauri build
+      - name: Pliki wydania
+        shell: pwsh
+        run: |
+          $ver = $env:TAG.TrimStart('v'); $repo = $env:GITHUB_REPOSITORY; $setup = 'Aura-Fields-Setup.exe'
+          $utf8 = New-Object System.Text.UTF8Encoding $false
+          $built = Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter "*_${ver}_x64-setup.exe" | Select-Object -First 1
+          if (-not $built -or -not (Test-Path "$($built.FullName).sig")) { throw "Brak instalatora $ver z podpisem" }
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item $built.FullName "dist/$setup"
+          Copy-Item "$($built.FullName).sig" "dist/$setup.sig"
+          Compress-Archive -Path 'web/*' -DestinationPath "dist/aura-fields-$env:TAG.zip"
+          # notatki: sekcja tej wersji z CHANGELOG.md
+          $log = [IO.File]::ReadAllText("$PWD/CHANGELOG.md", $utf8)
+          $m = [regex]::Match($log, "(?ms)^## $([regex]::Escape($ver)) [^\n]*\n(.*?)(?=^## |\z)")
+          $points = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "Aura Fields $ver" }
+          $url = "https://github.com/$repo/releases/download/$env:TAG/$setup"
+          [IO.File]::WriteAllText("$PWD/dist/notes.md", "$points`n`n**Pobierz:** [$setup]($url) (Windows 10/11)`n", $utf8)
+          $sig = (Get-Content "dist/$setup.sig" -Raw).Trim()
+          $latest = [ordered]@{
+            version   = $ver
+            notes     = $points
+            pub_date  = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = [ordered]@{
+              'windows-x86_64'      = [ordered]@{ signature = $sig; url = $url }
+              'windows-x86_64-nsis' = [ordered]@{ signature = $sig; url = $url }
+            }
+          }
+          [IO.File]::WriteAllText("$PWD/dist/latest.json", ($latest | ConvertTo-Json -Depth 5), $utf8)
+      - name: Publikacja
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Wydanie $TAG już istnieje."; exit 0; fi
+          gh release create "$TAG" dist/Aura-Fields-Setup.exe dist/Aura-Fields-Setup.exe.sig dist/latest.json "dist/aura-fields-$TAG.zip" \
+            --title "Aura Fields $TAG" --notes-file dist/notes.md

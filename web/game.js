@@ -129,6 +129,13 @@ const seedCost=c=>Math.max(1,Math.round(c.p*(1-0.06*res('bulk'))));
 const soilCost=p=>Math.round(150*Math.pow(2.1,p.soil));
 const plotCost=()=>Math.round(150*Math.pow(1.38,S.plots.length-6));
 const isReady=p=>p.crop&&p.prog>=p.need;
+const ENVIMG={pole:'pole',mokre:'mokre',szklarnia:'szklarnia'};
+function plotImgSrc(p){
+  if(!p.crop) return 'plots/'+ENVIMG[p.env]+(seasonN()===3?'-zima':'')+'.webp';
+  const c=CR[p.crop],st=isReady(p)?3:(c.r&&p.h>0)?4:p.prog/p.need<0.5?1:2;
+  return 'plots/'+c.id+'-'+st+'.webp';}
+const plotImg=p=>`<img class="pimg" src="${plotImgSrc(p)}" alt="" decoding="async" draggable="false">`;
+const cropThumb=(id,st)=>`<img class="pimg" src="plots/${id}-${st||3}.webp" alt="" loading="lazy" decoding="async" draggable="false">`;
 function stage(p){if(isReady(p))return 3;if(p.h>0)return 2;const f=p.prog/p.need;return f<.15?0:f<.5?1:2}
 
 function plant(i,cid,quiet){const p=S.plots[i],c=CR[cid]; if(!p||!c||p.crop||!compatible(c,p.env)||!unlocked(c)||frozen(p)) return false;
@@ -614,10 +621,10 @@ function vPola(){
    <button class="btn" data-act="replant" ${canRe?'':'disabled'}>${lico(ICO.bag)}Obsiej wolne tym, co rosło</button>
    <span class="sp">${lico(ICO.sprout)}${empty} ${plural(empty,'wolne','wolne','wolnych')} z ${S.plots.length}${working('parobek')?' · parobek zbiera':''}${working('siewca')?' · siewca sieje':''}</span></div><div class="plots">`;
   S.plots.forEach((p,i)=>{const fz=frozen(p);
-    if(!p.crop){h+=`<button class="plot empty env-${p.env} ${fz?'winter':''}" data-act="plot" data-i="${i}"><span class="ptop"><span class="tag">${ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${fz?'<svg class="flake" viewBox="0 0 24 24" aria-hidden="true">'+WXI.mroz+'</svg>':'<span class="plus">+</span>'}</span><span class="pfoot"><span class="pn">${lico(ICO.sprout)}${fz?'Zima':'Wolne'}</span><span class="ps">${fz?'Siew dopiero wiosną':p.last?'Ostatnio: '+esc(CR[p.last].n):'Kliknij, by zasiać'}</span></span></button>`;return}
+    if(!p.crop){h+=`<button class="plot empty env-${p.env} ${fz?'winter':''}" data-act="plot" data-i="${i}"><span class="ptop"><span class="tag">${ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${plotImg(p)}${fz?'<svg class="flake" viewBox="0 0 24 24" aria-hidden="true">'+WXI.mroz+'</svg>':'<span class="plus">+</span>'}</span><span class="pfoot"><span class="pn">${lico(ICO.sprout)}${fz?'Zima':'Wolne'}</span><span class="ps">${fz?'Siew dopiero wiosną':p.last?'Ostatnio: '+esc(CR[p.last].n):'Kliknij, by zasiać'}</span></span></button>`;return}
     const c=CR[p.crop],s=stage(p),rd=isReady(p);
     h+=`<button class="plot env-${p.env} ${rd?'ready':''} ${fz&&!rd?'winter':''}" data-act="plot" data-i="${i}" aria-label="${esc(c.n)}${rd?', gotowe do zbioru':''}">
-      <span class="ptop"><span class="tag">${c.r?KIND[c.kind]:ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${fz&&!rd?art(c.kind,s,c.col).replace('</svg>',SNOWCAP+'</svg>'):art(c.kind,s,c.col)}</span>
+      <span class="ptop"><span class="tag">${c.r?KIND[c.kind]:ENV[p.env]}</span>${soilHtml(p)}</span><span class="art">${plotImg(p)}</span>
       <span class="pfoot"><span class="pn">${lico(ICO.sprout)}${esc(c.n)}</span>
       <span class="ps">${rd?`<span>Zbierz ${plotYield(p)}×</span>`:`<span>${fz?'uśpione':p.h?'owocuje':'rośnie'}</span><span class="num" data-pl="${i}"></span>`}</span>
       <span class="pbar"><i data-pp="${i}" style="width:${Math.min(100,p.prog/p.need*100)}%"></i></span></span></button>`;});
@@ -663,11 +670,13 @@ function vPrz(){syncLines();
    ${millersPanel()}`;
   if(!S.lines.length) h+=`<p class="empty-note">Nic nie czeka na przerobienie. Zbierz plony z poletek, a tu pojawią się ich linie do mąki. Możesz też dodać linię sam przyciskiem „+ Dodaj linię”.</p>`;
   const node=(k,last)=>`<span class="lnode ${last?'flour':''} ${inv(k)?'':'zero'}">${slot(k,{count:inv(k),cls:last?'gain':inv(k)?'ok':''})}<small>${esc(ITEMS[k].n)}</small></span>`;
-  const step=r=>{const m=S.m[r.m],own=m.owned,n=canDo(r),q=inQueue(r),k=m.run.findIndex(j=>j.r===r.id),extra=Object.keys(r.in).filter((x,i)=>i>0);
+  const step=r=>{const m=S.m[r.m],own=m.owned,n=canDo(r),q=inQueue(r),runs=m.run.map((j,i)=>j.r===r.id?i:-1).filter(i=>i>=0),k=runs.length?runs[0]:-1,sl=own?mSlots(r.m):0,extra=Object.keys(r.in).filter((x,i)=>i>0);
+    // stanowiska maszyny: zielone = ten etap (z postępem), szare = inna partia, puste = wolne
+    const sta=sl>1?`<span class="lsta" title="Stanowiska maszyny: ${m.run.length} z ${sl} zajęte">${Array.from({length:sl},(_,i)=>{const j=m.run[i];return j?(j.r===r.id?`<i class="on"><b data-rjw="${r.m}:${i}" style="width:${jobPct(r.m,i)*100}%"></b></i>`:'<i class="other"></i>'):'<i></i>'}).join('')}</span>`:'';
     return `<span class="lstep ${own?'':'miss'} ${k>=0?'busy':''}">
-      <span class="lm" title="${esc(M[r.m].n)}: ${esc(r.verb)}">${k>=0?`<span class="ringwrap sm">${ring(jobPct(r.m,k),`data-rj="${r.m}:${k}"`)}${mart(r.m)}</span>`:mart(r.m)}</span>
+      <span class="lm" title="${esc(M[r.m].n)}: ${esc(r.verb)}">${k>=0?`<span class="ringwrap sm">${ring(jobPct(r.m,k),`data-rj="${r.m}:${k}"`)}${mart(r.m)}${runs.length>1?`<em class="lmx">×${runs.length}</em>`:''}</span>`:mart(r.m)}</span>${sta}
       <small>${esc(M[r.m].n)}${extra.map(x=>` + ${r.in[x]}× ${esc(ITEMS[x].n)}`).join('')}</small>
-      ${k>=0||q?`<small class="lq">${k>=0?`<b class="num" data-mj="${r.m}:${k}">${fmtT((r.t-m.run[k].prog)/mSpeed(r.m))}</b>`:''}${q?` · ${q} w kolejce <button class="lx" data-act="lunq" data-r="${r.id}" title="Wyjmij z kolejki i zwróć surowce">✕</button>`:''}</small>`:''}
+      ${k>=0||q?`<small class="lq">${runs.map(i=>`<b class="num" data-mj="${r.m}:${i}">${fmtT((r.t-m.run[i].prog)/mSpeed(r.m))}</b>`).join(' · ')}${q?` · ${q} w kolejce <button class="lx" data-act="lunq" data-r="${r.id}" title="Wyjmij z kolejki i zwróć surowce">✕</button>`:''}</small>`:''}
       ${own?`<span class="lbtn"><button class="btn sm" data-act="enq" data-r="${r.id}" data-n="1" ${n?'':'disabled'}>+1</button><button class="btn sm" data-act="enq" data-r="${r.id}" data-n="5" ${n?'':'disabled'}>+5</button><button class="btn sm" data-act="enq" data-r="${r.id}" data-n="999" ${n?'':'disabled'}>max${n>1?' '+n:''}</button></span>`:`<span class="req">brak maszyny</span>`}</span>`};
   h+=`<div class="lines">${S.lines.map((f,ix)=>{const {steps,crop}=lineParts(f);
     const fold=S.lineFold.includes(f),busy=steps.some(s=>S.m[s.r.m].run.some(j=>j.r===s.r.id)),last=steps.length?steps[steps.length-1].out:f;
@@ -874,7 +883,7 @@ function vUlep(){
     <div class="ft">${l>=mx?'<span class="owned">Ukończone</span>':S.lvl<rq?`<span class="req">Następny stopień od poziomu ${rq}</span><span class="num">${fmtZ(c)}</span>`:`<span class="num">${fmtZ(c)}</span><button class="btn sm pri" data-act="research" data-r="${id}" ${S.coins<c?'disabled':''}>Wdroż stopień ${l+1}</button>`}</div></div>`});
   h+=`</div></div><div class="sec"><div class="sechead"><h2>Maszyny</h2><p>Każda maszyna ma ${MLVMAX} poziomów: +20% tempa na poziom, drugie stanowisko od poziomu 4, trzecie od poziomu 8.</p></div><div class="shop">`;
   MACH.forEach(([id])=>{const mm=M[id],m=S.m[id],lk=S.lvl<mm.lv;
-    h+=`<div class="item ${m.owned?'has':''}"><div class="ih">${mart(id)}<div><h3>${mm.n}</h3>${m.owned?lvdots(m.lvl,MLVMAX):''}</div></div><p>${mm.d}</p>
+    h+=`<div class="item ${m.owned?'has':''}"><div class="ih">${mart(id)}<div><h3>${mm.n}</h3>${m.owned?lvdots(m.lvl,MLVMAX)+`<small class="more">${mSlots(id)} ${plural(mSlots(id),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(id).toFixed(2)}</small>`:''}</div></div><p>${mm.d}</p>
     <div class="ft">${!m.owned?(lk?`<span class="req">Od poziomu ${mm.lv}</span><span class="num">${fmtZ(mm.p)}</span>`:`<span class="num">${fmtZ(mm.p)}</span><button class="btn sm" data-act="buym" data-m="${id}" ${S.coins<mm.p?'disabled':''}>Kup</button>`):m.lvl<MLVMAX?`<span class="num">${fmtZ(mUpCost(id))}</span><button class="btn sm" data-act="upm" data-m="${id}" ${S.coins<mUpCost(id)?'disabled':''}>Ulepsz do poz. ${m.lvl+1}</button>`:'<span class="owned">Poziom maksymalny</span>'}</div></div>`});
   const pc=plotCost();
   h+=`</div></div><div class="sec"><div class="sechead"><h2>Ziemia</h2></div><div class="shop">
@@ -923,7 +932,7 @@ function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('
   const fz=frozen(p);
   if(p.crop){const c=CR[p.crop],rate=plotRate(p);
     h=`<div class="ph"><div><h2>${esc(c.n)}</h2><p><span class="lat">${esc(c.lat)}</span> · ${ENV[p.env]} · poletko ${i+1}</p></div><button class="btn sm" data-act="close">Zamknij</button></div>
-    <div class="cur"><span class="sv">${art(c.kind,stage(p),c.col)}</span><div class="si"><b>${isReady(p)?'Gotowe do zbioru':(fz?'Uśpione na zimę':p.h?'Odrasta po zbiorze':'Rośnie')+`: zostało <span class="num" data-pl="${i}"></span>`}</b><br><span class="more">Plon: ${plotYield(p)}× ${esc(ITEMS[c.out].n)} · tempo ×${rate.toFixed(2)}${c.r?` · owocuje co ${fmtT(c.r)}, zebrano ${p.h}×`:''}</span><span class="pbar"><i data-pp="${i}" style="width:${Math.min(100,p.prog/p.need*100)}%"></i></span></div></div>
+    <div class="cur"><span class="sv">${plotImg(p)}</span><div class="si"><b>${isReady(p)?'Gotowe do zbioru':(fz?'Uśpione na zimę':p.h?'Odrasta po zbiorze':'Rośnie')+`: zostało <span class="num" data-pl="${i}"></span>`}</b><br><span class="more">Plon: ${plotYield(p)}× ${esc(ITEMS[c.out].n)} · tempo ×${rate.toFixed(2)}${c.r?` · owocuje co ${fmtT(c.r)}, zebrano ${p.h}×`:''}</span><span class="pbar"><i data-pp="${i}" style="width:${Math.min(100,p.prog/p.need*100)}%"></i></span></div></div>
     <p class="more" style="margin-top:12px">Prowadzi do: ${c.flours.map(f=>esc(ITEMS[f].n)).join(', ')}</p>
     <div class="envs">${isReady(p)?`<button class="btn pri" data-act="harvest1">Zbierz</button>`:''}<button class="btn warn" data-act="clear">${clearArm?'Na pewno? Kliknij ponownie':'Usuń roślinę z poletka'}</button></div>`;
   } else {
@@ -934,7 +943,7 @@ function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('
       CROPS.filter(c=>c.grp===g).forEach(c=>{const ok=compatible(c,p.env),lk=!unlocked(c),cost=seedCost(c),af=S.coins>=cost;
         const emptyCompat=S.plots.filter(q=>!q.crop&&compatible(c,q.env)&&!frozen(q)).length;
         const est=c.g/plotRate({...p,crop:c.id}), late=ok&&!lk&&est>tW;
-        h+=`<div class="seed ${lk?'lock':ok?'':'off'}"><span class="sv">${art(c.kind,3,c.col)}</span><div class="si"><b>${esc(c.n)}</b>
+        h+=`<div class="seed ${lk?'lock':ok?'':'off'}"><span class="sv">${cropThumb(c.id,3)}</span><div class="si"><b>${esc(c.n)}</b>
         <span>${lk?`odblokujesz na poziomie ${c.lvl}`:ok?`${fmtT(est)} · ${plotYield(p,c.id)}× plon${c.r?' · wieloletnia':''}`:`wymaga: ${ENV[c.env].toLowerCase()}`}</span>${late?'<br><span class="down">nie zdąży przed zimą, przezimuje uśpiona</span>':''}<br><span>→ ${c.flours.length} ${plural(c.flours.length,'mąka','mąki','mąk')} · ${price(c.out)} zł/szt. surowo</span></div>
         <div class="sb"><button class="btn sm ${ok&&af&&!lk?'pri':''}" data-act="plant" data-c="${c.id}" ${ok&&af&&!lk?'':'disabled'}>${cost} zł</button>
         ${ok&&!lk&&!c.r&&emptyCompat>1?`<button class="btn sm" data-act="plantall" data-c="${c.id}" ${af?'':'disabled'} title="Zasiej na wszystkich wolnych pasujących poletkach">×${emptyCompat}</button>`:''}</div></div>`;});
