@@ -402,13 +402,13 @@ function step(d,quiet){const pd=dayN(); S.t+=d; if(dayN()!==pd||S.day<0) newDay(
   for(const id in S.m) if(S.m[id].owned) advMachine(id,d);
   orderTick(); shopStep(d);
   if(working('parobek')) S.plots.forEach((p,i)=>{if(isReady(p)) harvest(i,true)});
-  placeItems(); spoilFloor(d);
+  placeItems();
   runPlanner();
   if(working('kupiec')){for(let i=0;i<S.orders.length;i++) if(canFull(S.orders[i])&&deliver(i,'full',true)) i--;
     S.shop.forEach(x=>{if(x&&x.q<(x.t||0)&&inv(x.k)>0){const n=Math.min(inv(x.k),x.t-x.q);add(x.k,-n);x.q+=n;dirty=true}});
     Object.keys(S.inv).forEach(k=>{if(ITEMS[k].kind==='by'&&inv(k)>=5) skup(k,inv(k))});}
 }
-function advance(total,quiet){let left=total; while(left>1e-9){const d=Math.min(2,left); left-=d; step(d,quiet);}}
+function advance(total,quiet){let left=total; placeItems(); while(left>1e-9){if(pantryStuck())return; const d=Math.min(2,left); left-=d; step(d,quiet);}}
 
 // ---------- DŹWIĘK ----------
 let AC=null, gest=false;
@@ -498,7 +498,7 @@ const WXFILE={slonce:'pogodnie',pochm:'pochmurno',deszcz:'deszcz',upal:'upal',sn
 const wxIcon=w=>`<svg class="wxi" viewBox="0 0 24 24" aria-hidden="true"><image href="ui/pogoda-${WXFILE[w]}.webp" width="24" height="24"/></svg>`;
 const TABICO={ // ikony zakładek, rysowane kolorem tekstu
  pola:'<path d="M12 21V11M12 11c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/><path d="M4 21h16"/>',
- prz:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
+ prz:'<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.8"/><path d="M12 5v14M5 12h14M7.1 7.1l9.8 9.8M16.9 7.1l-9.8 9.8"/><path d="M18.5 14.7L21.2 15.8M14.7 18.5L15.8 21.2M9.3 18.5L8.2 21.2M5.5 14.7L2.8 15.8M5.5 9.3L2.8 8.2M9.3 5.5L8.2 2.8M14.7 5.5L15.8 2.8M18.5 9.3L21.2 8.2" stroke-width="2.4"/>',
  spiz:'<path d="M8 4h8l-1 3c3 2 4 5 4 8 0 4-3 6-7 6s-7-2-7-6c0-3 1-6 4-8z"/><path d="M9 7h6"/>',
  targ:'<path d="M3 9l2-5h14l2 5M3 9h18M3 9c0 2 4 2 4 0 0 2 5 2 5 0 0 2 5 2 5 0 0 2 4 2 4 0M5 11v9h14v-9"/><path d="M10 20v-5h4v5"/>',
  ulep:'<path d="M12 19V5M6 11l6-6 6 6"/><path d="M5 21h14"/>',
@@ -578,6 +578,8 @@ function render(){
   const sy=window.scrollY;
   // zachowaj fokus klawiatury mimo przebudowy widoku
   const ae=document.activeElement, fk=ae&&ae.dataset&&ae.dataset.act&&$('#view').contains(ae)?'[data-act]'+Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(v)}"]`).join(''):null;
+  document.body.dataset.tab=S.tab;
+  {const st=pantryStuck(),pb=$('#pausebar');if(pb){pb.hidden=!st;if(st)pb.innerHTML=`<b>Gra wstrzymana</b><span>W spiżarni zabrakło miejsca na nowe towary. Rozłóż je na półki albo wyrzuć do kosza.</span>${S.tab!=='spiz'?'<button class="btn sm pri" data-act="gospiz">Do spiżarni</button>':''}`}}
   $('#view').innerHTML=({pola:vPola,prz:vPrz,spiz:vSpiz,targ:vTarg,ulep:vUlep,ksiega:vKsiega,kron:vKron})[S.tab]();
   {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
   if(fk){const el=$('#view').querySelector(fk);if(el)el.focus({preventScroll:true})}
@@ -702,8 +704,9 @@ function drawLineAdd(){syncLines();
 const ioPlain=obj=>Object.entries(obj).map(([k,q])=>`${q}× ${ITEMS[k].n}`).join(' + ');
 
 // ---------- SPIŻARNIA: PÓŁKI, MIEJSCA DO ROZŁOŻENIA I REGUŁY MIEJSC ----------
-// Każdy rodzaj towaru zajmuje jedno miejsce. Nowe towary trafiają na pierwsze wolne miejsce na półkach,
-// potem do „Do rozłożenia” (TRAY_N miejsc). Co się nie zmieści, leży obok i powoli się psuje.
+// Każdy rodzaj towaru zajmuje jedno miejsce. Nowe towary trafiają do „Do rozłożenia” (TRAY_N miejsc), a gracz
+// rozkłada je na półki. Gdy coś się tam nie zmieści, gra stoi, aż gracz zrobi miejsce albo wyrzuci towar do kosza.
+// Towar, którego ubyło do zera, znika z miejsca (chyba że miejsce jest przypięte do niego).
 const SHELF_W=8, SHELF_START=4, SHELF_MAX=30, ROT_EVERY=120, GRID_W=16, TRAY_N=8;
 const shelfCost=()=>Math.round(250*Math.pow(1.3,S.shelves-SHELF_START));
 const ITEM_ORDER={};(()=>{let n=0;FLOURS.forEach(f=>{chainOf(f).forEach(s=>{const id=s.crop?s.crop.out:s.out;if(ITEM_ORDER[id]==null)ITEM_ORDER[id]=n++});if(ITEM_ORDER[f]==null)ITEM_ORDER[f]=n++});Object.keys(ITEMS).forEach(k=>{if(ITEM_ORDER[k]==null)ITEM_ORDER[k]=n++})})();
@@ -727,10 +730,15 @@ const placed=()=>new Set([...S.shelf,...S.tray]);
 function overflowItems(){const on=placed();return Object.keys(S.inv).filter(k=>inv(k)>0&&!on.has(k)).sort(byOrder)}
 function placeItems(){ensureShelfPos();
   S.tray=S.tray.map(k=>k&&hold(k)>0?k:null);
+  S.shelf=S.shelf.map((k,i)=>k&&(hold(k)>0||rule(i)==='pin')?k:null);
   const on=placed(),keys=new Set([...Object.keys(S.inv),...S.shop.filter(x=>x&&x.q>0).map(x=>x.k)]);
   for(const k of keys){if(hold(k)<=0||on.has(k))continue;
-    let i=findSlot(); if(i>=0){S.shelf[i]=k;on.add(k);dirty=true;continue}
     const j=findTray(); if(j>=0){S.tray[j]=k;on.add(k);dirty=true}}}
+const pantryStuck=()=>{ensureShelfPos();return overflowItems().length>0};
+function trash(k){const q=inv(k);if(!q)return;S.inv[k]=0;delete S.rot[k];
+  const i=S.shelf.indexOf(k);if(i>=0&&rule(i)!=='pin')S.shelf[i]=null;const j=S.tray.indexOf(k);if(j>=0)S.tray[j]=null;
+  if(pSel===k){pSel=null;pMove=false}
+  feed('trash|'+k,itemSvg(k),-q,ITEMS[k].n,'Wyrzucone do kosza',false,'spend');placeItems();dirty=true;save()}
 let lastFloorWarn=0;
 function spoilFloor(d){const on=placed();let any=false;
   for(const k of Object.keys(S.inv)){if(on.has(k)||S.inv[k]<=0){delete S.rot[k];continue}
@@ -757,6 +765,7 @@ function toShelf(k){const i=findSlot();if(i<0){toast('Na półkach nie ma wolneg
 // --- interfejs
 let pSel=null, pMove=false, dragKey=null, dragging=false, ptrDown=false, ctxOpen=false;
 const PIN='<svg class="mark-pin" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h4l-.5 4 2.5 2.5V9H8.7L8 15l-.7-6H4V7.5L6.5 5z" fill="currentColor"/></svg>';
+const TRASH='<svg class="trash" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>';
 const BLOCK='<svg class="mark-block" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.5 17.5l11-11" stroke="currentColor" stroke-width="2"/></svg>';
 // slot: na półce data-i, w „Do rozłożenia” data-t, poza miejscami data-o
 function pslotHtml(k,attr,r){
@@ -774,13 +783,13 @@ function vSpiz(){
   if(pSel&&hold(pSel)>0){const k=pSel,q=inv(k),it=ITEMS[k],sup=it.kind==='supply',loc=locate(k),onShop=S.shop.find(x=>x&&x.k===k);
     h+=`<div class="pbar-sel">${slot(k,{count:q})}<div class="pst"><b>${esc(it.n)}</b><small>${sup?'zaopatrzenie':`w sklepie ${unitPrice(k)} zł / szt.`}${onShop?` · <span class="shopt">na wystawie ${onShop.q}</span>`:''}${S.hot===k?' · <span class="up">poszukiwana dziś</span>':''}${pMove?' · <b class="up">kliknij miejsce na półce albo w „Do rozłożenia”</b>':''}</small></div>
       <div class="pacts">${onShop?`<button class="btn sm" data-act="unlistk" data-k="${k}">Zdejmij z wystawy</button>`:''}${!sup&&q?`<button class="btn sm pri" data-act="list" data-k="${k}" data-n="all" title="Przenieś cały zapas na wystawę w sklepie">Wystaw w sklepie</button>${q>10?`<button class="btn sm" data-act="list" data-k="${k}" data-n="10">Wystaw 10</button>`:''}`:''}${canSkup(k)&&q?`<button class="btn sm" data-act="skup" data-k="${k}" data-n="${q}" title="Skup płaci od ręki, ale połowę ceny">Skup · ${fmtZ(skupPrice(k)*q)}</button>`:''}
-       <button class="btn sm ${pMove?'on':''}" data-act="pmove">${pMove?'Anuluj':'Przenieś'}</button>${loc.where==='shelf'?`<button class="btn sm" data-act="ctxtray" data-k="${k}">Do rozłożenia</button>`:`<button class="btn sm" data-act="ctxshelf" data-k="${k}">Na półkę</button>`}<button class="btn sm" data-act="pdesel" aria-label="Zamknij">✕</button></div></div>`;}
+       <button class="btn sm ${pMove?'on':''}" data-act="pmove">${pMove?'Anuluj':'Przenieś'}</button>${loc.where==='shelf'?`<button class="btn sm" data-act="ctxtray" data-k="${k}">Do rozłożenia</button>`:`<button class="btn sm" data-act="ctxshelf" data-k="${k}">Na półkę</button>`}<button class="btn sm warn" data-act="ptrash" data-k="${k}" title="Wyrzuć cały zapas (${q})">${TRASH} Do kosza</button><button class="btn sm" data-act="pdesel" aria-label="Zamknij">✕</button></div></div>`;}
   else {pSel=null;pMove=false}
   h+=`<p class="more">Kliknij towar, żeby wystawić go w sklepie albo przenieść, albo przeciągnij go myszą. Prawy przycisk na miejscu albo nazwie półki (na telefonie przytrzymanie) daje opcje i zmianę nazwy półki. <span class="shopt">Niebieska liczba</span> to towar wystawiony w sklepie.</p></div>
    <div class="wallwrap"><div class="wall" style="--rows:${rows}">${shelfOrder().map(s=>{const p=S.shelfPos[s];return `<div class="shelf" style="grid-column:${p.x+1}/span ${SHELF_W};grid-row:${p.y+1}"><span class="slabel" data-sh="${s}" title="Prawy przycisk: zmień nazwę">${esc((S.shelfNames||[])[s]||`Półka ${s+1}`)}</span><div class="slots8">${sh.slice(s*SHELF_W,(s+1)*SHELF_W).map((k,j)=>pslotHtml(k,`data-act="pslot" data-i="${s*SHELF_W+j}"`,rule(s*SHELF_W+j))).join('')}</div></div>`}).join('')}</div></div>
-   <div class="tray ${over.length?'rot':''}"><div class="trayhead"><h3>Do rozłożenia <span class="more num">${S.tray.filter(k=>k&&hold(k)>0).length} / ${TRAY_N}</span></h3><p>${over.length?`Brakuje miejsca dla ${over.length} ${plural(over.length,'towaru','towarów','towarów')}: leżą obok i co ${ROT_EVERY/60} min psuje się 5% każdego. Dokup półkę albo wystaw nadmiar w sklepie.`:'Podręczne miejsca na towary, które nie mają miejsca na półkach albo które sam tu odłożysz.'}</p></div>
-    <div class="traygrid">${S.tray.map((k,j)=>pslotHtml(k&&hold(k)>0?k:null,`data-act="pslot" data-t="${j}"`,null)).join('')}</div>
-    ${over.length?`<div class="overrow"><span class="lbl">Leży obok · psuje się</span><div class="traygrid">${over.map(k=>pslotHtml(k,`data-act="pslot" data-o="${k}"`,null)).join('')}</div></div>`:''}</div>`;
+   <div class="tray ${over.length?'rot':''}"><div class="trayhead"><h3>Do rozłożenia <span class="more num">${S.tray.filter(k=>k&&hold(k)>0).length} / ${TRAY_N}</span></h3><p>${over.length?`<b class="bad">Gra wstrzymana.</b> Nie mieści się ${over.length} ${plural(over.length,'towar','towary','towarów')}. Rozłóż towary na półki, wystaw je w sklepie albo wyrzuć do kosza.`:'Tu trafia wszystko, co nowe. Przeciągnij towar na półkę albo do kosza.'}</p></div>
+    <div class="traygrid">${S.tray.map((k,j)=>pslotHtml(k&&hold(k)>0?k:null,`data-act="pslot" data-t="${j}"`,null)).join('')}<button class="pslot bin ${pMove?'target':''}" data-act="pbin" data-bin="1" title="Kosz: przeciągnij tu towar, żeby go wyrzucić">${TRASH}<span class="pn">Kosz</span></button></div>
+    ${over.length?`<div class="overrow"><span class="lbl">Nie mieści się · gra stoi</span><div class="traygrid">${over.map(k=>pslotHtml(k,`data-act="pslot" data-o="${k}"`,null)).join('')}</div></div>`:''}</div>`;
   return h;
 }
 // --- menu pod prawym przyciskiem
@@ -814,6 +823,7 @@ function showCtx(el,x,y){const m=$('#ctx');if(!m)return;let items=[],title='';
   else {const k=el.dataset.dk;if(!k){hideCtx();return}title=ITEMS[k].n;
     items.push(['ctxshelf',`data-k="${k}"`,'<span class="x">⇡</span>','Odłóż na półkę','Na pierwsze wolne miejsce']);
     if(el.dataset.o!=null) items.push(['ctxtray',`data-k="${k}"`,'<span class="x">⇣</span>','Do rozłożenia','']);}
+  {const k=el.dataset.i!=null?S.shelf[+el.dataset.i]:el.dataset.dk;if(k&&inv(k)>0)items.push(['ptrash',`data-k="${k}"`,TRASH,'Wyrzuć do kosza',`Cały zapas: ${inv(k)}`]);}
   if(!items.length){hideCtx();return}
   m.innerHTML=`<div class="ctxh">${esc(title)}</div>${items.map(([a,d,ic,t,s])=>`<button class="ctxi" data-act="${a}" ${d}><span class="ci">${ic}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
   m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;
@@ -1019,6 +1029,9 @@ const ACT={
    if(pMove&&pSel){let ok=false;if(d.i!=null)ok=moveToShelf(pSel,+d.i);else if(d.t!=null)ok=moveToTray(pSel,+d.t);if(ok)pMove=false;render();return}
    pSel=k&&hold(k)>0&&pSel!==k?k:null;pMove=false;render()},
  pmove:()=>{pMove=!pMove;render()},
+ ptrash:d=>{hideCtx();trash(d.k);render()},
+ pbin:()=>{if(pMove&&pSel){trash(pSel);render();return}toast('Przeciągnij tu towar, żeby go wyrzucić.')},
+ gospiz:()=>{S.tab='spiz';closeSheet();render();window.scrollTo(0,0)},
  pdesel:()=>{pSel=null;pMove=false;render()},
  ctxpin:d=>{hideCtx();const i=+d.i;if(S.shelf[i]){S.slotRule[i]='pin';toast(`${ITEMS[S.shelf[i]].n}: zawsze na tym miejscu`)}render()},
  ctxblock:d=>{hideCtx();const i=+d.i,k=S.shelf[i];if(k&&inv(k)>0){S.shelf[i]=null;delete S.slotRule[i];if(!moveToTray(k))placeItems()}S.shelf[i]=null;S.slotRule[i]='block';render()},
@@ -1082,11 +1095,11 @@ addEventListener('pointerup',()=>{ptrDown=false}); addEventListener('pointercanc
 // przeciąganie towarów: między półkami, „Do rozłożenia” i tym, co leży obok
 document.addEventListener('dragstart',e=>{const b=e.target.closest&&e.target.closest('.pslot[data-dk]');if(!b)return;dragKey=b.dataset.dk;dragging=true;hideCtx();
   e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragKey)}catch(_){}});
-const dropSlot=t=>t.closest&&t.closest('.pslot[data-i],.pslot[data-t]');
+const dropSlot=t=>t.closest&&t.closest('.pslot[data-i],.pslot[data-t],.pslot[data-bin]');
 document.addEventListener('dragover',e=>{if(dragKey&&dropSlot(e.target)){e.preventDefault();e.dataTransfer.dropEffect='move'}});
 document.addEventListener('dragenter',e=>{const t=dropSlot(e.target);document.querySelectorAll('.pslot.over').forEach(x=>x!==t&&x.classList.remove('over'));if(t&&dragKey)t.classList.add('over')});
 document.addEventListener('drop',e=>{const t=dropSlot(e.target);if(!t||!dragKey)return;e.preventDefault();
-  if(t.dataset.i!=null) moveToShelf(dragKey,+t.dataset.i); else moveToTray(dragKey,+t.dataset.t);
+  if(t.dataset.bin) trash(dragKey); else if(t.dataset.i!=null) moveToShelf(dragKey,+t.dataset.i); else moveToTray(dragKey,+t.dataset.t);
   pSel=null;pMove=false;dragKey=null;dragging=false;save();render()});
 document.addEventListener('dragend',()=>{if(dragging){dragKey=null;dragging=false;render()}});
 // przeciąganie linii produkcyjnych za uchwyt

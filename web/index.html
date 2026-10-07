@@ -1113,10 +1113,26 @@ h3{text-shadow:0 1px 8px rgba(0,0,0,.5)}
 .plot.winter:not(.empty) .art::after{background:none}
 .plot .art .pimg{object-position:center 45%}
 .seed .sv .pimg.sasz{object-fit:contain;padding:4px}
+
+/* ===== PRZETWÓRNIA: tło wnętrza młyna; SPIŻARNIA: kosz i pauza ===== */
+.bgroom{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#1a120b url(bg/przetwornia.webp) center 40%/cover no-repeat;opacity:0;transition:opacity .5s ease}
+body[data-tab="prz"] .bgroom{opacity:1}
+body[data-tab="prz"] .bgshade{background:linear-gradient(180deg,rgba(14,10,6,.35),rgba(14,10,6,.55) 45%,rgba(14,10,6,.8))}
+.pslot.bin{border-style:dashed;border-color:rgba(214,110,90,.55);background:rgba(120,40,30,.12);color:#e09a88;display:grid;place-items:center}
+.pslot.bin svg.trash{width:30px;height:30px;filter:none}
+.pslot.bin.over,.pslot.bin.target{background:rgba(180,60,40,.3);border-color:#e0806a}
+.btn svg.trash{width:15px;height:15px;vertical-align:-3px}
+.ctxi .ci svg.trash{width:18px;height:18px}
+.pausebar{position:sticky;top:64px;z-index:30;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:1220px;margin:14px auto 0;padding:11px 16px;border-radius:12px;border:1px solid rgba(224,128,106,.6);background:linear-gradient(90deg,rgba(110,34,22,.92),rgba(60,22,14,.92));box-shadow:0 8px 24px -10px rgba(0,0,0,.7)}
+.pausebar[hidden]{display:none}
+.pausebar b{font-family:var(--f-display);font-size:1.05rem;color:#ffd9c8}
+.pausebar span{flex:1;min-width:200px;color:#f3d6c8}
+.tray p .bad{color:#ff9d84}
 </style>
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
+<div class="bgroom" aria-hidden="true"></div>
 <div class="bgshade" aria-hidden="true"></div>
 <header class="bar-top">
   <div class="barin">
@@ -1130,7 +1146,8 @@ h3{text-shadow:0 1px 8px rgba(0,0,0,.5)}
     </div>
   </div>
 </header>
-<main><div id="view"></div></main>
+<main><div id="pausebar" class="pausebar" role="alert" hidden></div>
+<div id="view"></div></main>
 <aside id="goal" aria-label="Bieżący cel"></aside>
 <div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
 <div id="ctx" role="menu" hidden></div>
