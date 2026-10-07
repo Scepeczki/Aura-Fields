@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Odsłuch dźwięków</title>
+<style>
+:root{--bg:#15100b;--card:#221a12;--bd:rgba(236,188,76,.35);--tx:#f1e4c8;--mut:#b9a888;--gold:#ecbc4c}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,"Segoe UI",sans-serif;padding:24px 16px}
+main{max-width:860px;margin:0 auto}
+h1{font-family:Georgia,serif;margin:0 0 4px}h2{font-family:Georgia,serif;margin:28px 0 10px;color:var(--gold)}
+p{color:var(--mut);margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.s{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--card)}
+.s img{width:44px;height:44px;object-fit:contain;flex:none}
+.s div{flex:1;min-width:0}.s b{display:block}.s small{color:var(--mut)}
+button{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:18px;cursor:pointer}
+.s.on{border-color:var(--gold);box-shadow:0 0 18px -6px var(--gold)}.s.on button{background:var(--gold);color:#2a1d0c}
+</style>
+</head>
+<body><main>
+<h1>Odsłuch dźwięków</h1>
+<p>Kliknij, żeby posłuchać. Pętle grają w kółko, aż klikniesz drugi raz. W grze każda maszyna gra tylko wtedy, gdy pracuje. Jak kilka pracuje naraz, każda jest trochę ciszej.</p>
+<div id="app"></div>
+</main>
+<script>
+const W='../web/';
+const G=[
+ ['Maszyny w przetwórni',[
+  ['tryby','Drewniane tryby','słychać zawsze, gdy cokolwiek pracuje',null],
+  ['zarna','Żarna','oraz Młyn czystej linii','zar'],
+  ['sypanie','Młocarnia','sypiące się ziarno (w grze do tego miarowe uderzenia cepów)','mlo'],
+  ['sito','Odsiewacz','sito','sit'],
+  ['ogien','Prażalnik','ogień w piecu','pra'],
+  ['wrzatek','Kocioł','wrząca woda','koc'],
+  ['krople','Kadź do moczenia','kapiąca woda','kad'],
+  ['plukanie','Płuczka skrobi','chlupot wody','plu'],
+  ['krojenie','Stół krojenia','nóż na desce','obi'],
+  ['orzechy','Łupiarka orzechów','pękające łupiny','lup'],
+  ['prasa','Prasa','tłocznia','pre'],
+  ['suszarnia','Suszarnia','wentylator','sus'],
+ ]],
+ ['Pole i targ',[
+  ['ptaki','Ptaki','wiosną i latem w dzień',null],
+  ['swierszcze','Świerszcze','latem i jesienią nocą',null],
+  ['pies','Pies w oddali','rzadko, raz na kilka minut',null,1],
+  ['samolot','Samolot','rzadko, raz na kilka minut',null,1],
+  ['targ','Gwar na targu','',null],
+ ]],
+ ['Sklep',[
+  ['drzwi','Drzwi z dzwonkiem','przy wejściu do Sklepu',null,1],
+  ['jazz','Jazz w tle','gra cicho, dopóki jesteś w Sklepie',null],
+ ]],
+];
+let cur=null;
+document.getElementById('app').innerHTML=G.map(([h,l])=>`<h2>${h}</h2><div class="grid">${l.map(([f,n,d,m,one])=>`<div class="s" data-f="${f}" data-one="${one||''}">${m?`<img src="${W}machines/${m}-praca.webp" alt="">`:''}<div><b>${n}</b><small>${d}</small></div><button aria-label="Odtwórz: ${n}">▶</button></div>`).join('')}</div>`).join('');
+document.addEventListener('click',e=>{const c=e.target.closest('.s');if(!c)return;
+  if(cur&&cur.c===c){cur.a.pause();c.classList.remove('on');c.querySelector('button').textContent='▶';cur=null;return}
+  if(cur){cur.a.pause();cur.c.classList.remove('on');cur.c.querySelector('button').textContent='▶'}
+  const a=new Audio(W+'sfx/'+c.dataset.f+'.ogg');a.loop=!c.dataset.one;a.volume=.8;a.play();
+  a.onended=()=>{c.classList.remove('on');c.querySelector('button').textContent='▶';cur=null};
+  c.classList.add('on');c.querySelector('button').textContent='■';cur={a,c}});
+</script>
+</body>
+</html>

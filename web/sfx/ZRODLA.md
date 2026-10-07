@@ -16,3 +16,8 @@ Nagrania z freesound.org na licencji Creative Commons 0 (domena publiczna), przy
 - sfx/orzechy.ogg — freesound.org/s/403521 — Walnuts_Breaking-In-Towel.wav (CC0)
 - sfx/prasa.ogg — freesound.org/s/872939 — Wine Press (CC0)
 - sfx/suszarnia.ogg — freesound.org/s/327449 — Old Noisy Ceiling Fan + RoomTone (CC0)
+- sfx/swierszcze.ogg — freesound.org/s/522299 — Crickets At Night - Raw sound (CC0)
+- sfx/jazz.ogg — freesound.org/s/261100 — Jazz loop.wav (CC0)
+- sfx/pies.ogg — freesound.org/s/54545 — distant_dog.wav (CC0)
+- sfx/samolot.ogg — freesound.org/s/348595 — PlaneFlyoverDistant.wav (CC0)
+- sfx/drzwi.ogg — freesound.org/s/57743 — shop_door_bell.wav (CC0)

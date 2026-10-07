@@ -77,6 +77,15 @@ function sfx(name){let x=SFX[name];if(x)return x;x=SFX[name]={ok:false,g:null,el
     const sr=ac.createBufferSource();sr.buffer=buf;sr.loop=true;const g=gain(0);sr.connect(g);g.connect(ambBus);sr.start(T(),R(0,buf.duration));x.g=g;x.ok=true}).catch(viaEl);
   return x}
 const ready=n=>!!(SFX[n]&&SFX[n].ok);
+const failed=n=>!!(SFX[n]&&SFX[n].fail);
+// odgłosy jednorazowe z nagrań (pies, samolot, drzwi); pierwszy raz tylko się wczytują
+const SHOT={};
+function shotLoad(name){if(SHOT[name])return SHOT[name];const x=SHOT[name]={buf:null,file:fileMode};
+  if(!fileMode)fetch('sfx/'+name+'.ogg').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).then(b=>ac.decodeAudioData(b)).then(b=>{x.buf=b}).catch(()=>{x.file=true});
+  return x}
+function shot(name,v,p=0){const x=shotLoad(name);
+  if(x.buf){const sr=ac.createBufferSource();sr.buffer=x.buf;chain(sr,gain(v),pan(p),ambBus);sr.start();return}
+  if(x.file&&st){const el=new Audio('sfx/'+name+'.ogg');el.volume=Math.min(1,v*1.6*st.vol);el.play().catch(()=>{})}}
 function sfxLevel(name,v,tc,s){if(v<=0&&!SFX[name])return;const x=sfx(name);
   if(x.g){glide(x.g.gain,v,tc);return}
   if(!x.el)return;const tgt=s.on&&s.amb&&!document.hidden?Math.min(1,v*1.6*s.vol):0;
@@ -144,6 +153,10 @@ function schedule(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',night=
   every('gust',1.5,4,()=>{glide(B.windBP.frequency,R(260,620),1.4)});
   if(wet){const n=out?3:1;for(let i=0;i<n;i++)if(Math.random()<.7)burst(ambBus,{f:out?R(2000,5600):R(700,1400),q:2.5,dur:R(.008,.02),v:out?R(.01,.03):R(.006,.014),at:R(0,.1),p:R(-.8,.8)})}
   if(out&&!wet&&!night&&s.season<3&&!ready('ptaki')) every('bird',2.5,8,()=>chirp(ambBus));
+  // rzadko: pies szczeka gdzieś daleko, raz na kilka minut przelatuje samolot
+  if(out){shotLoad('pies');shotLoad('samolot');
+    every('dog',100,320,()=>shot('pies',R(.3,.5),R(-.9,.9)));
+    every('plane',200,480,()=>shot('samolot',wet?.25:.4,R(-.4,.4)))}
   if(tab==='prz'){every('creak',4,11,()=>creak(ambBus,R(.03,.06)));
     const r=s.run||{};
     if(r.mlo) every('flail',.55,.75,()=>{tone(ambBus,{f:80,f2:55,dur:.16,v:.12});burst(ambBus,{f:1000,q:.8,dur:.1,v:.05,at:.01,p:R(-.3,.3)})});
@@ -159,7 +172,7 @@ function schedule(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',night=
   if(tab==='targ'){every('till',3,8,()=>{const n=Math.floor(R(1,4));for(let i=0;i<n;i++)clink(ambBus,i*R(.05,.12),.03,R(-.7,.7))});
     every('bag',5,14,()=>rustle(ambBus,.3,.03,1800));
     every('cart',14,30,()=>{for(let i=0;i<8;i++)burst(ambBus,{f:R(300,700),q:1,dur:.06,v:.03,noise:brown,at:i*R(.12,.2),p:-.8+i*.2})});}
-  if(tab==='ulep'){music();every('paper',8,20,()=>rustle(ambBus,.4,.025,3200));
+  if(tab==='ulep'){if(failed('jazz'))music();every('paper',8,20,()=>rustle(ambBus,.4,.025,3200));
     every('bell',40,80,()=>[1568,2093,2637].forEach((f,i)=>tone(ambBus,{f,dur:2.2,v:.012,at:i*.09,p:-.4})))}
   else musT=null;
   if(tab==='spiz'){every('jar',7,18,()=>{const f=R(1800,2600),p=R(-.5,.5);tone(ambBus,{f,dur:.3,v:.02,p});tone(ambBus,{f:f*2.3,dur:.14,v:.008,p})});
@@ -178,9 +191,11 @@ function levels(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',winter=s
   return L}
 // poziomy nagrań w danym miejscu
 function sampleLevels(s){const tab=s.tab,wet=s.wx==='deszcz',night=s.hour<5||s.hour>=21,r=s.run||{},n=Object.values(r).reduce((a,b)=>a+b,0);
-  const S={ptaki:0,targ:0,tryby:0,zarna:0,sypanie:0,sito:0,ogien:0,wrzatek:0,krople:0,plukanie:0,krojenie:0,orzechy:0,prasa:0,suszarnia:0};
+  const S={swierszcze:0,jazz:0,ptaki:0,targ:0,tryby:0,zarna:0,sypanie:0,sito:0,ogien:0,wrzatek:0,krople:0,plukanie:0,krojenie:0,orzechy:0,prasa:0,suszarnia:0};
   if(tab==='pola'&&!night&&s.season<3) S.ptaki=wet?.2:s.season===2?.45:.85;
   if(tab==='targ') S.targ=.85;
+  if(tab==='pola'&&night&&!wet&&(s.season===1||s.season===2)) S.swierszcze=.55;
+  if(tab==='ulep') S.jazz=.42;
   // przy kilku maszynach naraz każda trochę ciszej, żeby całość nie rosła bez końca
   if(tab==='prz'){const k=1/Math.sqrt(Math.max(1,Object.keys(r).length));S.tryby=n?.2:0;S.zarna=(r.zar||r.mbg)?.42*k:0;S.sypanie=r.mlo?.22*k:0;S.sito=r.sit?.32*k:0;S.ogien=r.pra?.32*k:0;S.wrzatek=r.koc?.3*k:0;
     S.krople=r.kad?.32*k:0;S.plukanie=r.plu?.32*k:0;S.krojenie=r.obi?.36*k:0;S.orzechy=r.lup?.36*k:0;S.prasa=r.pre?.32*k:0;S.suszarnia=r.sus?.3*k:0}
@@ -189,6 +204,7 @@ function sampleLevels(s){const tab=s.tab,wet=s.wx==='deszcz',night=s.hour<5||s.h
 const SYN_BY={grind:'zarna',sift:'sito',fan:'suszarnia',fire:'ogien',crowd:'targ',rumble:'tryby'};
 function apply(s,tc){const L=levels(s);for(const k in SYN_BY)if(ready(SYN_BY[k]))L[k]=k==='rumble'?L[k]*.35:0;
   if(L.water&&(ready('krople')||ready('plukanie')))L.water=0;
+  if(!failed('swierszcze'))L.crick=0;if(!failed('jazz'))L.music=0;
   for(const k in L)glide(B[k].gain,L[k],tc);
   const SL=sampleLevels(s);for(const k in SL)sfxLevel(k,SL[k],tc,s);
   const out=s.tab==='pola';glide(B.windLP.frequency,out?3500:600,tc);glide(B.rainLP.frequency,out?7000:s.tab==='targ'?3000:900,tc)}
@@ -197,7 +213,7 @@ function ensure(){if(ac)return true;const C=window.AudioContext||window.webkitAu
   try{ac=new C();out=filt('lowpass',16000);const comp=ac.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=3;out.connect(comp);comp.connect(ac.destination);
     ambBus=gain(0);fxBus=gain(0);ambBus.connect(out);fxBus.connect(out);
     const cv=ac.createConvolver();cv.buffer=verbBuf(2.2);verb=gain(1);chain(verb,cv,gain(.55),ambBus);
-    pink=noiseBuf('pink');brown=noiseBuf('brown');buildBeds();
+    pink=noiseBuf('pink');brown=noiseBuf('brown');buildBeds();shotLoad('drzwi');
     document.addEventListener('visibilitychange',()=>{if(!ac)return;if(document.hidden){ac.suspend();sfxMuteAll()}else if(st&&st.on)ac.resume()});
     return true}catch(e){ac=null;return false}}
 window.AuraSound={
@@ -207,6 +223,7 @@ window.AuraSound={
     if(ac.state==='suspended'&&!document.hidden)ac.resume();
     glide(fxBus.gain,1.2*s.vol,.1);glide(ambBus.gain,s.amb?1.6*s.vol:0,.6);
     const now=performance.now(),sw=s.tab!==lastTab;if(!sw&&now-lastTick<90)return;lastTick=now;lastTab=s.tab;
+    if(sw&&s.tab==='ulep'&&s.amb)shot('drzwi',.6,.35);
     apply(s,sw?.04:1.2);if(s.amb)schedule(s);else{crowd(false);musT=null;sfxMuteAll()}},
   fx(type){if(!st||!st.on||!ensure()||document.hidden)return;if(ac.state==='suspended')ac.resume();try{(FX[type]||FX.click)()}catch(e){}}
 };
