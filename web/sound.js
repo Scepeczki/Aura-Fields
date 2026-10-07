@@ -1,5 +1,6 @@
 // Aura Fields — dźwięk: spokojne tło każdego miejsca, miękkie odgłosy akcji i cicha muzyczka w sklepie.
-// Wszystko jest syntezowane w Web Audio (szum, oscylatory, filtry, pogłos), bez plików nagrań.
+// Tło miejsc i maszyn to zapętlone nagrania z sfx/ (CC0, lista w sfx/ZRODLA.md); reszta jest syntezowana w Web Audio.
+// Nagranie wczytuje się dopiero, gdy jest potrzebne. Póki go nie ma (albo się nie wczyta), gra syntezowany zamiennik.
 // Gra woła AuraSound.update(stan) kilka razy na sekundę i AuraSound.fx(rodzaj) przy akcjach.
 (()=>{
 'use strict';
@@ -65,6 +66,24 @@ function buildBeds(){
   bed('music',g=>{B.musicIn=gain(1);B.musicIn.connect(g);const s=gain(.55);B.musicIn.connect(s);s.connect(verb)});
 }
 
+// ---------- nagrania (pętle) ----------
+// http(s)/aplikacja: Web Audio (pętla bez przerwy); plik otwarty z dysku (file://): element <audio>, bo fetch jest tam zablokowany
+const SFX={}, fileMode=location.protocol==='file:';
+function sfx(name){let x=SFX[name];if(x)return x;x=SFX[name]={ok:false,g:null,el:null,vol:0};
+  const viaEl=()=>{const el=new Audio('sfx/'+name+'.ogg');el.loop=true;el.volume=0;el.preload='auto';x.el=el;
+    el.addEventListener('canplaythrough',()=>{x.ok=true},{once:true});el.addEventListener('error',()=>{x.fail=true})};
+  if(fileMode){viaEl();return x}
+  fetch('sfx/'+name+'.ogg').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).then(b=>ac.decodeAudioData(b)).then(buf=>{
+    const sr=ac.createBufferSource();sr.buffer=buf;sr.loop=true;const g=gain(0);sr.connect(g);g.connect(ambBus);sr.start(T(),R(0,buf.duration));x.g=g;x.ok=true}).catch(viaEl);
+  return x}
+const ready=n=>!!(SFX[n]&&SFX[n].ok);
+function sfxLevel(name,v,tc,s){if(v<=0&&!SFX[name])return;const x=sfx(name);
+  if(x.g){glide(x.g.gain,v,tc);return}
+  if(!x.el)return;const tgt=s.on&&s.amb&&!document.hidden?Math.min(1,v*1.6*s.vol):0;
+  x.vol=tc<.1?tgt:x.vol+(tgt-x.vol)*.35;if(Math.abs(x.vol-tgt)<.003)x.vol=tgt;x.el.volume=Math.max(0,Math.min(1,x.vol));
+  if(x.vol>.001&&x.el.paused)x.el.play().catch(()=>{});else if(x.vol<=.001&&!x.el.paused)x.el.pause()}
+function sfxMuteAll(){for(const n in SFX){const x=SFX[n];if(x.el&&!x.el.paused){x.vol=0;x.el.volume=0;x.el.pause()}}}
+
 // ---------- odgłosy jednorazowe ----------
 function burst(bus,{f=1500,q=1,dur=.08,v=.1,type='bandpass',noise=pink,at=0,p=0,attack=.004}){const t=T()+at,s=ac.createBufferSource();s.buffer=noise;
   const fl=filt(type,f,q),g=gain(0),pn=pan(p);chain(s,fl,g,pn,bus);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+attack);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
@@ -103,7 +122,7 @@ const FX={
 // ---------- muzyczka w sklepie: spokojne akordy i pozytywka, generowane na bieżąco ----------
 const CHORDS=[[48,55,64,71],[45,52,60,67],[41,48,57,64],[43,50,59,62],[48,55,64,67],[45,52,60,64],[50,57,65,72],[43,50,59,65]];
 const SCALE=[72,74,76,79,81,84,86,88];
-let musT=null, musStep=0;
+let lastTab=null, musT=null, musStep=0;
 function music(){const E=60/70/2,now=T();if(musT==null||musT<now)musT=now+.15;
   while(musT<now+.4){const at=musT-now,bar=Math.floor(musStep/8)%CHORDS.length,b=musStep%8,ch=CHORDS[bar];
     if(b===0){note(ch[0]-12,at,.05,3.6);ch.slice(1).forEach((m,i)=>note(m,at+i*.03,.016,3.2))}
@@ -114,7 +133,7 @@ function music(){const E=60/70/2,now=T();if(musT==null||musT<now)musT=now+.15;
 // ---------- harmonogram zdarzeń tła ----------
 const every=(k,a,b,fn)=>{const now=T();if(timers[k]==null)timers[k]=now+R(a*.3,b);if(now>=timers[k]){timers[k]=now+R(a,b);fn()}};
 function crowd(on){const now=T();B.voices.forEach(v=>{
-  if(!on){if(v.talk){v.talk=false;glide(v.vg.gain,0,.3)}return}
+  if(!on){if(v.talk){v.talk=false;glide(v.vg.gain,0,.04)}return}
   if(now<v.next)return;
   if(v.talk){const [a,b]=pick(VOWELS),k=v.f0>160?1.12:1;v.f1.frequency.setTargetAtTime(a*k,now,.03);v.f2.frequency.setTargetAtTime(b*k,now,.03);
     v.o.frequency.setTargetAtTime(v.f0*R(.88,1.18),now,.08);
@@ -124,19 +143,19 @@ function crowd(on){const now=T();B.voices.forEach(v=>{
 function schedule(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',night=s.hour<5||s.hour>=21;
   every('gust',1.5,4,()=>{glide(B.windBP.frequency,R(260,620),1.4)});
   if(wet){const n=out?3:1;for(let i=0;i<n;i++)if(Math.random()<.7)burst(ambBus,{f:out?R(2000,5600):R(700,1400),q:2.5,dur:R(.008,.02),v:out?R(.01,.03):R(.006,.014),at:R(0,.1),p:R(-.8,.8)})}
-  if(out&&!wet&&!night&&s.season<2) every('bird',2.5,8,()=>chirp(ambBus));
+  if(out&&!wet&&!night&&s.season<3&&!ready('ptaki')) every('bird',2.5,8,()=>chirp(ambBus));
   if(tab==='prz'){every('creak',4,11,()=>creak(ambBus,R(.03,.06)));
     const r=s.run||{};
-    if(r.mlo) every('flail',.55,.75,()=>{tone(ambBus,{f:80,f2:55,dur:.16,v:.13});burst(ambBus,{f:1000,q:.8,dur:.1,v:.06,at:.01,p:R(-.3,.3)})});
-    if(r.zar||r.mbg) every('stone',1.6,3,()=>burst(ambBus,{f:R(500,900),q:1.2,dur:.5,v:.04,attack:.15}));
-    if(r.pra) every('crack',.07,.3,()=>burst(ambBus,{f:R(1800,4200),q:3,dur:R(.006,.015),v:R(.015,.045),p:R(-.4,.4)}));
-    if(r.koc) every('boil',.07,.22,()=>bubble(ambBus,180,.05));
-    if(r.kad||r.plu) every('drip',.2,.6,()=>bubble(ambBus,500,.035));
-    if(r.obi) every('knife',.45,.8,()=>{burst(ambBus,{f:R(800,1100),q:4,dur:.035,v:.09,p:-.2});burst(ambBus,{f:300,q:1,dur:.05,v:.05,noise:brown})});
-    if(r.lup) every('nut',1,2.2,()=>{burst(ambBus,{f:R(1500,2600),q:1.5,dur:.045,v:.1});burst(ambBus,{f:600,q:1,dur:.08,v:.06,noise:brown,at:.03})});
-    if(r.pre) every('press',2.5,4.5,()=>{creak(ambBus,.06);burst(ambBus,{f:500,q:1,dur:.35,v:.05,at:.4})});
-    if(r.sit) every('sieve',.9,1.6,()=>burst(ambBus,{f:R(3000,5000),q:1,dur:.25,v:.03,attack:.08}));}
-  crowd(tab==='targ');
+    if(r.mlo) every('flail',.55,.75,()=>{tone(ambBus,{f:80,f2:55,dur:.16,v:.12});burst(ambBus,{f:1000,q:.8,dur:.1,v:.05,at:.01,p:R(-.3,.3)})});
+    if((r.zar||r.mbg)&&!ready('zarna')) every('stone',1.6,3,()=>burst(ambBus,{f:R(500,900),q:1.2,dur:.5,v:.04,attack:.15}));
+    if(r.pra&&!ready('ogien')) every('crack',.07,.3,()=>burst(ambBus,{f:R(1800,4200),q:3,dur:R(.006,.015),v:R(.015,.045),p:R(-.4,.4)}));
+    if(r.koc&&!ready('wrzatek')) every('boil',.07,.22,()=>bubble(ambBus,180,.05));
+    if(r.kad&&!ready('krople')) every('drip',.2,.6,()=>bubble(ambBus,500,.035));
+    if(r.obi&&!ready('krojenie')) every('knife',.45,.8,()=>{burst(ambBus,{f:R(800,1100),q:4,dur:.035,v:.09,p:-.2});burst(ambBus,{f:300,q:1,dur:.05,v:.05,noise:brown})});
+    if(r.lup&&!ready('orzechy')) every('nut',1,2.2,()=>{burst(ambBus,{f:R(1500,2600),q:1.5,dur:.045,v:.1});burst(ambBus,{f:600,q:1,dur:.08,v:.06,noise:brown,at:.03})});
+    if(r.pre&&!ready('prasa')) every('press',2.5,4.5,()=>{creak(ambBus,.06);burst(ambBus,{f:500,q:1,dur:.35,v:.05,at:.4})});
+    if(r.sit&&!ready('sito')) every('sieve',.9,1.6,()=>burst(ambBus,{f:R(3000,5000),q:1,dur:.25,v:.03,attack:.08}));}
+  crowd(tab==='targ'&&!ready('targ'));
   if(tab==='targ'){every('till',3,8,()=>{const n=Math.floor(R(1,4));for(let i=0;i<n;i++)clink(ambBus,i*R(.05,.12),.03,R(-.7,.7))});
     every('bag',5,14,()=>rustle(ambBus,.3,.03,1800));
     every('cart',14,30,()=>{for(let i=0;i<8;i++)burst(ambBus,{f:R(300,700),q:1,dur:.06,v:.03,noise:brown,at:i*R(.12,.2),p:-.8+i*.2})});}
@@ -150,31 +169,45 @@ function schedule(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',night=
 // docelowe poziomy tła w danym miejscu
 function levels(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',winter=s.season===3,night=s.hour<5||s.hour>=21,r=s.run||{},n=Object.values(r).reduce((a,b)=>a+b,0);
   const L={wind:0,rain:0,room:0,vent:0,rumble:0,grind:0,sift:0,husk:0,fan:0,fire:0,water:0,crowd:0,crick:0,music:0};
-  if(out){L.wind=wet?.3:winter?.55:.4;L.rain=wet?.4:0;L.crick=night&&!wet&&(s.season===1||s.season===2)?.06:0}
+  if(out){L.wind=wet?.18:winter?.34:.24;L.rain=wet?.4:0;L.crick=night&&!wet&&(s.season===1||s.season===2)?.06:0}
   else if(tab==='targ'){L.crowd=.55;L.rain=wet?.12:0}
   else {L.wind=.03;L.rain=wet?.1:0;L.room=.08}
   if(tab==="spiz"){L.vent=.32;L.room=.04}
   if(tab==="ulep"){L.music=1.8;L.room=.03}
   if(tab==='prz'){L.room=.06;L.rumble=n?Math.min(.22,.08+.03*n):0;L.grind=(r.zar||r.mbg)?.45:0;L.sift=r.sit?.14:0;L.husk=r.lus?.16:0;L.fan=r.sus?.22:0;L.fire=r.pra?.18:0;L.water=(r.kad||r.plu)?.18:0}
   return L}
-function apply(s){const L=levels(s);for(const k in L)glide(B[k].gain,L[k],1.2);
-  const out=s.tab==='pola';glide(B.windLP.frequency,out?3500:600,1);glide(B.rainLP.frequency,out?7000:s.tab==='targ'?3000:900,1)}
+// poziomy nagrań w danym miejscu
+function sampleLevels(s){const tab=s.tab,wet=s.wx==='deszcz',night=s.hour<5||s.hour>=21,r=s.run||{},n=Object.values(r).reduce((a,b)=>a+b,0);
+  const S={ptaki:0,targ:0,tryby:0,zarna:0,sypanie:0,sito:0,ogien:0,wrzatek:0,krople:0,plukanie:0,krojenie:0,orzechy:0,prasa:0,suszarnia:0};
+  if(tab==='pola'&&!night&&s.season<3) S.ptaki=wet?.2:s.season===2?.45:.85;
+  if(tab==='targ') S.targ=.85;
+  // przy kilku maszynach naraz każda trochę ciszej, żeby całość nie rosła bez końca
+  if(tab==='prz'){const k=1/Math.sqrt(Math.max(1,Object.keys(r).length));S.tryby=n?.2:0;S.zarna=(r.zar||r.mbg)?.42*k:0;S.sypanie=r.mlo?.22*k:0;S.sito=r.sit?.32*k:0;S.ogien=r.pra?.32*k:0;S.wrzatek=r.koc?.3*k:0;
+    S.krople=r.kad?.32*k:0;S.plukanie=r.plu?.32*k:0;S.krojenie=r.obi?.36*k:0;S.orzechy=r.lup?.36*k:0;S.prasa=r.pre?.32*k:0;S.suszarnia=r.sus?.3*k:0}
+  return S}
+// syntetyczne warstwy, które nagranie zastępuje
+const SYN_BY={grind:'zarna',sift:'sito',fan:'suszarnia',fire:'ogien',crowd:'targ',rumble:'tryby'};
+function apply(s,tc){const L=levels(s);for(const k in SYN_BY)if(ready(SYN_BY[k]))L[k]=k==='rumble'?L[k]*.35:0;
+  if(L.water&&(ready('krople')||ready('plukanie')))L.water=0;
+  for(const k in L)glide(B[k].gain,L[k],tc);
+  const SL=sampleLevels(s);for(const k in SL)sfxLevel(k,SL[k],tc,s);
+  const out=s.tab==='pola';glide(B.windLP.frequency,out?3500:600,tc);glide(B.rainLP.frequency,out?7000:s.tab==='targ'?3000:900,tc)}
 
 function ensure(){if(ac)return true;const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
   try{ac=new C();out=filt('lowpass',16000);const comp=ac.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=3;out.connect(comp);comp.connect(ac.destination);
     ambBus=gain(0);fxBus=gain(0);ambBus.connect(out);fxBus.connect(out);
     const cv=ac.createConvolver();cv.buffer=verbBuf(2.2);verb=gain(1);chain(verb,cv,gain(.55),ambBus);
     pink=noiseBuf('pink');brown=noiseBuf('brown');buildBeds();
-    document.addEventListener('visibilitychange',()=>{if(!ac)return;if(document.hidden)ac.suspend();else if(st&&st.on)ac.resume()});
+    document.addEventListener('visibilitychange',()=>{if(!ac)return;if(document.hidden){ac.suspend();sfxMuteAll()}else if(st&&st.on)ac.resume()});
     return true}catch(e){ac=null;return false}}
 window.AuraSound={
   // s = {on, amb, vol, tab, wx, season, hour, run:{maszyna:liczba partii}}
   update(s){st=s;if(!s.on&&!ac)return;if(!ensure())return;
-    if(!s.on){if(ac.state==='running')ac.suspend();return}
+    if(!s.on){if(ac.state==='running')ac.suspend();sfxMuteAll();return}
     if(ac.state==='suspended'&&!document.hidden)ac.resume();
     glide(fxBus.gain,1.2*s.vol,.1);glide(ambBus.gain,s.amb?1.6*s.vol:0,.6);
-    const now=performance.now();if(now-lastTick<90)return;lastTick=now;
-    apply(s);if(s.amb)schedule(s);else{crowd(false);musT=null}},
+    const now=performance.now(),sw=s.tab!==lastTab;if(!sw&&now-lastTick<90)return;lastTick=now;lastTab=s.tab;
+    apply(s,sw?.04:1.2);if(s.amb)schedule(s);else{crowd(false);musT=null;sfxMuteAll()}},
   fx(type){if(!st||!st.on||!ensure()||document.hidden)return;if(ac.state==='suspended')ac.resume();try{(FX[type]||FX.click)()}catch(e){}}
 };
 })();

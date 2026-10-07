@@ -161,7 +161,7 @@ function enqueue(rid,n,quiet){const r=RECIPES[rid],id=r.m,m=S.m[id]; if(!m.owned
   while(k<n&&mLoad(id)<qMax()&&canDo(r)>=1){
     Object.entries(r.in).forEach(([i,q])=>add(i,-q));
     if(m.run.length<mSlots(id)) m.run.push({r:rid,prog:0}); else m.q.push(rid); k++;}
-  if(!k&&!quiet) toast(mLoad(id)>=qMax()?'Kolejka tej maszyny jest pełna. Większe zasobniki kupisz w Ulepszeniach.':'Brakuje surowców.');
+  if(!k&&!quiet) toast(mLoad(id)>=qMax()?'Kolejka tej maszyny jest pełna. Większe zasobniki kupisz w Sklepie.':'Brakuje surowców.');
   dirty=true; return k;}
 function clearQueue(id){const m=S.m[id];
   m.q.forEach(rid=>Object.entries(RECIPES[rid].in).forEach(([i,q])=>{add(i,q);gainFeed(i,q,'Zwrot z kolejki')})); m.q=[]; dirty=true;}
@@ -264,7 +264,7 @@ function shopStep(d){const r=custRate(); if(!r) return;
 // wystaw towar: do slotu z tym samym towarem, do wskazanego albo pierwszego wolnego
 function listWare(k,n,slot){n=Math.min(inv(k),n); if(n<=0||ITEMS[k].kind==='supply') return 0; padShop();
   let i=S.shop.findIndex(x=>x&&x.k===k);
-  if(i<0){i=slot!=null&&!S.shop[slot]?slot:S.shop.findIndex(x=>!x); if(i<0){toast('Wystawa w sklepie jest pełna. Zdejmij coś albo kup dłuższą ladę w Ulepszeniach.');return 0} S.shop[i]={k,q:0,pm:1,t:0}}
+  if(i<0){i=slot!=null&&!S.shop[slot]?slot:S.shop.findIndex(x=>!x); if(i<0){toast('Wystawa w sklepie jest pełna. Zdejmij coś albo kup dłuższą ladę w Sklepie.');return 0} S.shop[i]={k,q:0,pm:1,t:0}}
   const x=S.shop[i]; add(k,-n); x.q+=n; x.t=Math.max(x.t||0,x.q); dirty=true; return n;}
 function unlistWare(i){const x=S.shop[i]; if(!x) return; if(x.q) add(x.k,x.q); S.shop[i]=null; placeItems(); dirty=true;}
 function padShop(){const n=shopSlots(); while(S.shop.length<n) S.shop.push(null);}
@@ -370,7 +370,7 @@ const GOALS=[
  ['Zmiel pierwszą mąkę na Żarnach.',()=>nMade()>=1,20],
  ['Wystaw mąkę w sklepie na Targu i poczekaj na klienta.',()=>S.st.flourSold>=1||S.st.orders>=1,25],
  ['Osiągnij 2. poziom gospodarza.',()=>S.lvl>=2,30],
- ['Kup Łuszczarkę w zakładce Ulepszenia.',()=>S.m.lus.owned,40],
+ ['Kup Łuszczarkę w zakładce Sklep.',()=>S.m.lus.owned,40],
  ['Ulepsz Młocarnię albo Żarna do poziomu 2.',()=>S.m.mlo.lvl>=2||S.m.zar.lvl>=2,50],
  ['Użyźnij glebę: prawy przycisk na poletku.',()=>S.plots.some(p=>p.soil>0),40],
  ['Zdobądź renomę 2 i zrealizuj 5 zamówień na Targu.',()=>S.st.orders>=5,80],
@@ -542,7 +542,7 @@ const spendFeed=(n,src)=>feed('s|'+src,COIN,-n,'',src,true,'spend');
 // ---------- INTERFEJS ----------
 function toast(msg,cls){if(silent)return;const el=document.createElement('div');el.className='toast '+(cls||'');el.textContent=msg;$('#toasts').appendChild(el);
   setTimeout(()=>el.remove(),cls?4500:2600); const all=$('#toasts').children; while(all.length>3) all[0].remove();}
-const TABS=[['pola','Pola'],['prz','Przetwórnia'],['spiz','Spiżarnia'],['targ','Targ'],['ulep','Ulepszenia']];
+const TABS=[['pola','Pola'],['prz','Przetwórnia'],['spiz','Spiżarnia'],['targ','Targ'],['ulep','Sklep']];
 
 const resDef=id=>RES.find(x=>x[0]===id);
 const resCost=id=>{const r=resDef(id);return Math.round(r[4]*Math.pow(r[5],res(id)))};
@@ -672,7 +672,7 @@ function vPrz(){syncLines();
   const jobs=own.reduce((s,[id])=>s+mLoad(id),0), busy=own.filter(([id])=>S.m[id].run.length).length;
   let h=`<div class="sec"><div class="sechead"><h2>Przetwórnia</h2><button class="btn sm" data-act="laddopen">+ Dodaj linię</button></div>
    <div class="kpis"><div class="kpi"><span>Maszyny w pracy</span><b>${busy} / ${own.length}</b></div><div class="kpi"><span>Partie w kolejkach</span><b>${jobs}</b></div><div class="kpi"><span>Plony w spiżarni</span><b>${sumKind('raw')}</b></div><div class="kpi"><span>Półprodukty</span><b>${sumKind('mid')}</b></div><div class="kpi gold"><span>Worki mąki</span><b>${sumKind('flour')}</b></div></div>
-   <p class="more">Przeciągnij linię za uchwyt ⠿, żeby zmienić kolejność. Strzałka zwija linię, ✕ ją usuwa (wróci przez „+ Dodaj linię”). Te same opcje są pod prawym przyciskiem na linii. Maszyny kupujesz w Ulepszeniach.</p></div>
+   <p class="more">Przeciągnij linię za uchwyt ⠿, żeby zmienić kolejność. Strzałka zwija linię, ✕ ją usuwa (wróci przez „+ Dodaj linię”). Te same opcje są pod prawym przyciskiem na linii. Maszyny kupujesz w Sklepie.</p></div>
    ${millersPanel()}`;
   if(!S.lines.length) h+=`<p class="empty-note">Nic nie czeka na przerobienie. Zbierz plony z poletek, a tu pojawią się ich linie do mąki. Możesz też dodać linię sam przyciskiem „+ Dodaj linię”.</p>`;
   const node=(k,last)=>`<span class="lnode ${last?'flour':''} ${inv(k)?'':'zero'}">${slot(k,{count:inv(k),cls:last?'gain':inv(k)?'ok':''})}<small>${esc(ITEMS[k].n)}</small></span>`;
@@ -850,7 +850,7 @@ function vTarg(){padShop();
      <div class="seg-switch pms">${PM.map((p,j)=>`<button data-act="pm" data-s="${i}" data-v="${j}" class="${x.pm===j?'on':''}" title="${j===0?'Klienci kupują częściej':j===2?'Klienci kupują rzadziej':'Zwykła cena'}">${p.n}</button>`).join('')}</div>
      <div class="wbtn"><button class="btn sm" data-act="restock" data-s="${i}" data-n="10" ${pin?'':'disabled'}>+10</button><button class="btn sm" data-act="restock" data-s="${i}" data-n="${pin}" ${pin?'':'disabled'}>+ wszystko (${pin})</button></div></div>`});
   const nextL=res('lada')<resDef('lada')[3];
-  if(nextL) h+=`<button class="ware lock" data-act="tab" data-v="ulep"><span class="plus">${LOCK}</span>Więcej miejsca: Lada sklepowa w Ulepszeniach</button>`;
+  if(nextL) h+=`<button class="ware lock" data-act="tab" data-v="ulep"><span class="plus">${LOCK}</span>Więcej miejsca: Lada sklepowa w Sklepie</button>`;
   h+=`</div>${SALES.length?`<div class="sales"><span class="gl">Ostatnio</span>${SALES.map(s=>`<span class="sale">${icon(s.k)}<b>${s.q}×</b> ${fmtZ(s.v)}</span>`).join('')}</div>`:''}</div>`;
   // zamówienia
   h+=`<div class="sec"><div class="sechead"><h2>Zamówienia <span class="more num">${S.orders.length} / ${os}</span></h2><p>Duże zamówienia na mąki, które już robisz. Pozycje oznaczone jako nowość możesz pominąć: zapłacą mniej i trochę spadnie renoma.</p></div>`;
@@ -1032,7 +1032,7 @@ function importSave(){const inp=document.createElement('input');inp.type='file';
 // ---------- AKCJE ----------
 function pay(c,src){if(S.coins<c)return false;S.coins-=c;dirty=true;if(src&&c){spendFeed(c,src);snd('buy')}return true}
 const ACT={
- tab:d=>{S.tab=d.v;if(d.v!=='pola')sowSel=null;closeSheet();render();window.scrollTo(0,0);if(d.v==='ksiega'||d.v==='kron')snd('page')},
+ tab:d=>{S.tab=d.v;if(d.v!=='pola')sowSel=null;closeSheet();render();sndUpdate();window.scrollTo(0,0);if(d.v==='ksiega'||d.v==='kron')snd('page')},
  plot:(d,b)=>{const i=+d.i,p=S.plots[i];if(isReady(p)){harvest(i);render()}else if(sowSel&&!p.crop){if(sowAt(i,b))sowPaint=true}else openPlot(i)},
  sowpick:()=>openSeeds(),
  sowend:()=>sowEnd(),
