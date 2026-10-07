@@ -27,7 +27,7 @@ button{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(-
 const W='../web/';
 const G=[
  ['Maszyny w przetwórni',[
-  ['tryby','Drewniane tryby','słychać zawsze, gdy cokolwiek pracuje',null],
+  ['tryby','Drewniane tryby','cicho w tle, gdy cokolwiek pracuje',null],
   ['zarna','Żarna','oraz Młyn czystej linii','zar'],
   ['sypanie','Młocarnia','sypiące się ziarno (w grze do tego miarowe uderzenia cepów)','mlo'],
   ['sito','Odsiewacz','sito','sit'],
@@ -36,7 +36,7 @@ const G=[
   ['krople','Kadź do moczenia','kapiąca woda','kad'],
   ['plukanie','Płuczka skrobi','chlupot wody','plu'],
   ['krojenie','Stół krojenia','nóż na desce','obi'],
-  ['orzechy','Łupiarka orzechów','pękające łupiny','lup'],
+  ['w-orzech','Łupiarka orzechów','pojedyncze trzaski łupin (w grze losowo, co chwilę)','lup',1],
   ['prasa','Prasa','tłocznia','pre'],
   ['suszarnia','Suszarnia','wentylator','sus'],
  ]],
@@ -47,9 +47,16 @@ const G=[
   ['samolot','Samolot','rzadko, raz na kilka minut',null,1],
   ['targ','Gwar na targu','',null],
  ]],
+ ['Spiżarnia: podnoszenie i odkładanie (kilka wariantów po kolei)',[
+  ['w-szelest','Podniesienie worka mąki','',null,1],
+  ['w-worek','Odłożenie worka mąki','',null,1],
+  ['w-ziarno','Ziarno, nasiona, kasze','podniesienie i odłożenie',null,1],
+  ['w-sloik','Słoik','mleczka, olej, sok, zaopatrzenie',null,1],
+ ]],
  ['Sklep',[
   ['drzwi','Drzwi z dzwonkiem','przy wejściu do Sklepu',null,1],
-  ['jazz','Jazz w tle','gra cicho, dopóki jesteś w Sklepie',null],
+  ['jazz','Jazz, pętla A (33 s, teraz w grze)','koniec przechodzi w początek; 15 taktów, najlepiej dopasowany styk',null],
+  ['../docs/jazz-b','Jazz, pętla B (45 s)','20 taktów, pełne frazy, styk trochę mniej dopasowany',null],
  ]],
 ];
 let cur=null;

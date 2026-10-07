@@ -415,7 +415,12 @@ let AC=null, gest=false;
 // odgłosy akcji i tło każdego miejsca są w sound.js
 function snd(type){ if(!S||!S.sound||!gest||silent) return; if(window.AuraSound) AuraSound.fx(type);}
 function sndUpdate(){if(!window.AuraSound||!gest||!S)return;const run={};for(const id in S.m){const n=S.m[id].owned?S.m[id].run.length:0;if(n)run[id]=n}
-  AuraSound.update({on:!!S.sound,amb:S.amb!==false,vol:S.vol==null?.7:S.vol,tab:S.tab,wx:S.wx,season:seasonN(),hour:hourF(),run})}
+  AuraSound.update({on:!!S.sound,vols:vols(),tab:S.tab,wx:S.wx,season:seasonN(),hour:hourF(),run})}
+// głośności kanałów 0..1 (ogólna, akcje, otoczenie, maszyny, targ, muzyka); stare zapisy: vol i amb
+const VOLS=[['all','Ogólna'],['fx','Efekty akcji'],['amb','Otoczenie i pogoda'],['mach','Maszyny'],['crowd','Gwar na targu'],['music','Muzyka w sklepie']];
+function vols(){if(!S.vols){S.vols={all:S.vol==null?.7:S.vol,fx:1,amb:S.amb===false?0:1,mach:1,crowd:1,music:1}}return S.vols}
+// rodzaj odgłosu towaru: worek (mąki), ziarno albo słoik (płyny, mleczka, zaopatrzenie)
+const itemSnd=k=>{const it=ITEMS[k];if(!it)return 'grain';if(it.kind==='flour')return 'sack';if(it.kind==='supply'||k==='olej'||k==='sok'||SHAPE_WET.test(it.n))return 'jar';return 'grain'};
 
 // ---------- GRAFIKA ----------
 const G='#6fa64a',D='#4c7d33',BR='#6a4a2e';
@@ -753,13 +758,13 @@ function moveToShelf(k,to){const sh=S.shelf;if(to<0||to>=sh.length)return false;
   if(src.where==='shelf'){if(src.i===to)return false;sh[to]=k;sh[src.i]=rule(src.i)==='pin'?null:other;if(rule(src.i)==='pin'){delete S.slotRule[src.i];S.slotRule[to]='pin'}}
   else if(src.where==='tray'){sh[to]=k;S.tray[src.i]=other}
   else sh[to]=k;
-  dirty=true;return true}
+  snd('drop_'+itemSnd(k));dirty=true;return true}
 function moveToTray(k,j){if(j==null||j<0){j=findTray();if(j<0){toast('Miejsce „Do rozłożenia” jest pełne.');return false}}
   const src=locate(k),other=S.tray[j]&&hold(S.tray[j])>0?S.tray[j]:null;
-  if(src.where==='tray'){if(src.i===j)return false;S.tray[j]=k;S.tray[src.i]=other;dirty=true;return true}
+  if(src.where==='tray'){if(src.i===j)return false;S.tray[j]=k;S.tray[src.i]=other;snd('drop_'+itemSnd(k));dirty=true;return true}
   if(other){toast('To miejsce do rozłożenia jest zajęte.');return false}
   if(src.where==='shelf'){S.shelf[src.i]=null;if(rule(src.i)==='pin')delete S.slotRule[src.i]}
-  S.tray[j]=k;dirty=true;return true}
+  S.tray[j]=k;snd('drop_'+itemSnd(k));dirty=true;return true}
 function toShelf(k){const i=findSlot();if(i<0){toast('Na półkach nie ma wolnego miejsca.');return false}return moveToShelf(k,i)}
 // --- interfejs
 let pSel=null, pMove=false, dragKey=null, dragging=false, ptrDown=false, ctxOpen=false;
@@ -934,8 +939,7 @@ function vKron(){
    <div class="toolbar"><button class="btn pri" data-act="export">Zapisz kopię do pliku</button><button class="btn" data-act="import">Wczytaj kopię z pliku</button></div></div>
    <div class="sec"><div class="sechead"><h2>Ustawienia</h2><span class="more">Aura Fields · wersja ${VERSION}</span></div><div class="toolbar">
    <button class="btn" data-act="sound">${S.sound?'Wycisz dźwięki':'Włącz dźwięki'}</button>
-   <button class="btn" data-act="amb" ${S.sound?'':'disabled'}>${S.amb!==false?'Wyłącz odgłosy otoczenia':'Włącz odgłosy otoczenia'}</button>
-   <label class="volr">Głośność <input type="range" id="volr" min="0" max="100" value="${Math.round((S.vol==null?.7:S.vol)*100)}" ${S.sound?'':'disabled'}></label>
+   </div><div class="vols">${VOLS.map(([k,n])=>`<label class="volr ${k==='all'?'main':''}"><span>${n}</span><input type="range" data-volk="${k}" min="0" max="100" value="${Math.round(vols()[k]*100)}" ${S.sound?'':'disabled'}><b class="num">${Math.round(vols()[k]*100)}%</b></label>`).join('')}</div><div class="toolbar">
    <button class="btn warn" data-act="reset">${resetArm?'Kliknij jeszcze raz, by skasować postęp':'Zacznij od nowa'}</button></div></div>`;
   return h;
 }
@@ -1054,7 +1058,7 @@ const ACT={
  pslot:d=>{hideCtx();
    const k=d.i!=null?S.shelf[+d.i]:d.t!=null?S.tray[+d.t]:d.o;
    if(pMove&&pSel){let ok=false;if(d.i!=null)ok=moveToShelf(pSel,+d.i);else if(d.t!=null)ok=moveToTray(pSel,+d.t);if(ok)pMove=false;render();return}
-   pSel=k&&hold(k)>0&&pSel!==k?k:null;pMove=false;render()},
+   pSel=k&&hold(k)>0&&pSel!==k?k:null;if(pSel)snd('pick_'+itemSnd(pSel));pMove=false;render()},
  pmove:()=>{pMove=!pMove;render()},
  ptrash:d=>{hideCtx();trash(d.k);render()},
  pbin:()=>{if(pMove&&pSel){trash(pSel);render();return}toast('Przeciągnij tu towar, żeby go wyrzucić.')},
@@ -1106,7 +1110,6 @@ const ACT={
  planstop:d=>{const ml=S.millers[+d.k];if(ml)ml.plan=null;if(sheetMode==='plan')closeSheet();render()},
  millerOff:d=>{const ml=S.millers[+d.k];ml.off=!ml.off;render()},
  sound:()=>{S.sound=!S.sound;sndUpdate();render()},
- amb:()=>{S.amb=S.amb===false;sndUpdate();render()},
  export:exportSave, import:importSave,
  reset:()=>{if(!resetArm){resetArm=true;render();setTimeout(()=>{resetArm=false;if(S.tab==='kron')render()},4000);return}
    resetArm=false;silent=true;S=repair(newState());if(S._arrange)delete S._arrange;stageCache=[];advance(0.01,true);silent=false;save();render();toast('Nowa gra')},
@@ -1122,7 +1125,7 @@ document.addEventListener('pointerdown',e=>{gest=true;ptrDown=true;
 addEventListener('pointerup',()=>{ptrDown=false;if(sowPaint){sowPaint=false;save();render()}});
 document.addEventListener('pointerover',e=>{if(!sowSel||!sowPaint||!(e.buttons&1))return;const b=e.target.closest&&e.target.closest('.plot.sowok');if(b)sowAt(+b.dataset.i,b)}); addEventListener('pointercancel',()=>{ptrDown=false});
 // przeciąganie towarów: między półkami, „Do rozłożenia” i tym, co leży obok
-document.addEventListener('dragstart',e=>{const b=e.target.closest&&e.target.closest('.pslot[data-dk]');if(!b)return;dragKey=b.dataset.dk;dragging=true;hideCtx();
+document.addEventListener('dragstart',e=>{const b=e.target.closest&&e.target.closest('.pslot[data-dk]');if(!b)return;dragKey=b.dataset.dk;dragging=true;hideCtx();snd('pick_'+itemSnd(dragKey));
   e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragKey)}catch(_){}});
 const dropSlot=t=>t.closest&&t.closest('.pslot[data-i],.pslot[data-t],.pslot[data-bin]');
 document.addEventListener('dragover',e=>{if(dragKey&&dropSlot(e.target)){e.preventDefault();e.dataTransfer.dropEffect='move'}});
@@ -1155,8 +1158,9 @@ document.addEventListener('click',e=>{
   if(e.detail!==0&&performance.now()-lastMouseAct<800) return;
   if(e.target.id==='sheet'){closeSheet();return}
   handle(e);});
-document.addEventListener('input',e=>{if(e.target.id==='volr'){S.vol=+e.target.value/100;sndUpdate();dirty=false}});
-document.addEventListener('change',e=>{if(e.target.id==='volr'){save();snd('coin')}});
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.volk;if(!k)return;vols()[k]=+e.target.value/100;const b=e.target.nextElementSibling;if(b)b.textContent=e.target.value+'%';sndUpdate();dirty=false});
+// po puszczeniu suwaka krótka próbka tego kanału
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.volk;if(!k)return;save();if(k==='all'||k==='fx')snd('coin')});
 document.addEventListener('keydown',e=>{gest=true;if(e.key==='Escape'){if(sheetMode)closeSheet();else if(sowSel)sowEnd()}});
 
 // ---------- NIEBO ----------
