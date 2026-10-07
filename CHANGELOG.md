@@ -1,6 +1,6 @@
 # Historia zmian
 
-Każde wydanie ma tag `vX.Y.Z` i paczkę `.zip` na stronie Releases.
+Każde wydanie ma tag `vX.Y.Z`, instalator `Aura-Fields-Setup.exe` i paczkę `.zip` na stronie Releases.
 
 ## 1.1.0 — 2026-10-06
 

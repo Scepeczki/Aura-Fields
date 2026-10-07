@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Okno gry: zdarzenia postępu aktualizacji i polecenia aktualizatora",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

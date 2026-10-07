@@ -1214,7 +1214,8 @@ function start(data){
   addEventListener('beforeunload',save); document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{loop();dirty=true}});
   requestAnimationFrame(skyLoop);
   try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-  if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // w aplikacji (Tauri) pliki są lokalne i aktualizuje je instalator, więc bez service workera
+  if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)&&!window.__TAURI_INTERNALS__) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 window.claude?.hot?.snapshot?.(()=>({state:S}));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
