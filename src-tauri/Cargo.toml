@@ -1,6 +1,6 @@
 [package]
 name = "aura-fields"
-version = "1.1.0"
+version = "1.2.0"
 description = "Aura Fields: gra o gospodarstwie i młynie"
 edition = "2021"
 publish = false

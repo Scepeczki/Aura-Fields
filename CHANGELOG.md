@@ -2,6 +2,12 @@
 
 Każde wydanie ma tag `vX.Y.Z`, instalator `Aura-Fields-Setup.exe` i paczkę `.zip` na stronie Releases.
 
+## 1.2.0 — 2026-10-07
+
+- Aura Fields jako aplikacja na Windows z instalatorem
+- Gra sama sprawdza aktualizacje: przycisk Pobierz, a potem Zainstaluj
+- Instalator zawsze instaluje najnowszą wersję
+
 ## 1.1.0 — 2026-10-06
 
 - Nowy wygląd: tło z porą roku i doby na cały ekran, półprzezroczyste panele ze złotą obwódką

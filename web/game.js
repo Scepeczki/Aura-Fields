@@ -2,7 +2,7 @@
 (()=>{
 'use strict';
 // wersja gry: podbija ją skrypt release.ps1 przy każdym wydaniu
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rand=n=>Math.floor(Math.random()*n), pick=a=>a[rand(a.length)];
