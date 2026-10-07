@@ -620,7 +620,7 @@ function calendar(){
 function vPola(){
   const ready=S.plots.filter(isReady).length, empty=S.plots.filter(p=>!p.crop).length;
   const canRe=S.plots.some(p=>!p.crop&&p.last&&CR[p.last]&&compatible(CR[p.last],p.env)&&!frozen(p)&&S.coins>=seedCost(CR[p.last]));
-  let h=`<div class="sec"><div class="sechead"><h2>Poletka</h2><p>Pole przyjmuje uprawy z naszego klimatu i zimą stoi. Pole ryżowe jest zalane wodą. W szklarni rośnie wszystko poza roślinami wodnymi, przez cały rok.</p></div>
+  let h=`<div class="sec"><div class="sechead"><h2>Poletka</h2></div>
   ${calendar()}
   <div class="toolbar"><button class="btn pri harv" data-act="harvestall" ${ready?'':'disabled'}>${lico(ICO.sickle)}Zbierz wszystko${ready?` (${ready})`:''}</button>
    <button class="btn" data-act="replant" ${canRe?'':'disabled'}>${lico(ICO.bag)}Obsiej wolne tym, co rosło</button>
