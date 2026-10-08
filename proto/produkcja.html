@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Przetwórnia: piaskownica</title>
+<title>Przetwórnia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{--bg:#120d09;--panel:rgba(30,22,15,.94);--panel2:#241a12;--bd:rgba(236,188,76,.28);--bd2:rgba(236,188,76,.6);--tx:#f1e4c8;--mut:#b9a888;--gold:#ecbc4c;--green:#8cc45a;--amber:#e09a3a;--red:#e0705a;--blue:#6fb4e0;--cell:86px}
 *{box-sizing:border-box}
@@ -154,25 +156,68 @@ input,select{user-select:auto}
 #toast.on{opacity:1}
 kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4px;font-size:.8rem}
 
+/* ===== WYGLĄD JAK W GRZE ===== */
+:root{--f-display:"Alegreya",Georgia,serif;--f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;--f-num:"JetBrains Mono",ui-monospace,monospace;--glass:rgba(22,16,10,.72);--gl-bd:rgba(236,188,76,.32)}
+body{font:15px/1.4 var(--f-body);background:#140e09 url(../web/bg/przetwornia.webp) center 40%/cover fixed}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(14,10,6,.45),rgba(14,10,6,.62) 45%,rgba(14,10,6,.85))}
+header{background:rgba(14,10,6,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--gl-bd);padding:12px 46px}
+header h1{display:flex;align-items:center;gap:10px;font:800 1.9rem var(--f-display);color:var(--tx);text-shadow:0 2px 10px rgba(0,0,0,.7)}
+.h1ico{width:30px;height:30px;color:var(--gold)}
+.money{font-family:var(--f-num);font-size:1.05rem;background:rgba(236,188,76,.1)}
+.test{position:relative}.test summary{list-style:none;cursor:pointer;padding:5px 12px;border:1px solid var(--bd);border-radius:999px;color:var(--mut);font-size:.85rem}
+.test summary::-webkit-details-marker{display:none}.test[open] summary{color:var(--gold);border-color:var(--gold)}
+.test .tbox{position:absolute;right:0;top:40px;width:560px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:#1b130c;border:1px solid var(--bd2);box-shadow:0 14px 34px rgba(0,0,0,.7);z-index:60}
+.test .mechs{padding:0;border:0;background:none}
+main{padding-top:22px}
+.ftabs .btn{background:var(--glass);backdrop-filter:blur(8px);font-weight:700}
+.ftabs .btn.on{background:var(--gold);color:#2a1d0c}
+.board-wrap{background:var(--glass);border:1px solid var(--gl-bd);border-radius:18px;padding:12px 12px 14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 18px 40px -16px rgba(0,0,0,.8)}
+/* podłoga z desek */
+.cell{border-radius:6px;border:1px solid rgba(0,0,0,.35);background:
+  linear-gradient(180deg,rgba(255,236,200,.06),rgba(0,0,0,.12)),
+  repeating-linear-gradient(90deg,#5a3f26 0 calc(var(--cell)/3 - 1px),#3e2b19 calc(var(--cell)/3 - 1px) calc(var(--cell)/3));
+  box-shadow:inset 0 1px 0 rgba(255,236,200,.08)}
+.cell:hover{border-color:rgba(236,188,76,.5)}
+.cell.in{box-shadow:inset 0 0 0 3px rgba(140,196,90,.75),inset 0 0 18px rgba(140,196,90,.25)}
+.cell.out{box-shadow:inset 0 0 0 3px rgba(224,154,58,.8),inset 0 0 18px rgba(224,154,58,.25)}
+.cell.sel{outline:3px solid var(--gold);outline-offset:1px}
+.mach{background:none;border:0;border-radius:6px}
+.mach img{width:96%;height:96%;filter:drop-shadow(0 6px 6px rgba(0,0,0,.65))}
+.mach.work img{filter:drop-shadow(0 6px 6px rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(140,196,90,.55))}
+.mach.block img{filter:drop-shadow(0 6px 6px rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(224,112,90,.7))}
+.mach[draggable=true]{cursor:grab}
+.st{font-family:var(--f-num);font-size:.68rem}
+.bar{height:5px;bottom:6px;left:12%;right:12%}
+.inq{font-family:var(--f-num)}
+.items .stk b{font-family:var(--f-num)}
+.gut{background:none}.door{font-family:var(--f-body);font-weight:700;background:linear-gradient(#6a4a2e,#3e2b19)}
+.mag{background:rgba(18,13,8,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.mag .lbl{font-family:var(--f-display);font-size:1.1rem}
+.mtile{background:rgba(255,236,200,.04)}
+#mbar{font-family:var(--f-body)}#mbar button{font-family:var(--f-num)}
+#drawer .handle,#shopdr .handle{font-family:var(--f-display);font-size:1rem}
+h2{font-family:var(--f-display);font-size:1.15rem}
+.info,#drawer .pan,#shopdr .pan{font-family:var(--f-body)}
 </style>
 </head>
 <body>
 <header>
-  <h1>Przetwórnia: piaskownica</h1>
-  <span class="money" id="money"></span>
+  <h1><svg class="h1ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.8"/><path d="M12 5v14M5 12h14M7.1 7.1l9.8 9.8M16.9 7.1l-9.8 9.8"/><path d="M18.5 14.7L21.2 15.8M14.7 18.5L15.8 21.2M9.3 18.5L8.2 21.2M5.5 14.7L2.8 15.8M5.5 9.3L2.8 8.2M9.3 5.5L8.2 2.8M14.7 5.5L15.8 2.8M18.5 9.3L21.2 8.2" stroke-width="2.4"/></svg>Przetwórnia</h1>
   <span class="sp">
-    <label>Tempo <select id="speed"><option value="1">×1</option><option value="3">×3</option><option value="6">×6</option><option value="15">×15</option></select></label>
-    <label><input type="checkbox" id="free"> zakupy za darmo</label>
-    <button class="btn" data-act="reset">Zacznij od nowa</button>
+    <span class="money" id="money"></span>
+    <details class="test"><summary>Piaskownica</summary><div class="tbox">
+      <label>Tempo <select id="speed"><option value="1">×1</option><option value="3">×3</option><option value="6">×6</option><option value="15">×15</option></select></label>
+      <label><input type="checkbox" id="free"> zakupy za darmo</label>
+      <div class="mechs" id="mechs"></div>
+      <button class="btn sm" data-act="reset">Zacznij od nowa</button></div></details>
   </span>
 </header>
-<div class="mechs" id="mechs"></div>
 <main>
   <section>
     <div class="ftabs" id="ftabs"></div>
     <div class="board-wrap" id="bw"><div class="board" id="board"></div></div>
     <div class="mag" id="mag"></div>
-    <p class="hint">Maszyna bierze wkład z kratki <span style="color:var(--green)">przed sobą (zielona)</span> i wyrzuca produkt (i uboczny obok niego) na kratkę <span style="color:var(--amber)">za sobą (pomarańczowa)</span>. Najedź na maszynę, żeby włożyć 1, 5 albo max partii. Wyjście jednej maszyny może być wejściem następnej. Maszyny kupujesz w sklepie z lewej, a z magazynu na dole ekranu przeciągasz je na kratki. Podwójne kliknięcie albo prawy przycisk → Szczegóły pokazuje wszystko o maszynie. Towar bierzesz ze spiżarni z prawej. <kbd>R</kbd> obraca, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
+    <p class="hint">Maszyna bierze wkład z kratki <span style="color:var(--green)">przed sobą (zielona)</span> i wyrzuca produkt (i uboczny obok niego) na kratkę <span style="color:var(--amber)">za sobą (pomarańczowa)</span>. Najedź na maszynę, żeby włożyć 1, 5 albo max partii. Wyjście jednej maszyny może być wejściem następnej. Maszyny kupujesz w sklepie z lewej, a z magazynu na dole ekranu przeciągasz je na kratki. Podwójne kliknięcie albo prawy przycisk → Szczegóły pokazuje wszystko o maszynie. Towar bierzesz ze spiżarni z prawej. Maszynę przenosisz, przytrzymując ją i przeciągając. <kbd>R</kbd> obraca maszynę pod kursorem, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
   </section>
 </main>
 <div class="info" id="info" hidden></div>
@@ -197,11 +242,11 @@ const MECH=[
 ];
 const CAP_FLOOR=99, CAP_BELT=3, CARRY=10, WK_SPEED=2.2;
 // ---------- stan ----------
-const KEY='aura-proto-produkcja-4';
+const KEY='aura-proto-produkcja-5';
 function fresh(){return {money:20000,speed:3,free:false,qty:5,mech:{C:0,D:0},exec:'now',
   pantry:{k_psz:100,k_zyt:60,k_jec:40,n_gry:40,ziem:30,kolby:20,wapno:20},
   store:{mlo:1,zar:1},workers:0,cur:0,
-  facts:[newFact('Przetwórnia 1',12,8)],wk:[]}}
+  facts:[newFact('Hala 1',11,3)],wk:[]}}
 function newFact(name,w,h){return {name,w,h,cells:{},items:{},orders:{},send:{}}}
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!S||!S.facts)S=fresh();
 S.wk=(S.wk||[]).map(w=>({...w,load:null,task:null,path:null,st:'idle'}));
@@ -332,7 +377,7 @@ function renderLeft(){if(dragging)return;
   if(S.mech.D&&S.exec==='wk'){const here=S.wk.filter(w=>w.f===S.cur).length;h+=`<h2>Młynarze <small>w tej hali: ${here}</small></h2><p class="hint">Chodzą od drzwi spiżarni (po lewej) z towarem do kratek z zamówieniami i odnoszą to, co ma wracać. Niosą do ${CARRY} sztuk.</p><button class="btn" data-act="hire">Zatrudnij młynarza · ${S.free?0:1000} zł</button>${here?` <button class="btn" data-act="fire">Zwolnij</button>`:''}`}
   $('left').innerHTML=h}
 function fitCells(){const f=F(),bw=$('bw');if(!bw)return;const top=bw.getBoundingClientRect().top+scrollY;
-  const byW=Math.floor((Math.min(innerWidth-110,1700)-47)/f.w)-3,c=Math.max(64,Math.min(128,byW));
+  const byW=Math.floor((Math.min(innerWidth-150,1700)-47)/f.w)-3,c=Math.max(64,Math.min(128,byW));
   document.documentElement.style.setProperty('--cell',c+'px')}
 addEventListener('resize',()=>{fitCells();renderBoard()});
 function renderBoard(){const f=F();fitCells();
@@ -349,7 +394,7 @@ function renderBoard(){const f=F();fitCells();
       const cls=['cell'];if(big)cls.push('mbig');if(IN[key])cls.push('in');if(OUT[key])cls.push('out');if(hot.has(key))cls.push('hot');if(sel===key)cls.push('sel');
       let inner='';
       if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st==='bad'?'bad':c.st==='ready'?'ready':'wait');
-        inner=`<div class="mach ${st}" title="${MP[c.m].n}${r?': '+r.verb:''}"><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt=""><div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
+        inner=`<div class="mach ${st}" draggable="true" data-drag="mv:${key}" title="${MP[c.m].n}${r?': '+r.verb:''}"><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt=""><div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
           ${c.job?`<div class="bar"><i style="width:${c.job.p/c.job.t*100}%"></i></div>`:''}${st==='block'?'<span class="st block" title="Kratka wyjścia jest pełna albo zajęta">pełno</span>':st==='bad'?'<span class="st bad" title="Przed maszyną leży coś, czego ona nie przerabia (albo za mało na partię)">?</span>':c.auto?'<span class="st auto" title="Tryb ciągły: sama bierze z kratek wejścia">ciągle</span>':st==='wait'?'<span class="st wait">pusto</span>':''}
           ${queued(c)?`<span class="inq" title="Partie włożone do maszyny i czekające">${queued(c)}</span>`:''}
           </div>`}
@@ -441,7 +486,7 @@ const ACT={
   notool:()=>{tool=null},rot:()=>{rot=(rot+1)%4},
   fact:d=>{S.cur=+d.i;sel=null;save()},
   grow:d=>{const f=F(),c=d.d==='w'?f.h*60:f.w*60;if(!pay(c))return;f[d.d]++;save()},
-  newfact:()=>{if(!pay(4000))return;S.facts.push(newFact('Przetwórnia '+(S.facts.length+1),6,5));S.cur=S.facts.length-1;sel=null;save()},
+  newfact:()=>{if(!pay(4000))return;S.facts.push(newFact('Hala '+(S.facts.length+1),11,3));S.cur=S.facts.length-1;sel=null;save()},
   rotsel:()=>{const c=F().cells[sel];if(c){c.dir=(c.dir+1)%4;save()}},
   movesel:()=>{const c=F().cells[sel];if(c){tool={k:'move',from:sel};rot=c.dir}},
   stash:()=>{const f=F(),c=f.cells[sel];if(!c)return;if(c.t==='machine'){unqueue(c);S.store[c.m]=(S.store[c.m]||0)+1;if(c.job){const r=RECIPES[c.job.r];Object.entries(r.in).forEach(([i,q])=>S.pantry[i]=(S.pantry[i]||0)+q)}}delete f.cells[sel];save()},
@@ -468,7 +513,7 @@ document.addEventListener('change',e=>{const f=F();
   if(e.target.id==='sendchk'){if(e.target.checked)f.send[sel]=1;else delete f.send[sel]}
   save();render()});
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
-  if(e.key==='r'||e.key==='R'){if(tool)rot=(rot+1)%4;else if(sel&&F().cells[sel]){F().cells[sel].dir=(F().cells[sel].dir+1)%4;save()}render()}
+  if(e.code==='KeyR'||e.key==='r'||e.key==='R'){const t=hoverKey&&occMap(F())[hoverKey]||sel;if(tool)rot=(rot+1)%4;else if(t&&F().cells[t]&&F().cells[t].t!=='chest'){F().cells[t].dir=(F().cells[t].dir+1)%4;save()}render();drawGhost()}
   if(e.key==='Escape'){tool=null;hideCtx();render()}
   if(e.key==='Delete'&&sel&&F().cells[sel]){ACT.stash();render()}});
 // prawy przycisk: opcje kratki albo maszyny
@@ -489,12 +534,14 @@ document.addEventListener('contextmenu',e=>{const slot=e.target.closest('.slot.f
 let drag=null;
 const dragQ=e=>e.shiftKey?999:e.altKey?1:S.qty==='max'?999:S.qty;
 document.addEventListener('dragstart',e=>{const s=e.target.closest('[data-drag]');if(!s)return;drag=s.dataset.drag;dragging=true;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',drag)}catch(_){}
+  if(drag.startsWith('mv:')){const c=F().cells[drag.slice(3)],d=$('dimg');if(c){d.querySelector('img').src='../web/machines/'+c.m+'.webp';d.querySelector('b').textContent='';try{e.dataTransfer.setDragImage(d,26,26)}catch(_){}}return}
   if(drag.startsWith('m:')){const d=$('dimg'),m=drag.slice(2);d.querySelector('img').src='../web/machines/'+m+'.webp';d.querySelector('b').textContent='';try{e.dataTransfer.setDragImage(d,26,26)}catch(_){}return}
   const p=drag.split(':'),f=F(),id=p[0]==='p'?p[1]:p[2],have=p[0]==='p'?(S.pantry[id]||0):((f.items[p[1]]||{})[id]||0),d=$('dimg');
   d.querySelector('img').src='../web/items/'+id+'.webp';d.querySelector('b').textContent=Math.min(have,dragQ(e));try{e.dataTransfer.setDragImage(d,26,26)}catch(_){}});
 document.addEventListener('dragover',e=>{if(!drag)return;const c=e.target.closest('[data-cell]')||e.target.closest('[data-slot]')||e.target.closest('#drawer');if(c){e.preventDefault();document.querySelectorAll('.drop').forEach(x=>x!==c&&x.classList.remove('drop'));if(c.dataset.cell||c.dataset.slot)c.classList.add('drop')}});
 document.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const f=F(),q=dragQ(e),parts=drag.split(':');
   const cell=e.target.closest('[data-cell]');
+  if(parts[0]==='mv'){const from=parts.slice(1).join(':'),c=f.cells[from];if(cell&&c&&cell.dataset.cell!==from){const prev=tool,pr=rot;tool={k:'move',from};rot=c.dir;place(cell.dataset.cell);tool=prev;rot=pr}drag=null;dragging=false;save();render();return}
   if(parts[0]==='m'){if(cell){const prev=tool;tool={k:'machine',m:parts[1]};place(cell.dataset.cell);tool=prev&&prev.k==='machine'?null:prev}drag=null;dragging=false;save();render();return}
   if(cell){const [tx,ty]=target(f,...pk(cell.dataset.cell),parts[0]==='p'?parts[1]:parts[2]);
     if(parts[0]==='p'){if(!fromPantry(f,tx,ty,parts[1],q))toast('Tu się nie zmieści.')}
