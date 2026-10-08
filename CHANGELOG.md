@@ -2,6 +2,18 @@
 
 Każde wydanie ma tag `vX.Y.Z`, instalator `Aura-Fields-Setup.exe` i paczkę `.zip` na stronie Releases.
 
+## 1.3.0 — 2026-10-08
+
+- Malowane grafiki: zagony (także zimą), ikony przedmiotów, saszetki nasion, maszyny, pracownicy, pory roku i pogoda
+- Nowe tła w Przetwórni, Spiżarni i Sklepie, a Targ zmienia się z porą roku, dniem i nocą
+- Siew z jednego miejsca: wybierz nasiona i klikaj albo przeciągaj po poletkach
+- Nasiona w kolejności Księgi mąk, z plonem i ilością mąki, którą już masz
+- Spiżarnia: nowe towary trafiają do Do rozłożenia, przy braku miejsca gra czeka, jest kosz
+- Linie pokazują, ile mąki jeszcze zrobisz z zapasów, a użyte mąki zostają w Dodaj linię przygaszone
+- Dźwięki pola, maszyn, spiżarni i targu, jazz w Sklepie, osobne suwaki głośności i dźwięk po zminimalizowaniu okna
+- Zakładka Ulepszenia nazywa się teraz Sklep
+- Drugie i trzecie stanowisko maszyny widać w liniach
+
 ## 1.2.0 — 2026-10-07
 
 - Aura Fields jako aplikacja na Windows z instalatorem
