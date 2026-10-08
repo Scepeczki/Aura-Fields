@@ -1304,7 +1304,20 @@ body[data-tab="targ"] .bgshade{background:linear-gradient(180deg,rgba(14,10,6,.3
 #dimg b{position:absolute;right:-6px;bottom:-4px;font:700 .85rem var(--f-num);background:#1a120b;border:1px solid rgba(236,188,76,.6);color:#ecbc4c;border-radius:7px;padding:0 5px}
 body[data-tab="prz"] main{padding-right:30px}
 /* w Przetwórni bez paska przewijania strony: prawą krawędź zajmuje szuflada spiżarni (przewijanie kółkiem działa dalej) */
-html.nosb{scrollbar-width:none}html.nosb::-webkit-scrollbar{display:none}
+html.nosb,html.nosb body{scrollbar-width:none}html.nosb::-webkit-scrollbar,html.nosb body::-webkit-scrollbar{display:none;width:0;height:0}
+.pdrawer .pin{scrollbar-width:none}.pdrawer .pin::-webkit-scrollbar{display:none;width:0}
+/* szuflada przypięta: zostaje otwarta, hala się zwęża */
+body.pdpin main{padding-right:min(430px,88vw)!important}
+.pdrawer.pinned .pdh{background:linear-gradient(180deg,#f3c95e,#c8962e);color:#2a1d0c}
+.pdtop{position:relative}
+.pd-bin{display:flex;align-items:center;gap:5px;margin-left:auto;padding:4px 10px;border-radius:9px;border:1px dashed rgba(214,110,90,.65);background:rgba(120,40,30,.15);color:#e09a88;font:700 .8rem var(--f-body)}
+.pd-bin svg{width:18px;height:18px}
+.pd-bin:hover,.pd-bin.over{background:rgba(180,60,40,.35);border-color:#e0806a;color:#ffd0c4}
+.pdtop{flex-wrap:wrap}.pdtop .pdq{width:100%;justify-content:flex-end;margin-top:6px}
+.hm .mn small{font:700 .62rem var(--f-num);color:#2a1d0c;background:#ecbc4c;border-radius:999px;padding:0 4px;margin-left:2px;vertical-align:1px}
+.mtog.off{opacity:.55}
+.hbtn button{padding:0 clamp(3px,.4vw,6px);font-size:clamp(.56rem,.75vw,.68rem)}
+body.pdpin .magbar{left:calc((100vw - min(430px,88vw))/2);max-width:calc(100vw - min(430px,88vw) - 60px)}
 </style>
 </head>
 <body>
