@@ -1318,15 +1318,16 @@ html.nosb,html.nosb body{scrollbar-width:none}html.nosb::-webkit-scrollbar,html.
 .mtog.off{opacity:.55}
 .hbtn button{padding:0 clamp(3px,.4vw,6px);font-size:clamp(.56rem,.75vw,.68rem)}
 /* „Do rozłożenia” przy lewej krawędzi Przetwórni, na stałe w miejscu */
-body[data-tab="prz"] main{padding-left:110px}
-.tdock{position:fixed;left:10px;top:110px;z-index:30;width:84px;display:flex;flex-direction:column;gap:5px;padding:8px 7px;border-radius:14px;border:1px solid rgba(236,188,76,.4);background:rgba(18,13,8,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 10px 26px rgba(0,0,0,.55);max-height:calc(100vh - 300px);overflow:auto;scrollbar-width:none}
+.hallsec{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:stretch}
+.hallmain{min-width:0}
+.tdock{position:sticky;top:72px;align-self:start;z-index:5;width:96px;display:flex;flex-direction:column;gap:5px;padding:8px 7px;border-radius:14px;border:1px solid rgba(236,188,76,.4);background:rgba(18,13,8,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 10px 26px rgba(0,0,0,.55);max-height:calc(100vh - 90px);overflow:auto;scrollbar-width:none}
 .tdock::-webkit-scrollbar{display:none}
 .tdock.bad{border-color:#e0705a;box-shadow:0 0 18px -4px rgba(224,112,90,.8)}
 .tdock.over{border-color:#ecbc4c;background:rgba(60,44,18,.9)}
 .tdock .tdl{font:700 .7rem/1.2 var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:#ecbc4c;text-align:center}
 .tdock .tdl span{display:block;font:600 .72rem var(--f-num);color:var(--husk);text-transform:none}
-.tdock .pd-s{aspect-ratio:1/.85;width:100%;flex:none}
-@media (max-width:760px){.tdock{display:none}body[data-tab="prz"] main{padding-left:16px}}
+.tdock .pd-s{aspect-ratio:auto;height:46px;width:100%;flex:none;flex-direction:row;gap:2px;justify-content:flex-start;padding-left:4px}.tdock .pd-s svg{width:30px;height:30px;flex:none}.tdock .pd-s small{display:none}.tdock .pd-s b{top:auto;bottom:3px}
+@media (max-width:760px){.tdock{display:none}.hallsec{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>

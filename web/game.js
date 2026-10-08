@@ -743,7 +743,7 @@ const fmtQ=q=>q>=10000?Math.floor(q/1000)+' tys.':String(q);
 // stos rośnie z ilością (plony): 1–9 jedna ikona, 10–99 trzy, 100–999 pięć, od 1000 kopiec
 function pile(id,q){const n=ITEMS[id].kind==='raw'?(q<10?1:q<100?3:q<1000?5:7):1;
   return `<span class="pile p${n}">${Array.from({length:n},()=>`<img src="items/${id}.webp" alt="" draggable="false">`).join('')}</span>`}
-const stackHtml=(key,id,q,half)=>`<span class="hs ${half?'half':''}" draggable="true" data-hdrag="c:${key}:${id}" data-act="hpick" data-click="1" data-k="${key}" data-id="${id}" title="${esc(ITEMS[id].n)}: ${q}. Przeciągnij albo kliknij, żeby przenieść">${pile(id,q)}<b class="hq">${fmtQ(q)}</b></span>`;
+const stackHtml=(key,id,q,half)=>`<span class="hs ${half?'half':''}" draggable="true" data-hdrag="c:${key}:${id}" data-k="${key}" data-id="${id}" title="${esc(ITEMS[id].n)}: ${q}. Przeciągnij albo kliknij, żeby przenieść">${pile(id,q)}<b class="hq">${fmtQ(q)}</b></span>`;
 function machHtml(h,key,c){const fd=feedable(h,key),q=c.q.reduce((a,b)=>a+b.n,0),sl=mSlots(c.lvl),work=c.run.length>0,ml=millerOf(h,key),auto=(c.auto&&c.lvl>=MLV_AUTO)||!!ml;
   const [x,y]=hxy(key),ik=hk(...inXY(c,x,y)),st=c.block?'block':work?'work':fd.n?'ready':sumQ(h.items[ik])?'nope':'idle';
   const j=c.run[0],t=j?RECIPES[j.r].t:1;
@@ -778,12 +778,12 @@ function vPrz(){const h=HL();if(hSel&&!h.cells[hSel]&&!h.items[hSel])hSel=null;c
   const ml=S.millers.length?`<div class="hmills">${S.millers.map((m,k)=>{const at=m.at&&S.halls[m.at.h]&&S.halls[m.at.h].cells[m.at.key];
     return `<span class="hmill ${m.off?'off':at?'on':''}">${MILLER_ART}<span><b>Młynarz ${k+1}</b><small>${m.off?'ma wolne':at?`${esc(M[at.m].n)} · hala ${m.at.h+1}`:'wolny: prawy przycisk na maszynie'}</small></span><button class="btn sm" data-act="millerOff" data-k="${k}">${m.off?'Do pracy':'Wolne'}</button></span>`}).join('')}</div>`:'';
   const cr=carry?carryInfo():'';
-  return `<div class="sec hallsec"><div class="sechead"><h2>Przetwórnia</h2>
+  return `<div class="sec hallsec">${trayDock()}<div class="hallmain"><div class="sechead"><h2>Przetwórnia</h2>
     <div class="htabs">${S.halls.map((x,i)=>`<button class="htab ${i===S.hall?'on':''}" data-act="hall" data-i="${i}">Hala ${i+1} <small>${x.w}×${x.h}</small></button>`).join('')}<button class="htab add ${S.coins<hallCost()?'poor':''}" data-act="newhall">+ Nowa hala <b>${fmtZ(hallCost())}</b></button></div></div>
     <p class="more">${busy} z ${allM} ${plural(allM,'maszyny','maszyn','maszyn')} pracuje. Przeciągnij towar ze spiżarni (prawa krawędź) przed maszynę i włóż partie przyciskami +1, +5, max. Maszynę chwytasz i przeciągasz, <span class="kbd">R</span> obraca, prawy przycisk to opcje, podwójne kliknięcie to szczegóły.</p>
     ${ml}${cr}
-    <div class="hwrap"><div class="hboard ${chain.size?'chain':''}" style="--cols:${h.w}">${g}</div></div>${add}</div>
-    ${magBar()}${pantryDrawer()}${trayDock()}`}
+    <div class="hwrap"><div class="hboard ${chain.size?'chain':''}" style="--cols:${h.w}">${g}</div></div>${add}</div></div>
+    ${magBar()}${pantryDrawer()}`}
 function carryInfo(){const c=carry,n=c.k==='p'?Math.min(hqty()==='max'?inv(c.id):hqty(),inv(c.id)):c.k==='c'?(()=>{const have=(HL().items[c.key]||{})[c.id]||0;return Math.min(hqty()==='max'?have:hqty(),have)})():1;
   const what=c.k==='s'||c.k==='m'?`${mart(c.id||HL().cells[c.key].m)}<b>${esc(M[c.id||HL().cells[c.key].m].n)}</b>`:`${icon(c.id)}<b>${esc(ITEMS[c.id].n)} ×${n}</b>`;
   return `<div class="hcarry">${what}<span>${c.k==='s'?'Kliknij wolną kratkę, żeby postawić. R obraca.':c.k==='m'?'Kliknij wolną kratkę, żeby przenieść.':'Kliknij kratkę albo maszynę. Kliknięcie spiżarni odkłada towar z powrotem.'}</span><button class="btn sm" data-act="hcancel">Anuluj</button></div>`}
@@ -793,11 +793,11 @@ function magBar(){const grp=[];MACH.forEach(([id])=>{[...new Set(S.mag.filter(x=
 // „Do rozłożenia” na stałe po lewej stronie hali (nie przewija się z halą): tu trafiają świeże plony
 function trayDock(){ensureShelfPos();const n=S.tray.filter(k=>k&&inv(k)>0).length,stuck=pantryStuck();
   return `<aside class="tdock ${stuck?'bad':''}" data-hback="1" title="Do rozłożenia: świeże plony i towar bez miejsca na półce. Przeciągnij do hali albo z hali tutaj."><b class="tdl">Do rozłożenia <span class="num">${n}/${TRAY_N}</span></b>
-    ${S.tray.map(k=>k&&inv(k)>0?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-act="ppick" data-click="1" data-id="${k}" title="${esc(ITEMS[k].n)}: ${inv(k)}">${itemSvg(k)}<b>${inv(k)}</b><small>${esc(ITEMS[k].n)}</small></span>`:'<span class="pd-s"></span>').join('')}</aside>`}
+    ${S.tray.map(k=>k&&inv(k)>0?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-id="${k}" title="${esc(ITEMS[k].n)}: ${inv(k)}">${itemSvg(k)}<b>${inv(k)}</b><small>${esc(ITEMS[k].n)}</small></span>`:'<span class="pd-s"></span>').join('')}</aside>`}
 // szuflada spiżarni przy prawej krawędzi: te same półki co w zakładce Spiżarnia
 function pantryDrawer(){ensureShelfPos();const q=hqty();
   const sl=k=>{if(!k||hold(k)<=0)return '<span class="pd-s"></span>';const n=inv(k);
-    return n?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-act="ppick" data-click="1" data-id="${k}" title="${esc(ITEMS[k].n)}: ${n}">${itemSvg(k)}<b>${n}</b><small>${esc(ITEMS[k].n)}</small></span>`
+    return n?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-id="${k}" title="${esc(ITEMS[k].n)}: ${n}">${itemSvg(k)}<b>${n}</b><small>${esc(ITEMS[k].n)}</small></span>`
       :`<span class="pd-s dim" title="${esc(ITEMS[k].n)}: wszystko na wystawie w sklepie">${itemSvg(k)}<b>0</b><small>${esc(ITEMS[k].n)}</small></span>`};
   const tray=S.tray.filter(k=>k&&inv(k)>0);
   return `<aside class="pdrawer ${S.pdPin?'open pinned':''}" data-pdrawer="1"><button class="pdh" data-act="pdtoggle" title="${S.pdPin?'Zamknij spiżarnię':'Otwórz spiżarnię'}">Spiżarnia${S.pdPin?' ✕':''}</button><div class="pan"><div class="pin">
