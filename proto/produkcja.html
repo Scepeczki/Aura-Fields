@@ -109,7 +109,7 @@ input,select{user-select:auto}
 .st.auto{color:var(--blue)}
 /* szuflada spiżarni przy prawej krawędzi */
 #drawer{position:fixed;top:0;right:0;bottom:0;z-index:40;display:flex;pointer-events:none}
-#drawer .handle{pointer-events:auto;align-self:center;width:30px;height:180px;border-radius:12px 0 0 12px;background:linear-gradient(180deg,#5a4024,#3a2a18);border:1px solid var(--bd2);border-right:0;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font:700 .85rem Georgia,serif;color:var(--gold);letter-spacing:.08em;box-shadow:-4px 0 14px rgba(0,0,0,.5)}
+#drawer .handle{pointer-events:auto;align-self:stretch;width:26px;height:auto;border-radius:0;background:linear-gradient(180deg,#5a4024,#3a2a18);border:1px solid var(--bd2);border-right:0;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font:700 .85rem Georgia,serif;color:var(--gold);letter-spacing:.08em;box-shadow:-4px 0 14px rgba(0,0,0,.5)}
 #drawer .pan{pointer-events:auto;width:0;overflow:hidden;transition:width .22s ease;background:#18110b;border-left:1px solid var(--bd2);box-shadow:-10px 0 30px rgba(0,0,0,.6)}
 #drawer.open .pan{width:420px}
 #drawer .in{width:420px;height:100%;overflow:auto;padding:14px}
