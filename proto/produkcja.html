@@ -198,6 +198,13 @@ main{padding-top:22px}
 #drawer .handle,#shopdr .handle{font-family:var(--f-display);font-size:1rem}
 h2{font-family:var(--f-display);font-size:1.15rem}
 .info,#drawer .pan,#shopdr .pan{font-family:var(--f-body)}
+/* rząd do dokupienia pod halą */
+.addrow{height:calc(var(--cell)*.62);border:2px dashed rgba(236,188,76,.45);border-radius:10px;background:repeating-linear-gradient(135deg,rgba(236,188,76,.07) 0 12px,rgba(0,0,0,0) 12px 24px);display:flex;align-items:center;justify-content:center;gap:14px;color:rgba(241,228,200,.75);font:700 1.05rem var(--f-display);opacity:.7;transition:opacity .15s,border-color .15s}
+.addrow:hover{opacity:1;border-color:var(--gold);color:var(--tx)}
+.addrow b{font:700 .95rem var(--f-num);color:var(--gold);padding:2px 10px;border:1px solid var(--bd2);border-radius:999px}
+/* pola lekko przezroczyste */
+.cell{background:linear-gradient(180deg,rgba(255,236,200,.05),rgba(0,0,0,.1)),repeating-linear-gradient(90deg,rgba(90,63,38,.5) 0 calc(var(--cell)/3 - 1px),rgba(52,36,22,.5) calc(var(--cell)/3 - 1px) calc(var(--cell)/3));border-color:rgba(255,236,200,.08)}
+.board-wrap{background:rgba(22,16,10,.45)}
 </style>
 </head>
 <body>
@@ -377,20 +384,20 @@ function renderLeft(){if(dragging)return;
   if(S.mech.D&&S.exec==='wk'){const here=S.wk.filter(w=>w.f===S.cur).length;h+=`<h2>Młynarze <small>w tej hali: ${here}</small></h2><p class="hint">Chodzą od drzwi spiżarni (po lewej) z towarem do kratek z zamówieniami i odnoszą to, co ma wracać. Niosą do ${CARRY} sztuk.</p><button class="btn" data-act="hire">Zatrudnij młynarza · ${S.free?0:1000} zł</button>${here?` <button class="btn" data-act="fire">Zwolnij</button>`:''}`}
   $('left').innerHTML=h}
 function fitCells(){const f=F(),bw=$('bw');if(!bw)return;const top=bw.getBoundingClientRect().top+scrollY;
-  const byW=Math.floor((Math.min(innerWidth-150,1700)-47)/f.w)-3,c=Math.max(64,Math.min(128,byW));
+  const byW=Math.floor((Math.min(innerWidth-150,1700)-24)/f.w)-3,c=Math.max(64,Math.min(128,byW));
   document.documentElement.style.setProperty('--cell',c+'px')}
 addEventListener('resize',()=>{fitCells();renderBoard()});
 function renderBoard(){const f=F();fitCells();
   $('ftabs').innerHTML=S.facts.map((x,i)=>`<button class="btn ${i===S.cur?'on':''}" data-act="fact" data-i="${i}">${x.name} <small>${x.w}×${x.h}</small></button>`).join('')+
-   `<button class="btn sm" data-act="grow" data-d="w" ${f.w>=18?'disabled':''}>+ kolumna · ${S.free?0:f.h*60} zł</button><button class="btn sm" data-act="grow" data-d="h" ${f.h>=12?'disabled':''}>+ rząd · ${S.free?0:f.w*60} zł</button><button class="btn sm" data-act="newfact">Nowa hala · ${S.free?0:4000} zł</button>`;
+   `<button class="btn sm" data-act="newfact">Nowa hala · ${S.free?0:4000} zł</button>`;
   // które kratki są wejściami i wyjściami maszyn
   const IN={},OUT={},hot=new Set();
   for(const key in f.cells){const c=f.cells[key];if(c.t!=='machine')continue;const [x,y]=pk(key);inCells(f,x,y).forEach(p=>{IN[k(...p)]=1;if(sel===key)hot.add(k(...p))});outCells(f,x,y).forEach(p=>{OUT[k(...p)]=1;if(sel===key)hot.add(k(...p))})}
   const occ=occMap(f);const [dx0,dy0]=DOOR(f);let h='';
-  for(let y=0;y<f.h;y++){h+=`<div class="gut" style="grid-column:1;grid-row:${y+1}">${y===dy0?'<div class="door">drzwi do spiżarni</div>':''}</div>`;
+  for(let y=0;y<f.h;y++){
     for(let x=0;x<f.w;x++){const key=k(x,y),c=f.cells[key],it=f.items[key];
       if(occ[key]&&occ[key]!==key)continue;
-      const big=false,pos=`grid-column:${x+2}${big?'/span 2':''};grid-row:${y+1}${big?'/span 2':''}`;
+      const big=false,pos=`grid-column:${x+1}${big?'/span 2':''};grid-row:${y+1}${big?'/span 2':''}`;
       const cls=['cell'];if(big)cls.push('mbig');if(IN[key])cls.push('in');if(OUT[key])cls.push('out');if(hot.has(key))cls.push('hot');if(sel===key)cls.push('sel');
       let inner='';
       if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st==='bad'?'bad':c.st==='ready'?'ready':'wait');
@@ -405,22 +412,23 @@ function renderBoard(){const f=F();fitCells();
       const o=f.orders[key];if(o&&S.mech.D)inner+=`<span class="badge" title="Zasilaj ze spiżarni: ${nm(o.id)}, utrzymuj ${o.keep}">${ic(o.id)}${o.keep}</span>`;
       if(f.send[key]&&S.mech.D)inner+=`<span class="badge send" title="Odsyłaj do spiżarni">⤴</span>`;
       h+=`<div class="${cls.join(' ')}" style="${pos}" data-cell="${key}">${inner}</div>`}}
-  $('board').style.gridTemplateColumns=`44px repeat(${f.w},var(--cell))`;
+  $('board').style.gridTemplateColumns=`repeat(${f.w},var(--cell))`;
+  if(f.h<12)h+=`<button class="addrow" data-act="grow" data-d="h" style="grid-column:1/-1;grid-row:${f.h+1}"><span>+ Nowy rząd</span><b>${S.free?0:f.w*60} zł</b></button>`;
   $('board').innerHTML=h+'<div id="ghost"></div><div id="mbar" hidden></div>'+S.wk.filter(w=>w.f===S.cur).map((w,i)=>`<div class="wk" data-w="${i}"><img src="../web/people/mlynarz.webp" alt="">${w.load?`<i>${ic(w.load.id)}</i>`:''}</div>`).join('');
   placeWorkers();drawGhost();drawMbar()}
 function placeWorkers(){const f=F(),cells=$('board').querySelectorAll('.wk');const step=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))+3;
-  S.wk.filter(w=>w.f===S.cur).forEach((w,i)=>{const el=cells[i];if(!el)return;el.style.left=(44+3+w.x*step+step/2-1.5)+'px';el.style.top=(w.y*step+step/2-1.5)+'px'})}
+  S.wk.filter(w=>w.f===S.cur).forEach((w,i)=>{const el=cells[i];if(!el)return;el.style.left=(w.x*step+step/2-1.5)+'px';el.style.top=(w.y*step+step/2-1.5)+'px'})}
 let hoverKey=null;
 const cellPx=()=>parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))+3;
 function drawMbar(){const b=document.getElementById('mbar');if(!b)return;const f=F(),key=mbKey(),c=key&&f.cells[key];
   if(!c||c.t!=='machine'||tool){b.hidden=true;return}const [x,y]=pk(key),st=cellPx(),fd=feedable(f,key);
   b.innerHTML=c.auto?'<small>tryb ciągły</small>':`<small>${fd.n?'włóż':'brak wkładu'}</small><button data-act="feed" data-c="${key}" data-q="1" ${fd.n?'':'disabled'}>1</button><button data-act="feed" data-c="${key}" data-q="5" ${fd.n?'':'disabled'}>5</button><button data-act="feed" data-c="${key}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' '+fd.n:''}</button>`;
-  b.hidden=false;b.style.left=(44+3+x*st+st/2-b.offsetWidth/2)+'px';b.style.top=Math.max(0,y*st-b.offsetHeight-4)+'px'}
+  b.hidden=false;b.style.left=(x*st+st/2-b.offsetWidth/2)+'px';b.style.top=Math.max(0,y*st-b.offsetHeight-4)+'px'}
 let mbHover=null;
 const mbKey=()=>{const f=F();if(mbHover&&f.cells[mbHover]&&f.cells[mbHover].t==='machine')return mbHover;if(sel&&f.cells[sel]&&f.cells[sel].t==='machine')return sel;return null};
 function drawGhost(){const g=document.getElementById('ghost');if(!g)return;g.innerHTML='';const f=F();
   if(!tool||!hoverKey||(tool.k!=='machine'&&!(tool.k==='move'&&f.cells[tool.from]&&f.cells[tool.from].t==='machine')))return;
-  const [x,y]=pk(hoverKey),st=cellPx(),L=(cx)=>44+3+cx*st,T=(cy)=>cy*st,ok=fits(f,x,y,tool.k==='move'?tool.from:null);
+  const [x,y]=pk(hoverKey),st=cellPx(),L=(cx)=>cx*st,T=(cy)=>cy*st,ok=fits(f,x,y,tool.k==='move'?tool.from:null);
   let h=`<div class="ghost ${ok?'':'bad'}" style="left:${L(x)}px;top:${T(y)}px;width:${st-3}px;height:${st-3}px"></div>`;
   sideCells(x,y,(rot+2)%4).forEach(([a,b])=>h+=`<div class="gside i" style="left:${L(a)}px;top:${T(b)}px;width:${st-3}px;height:${st-3}px"></div>`);
   sideCells(x,y,rot).forEach(([a,b])=>h+=`<div class="gside o" style="left:${L(a)}px;top:${T(b)}px;width:${st-3}px;height:${st-3}px"></div>`);
