@@ -638,7 +638,7 @@ function render(){
   const sy=window.scrollY;
   // zachowaj fokus klawiatury mimo przebudowy widoku
   const ae=document.activeElement, fk=ae&&ae.dataset&&ae.dataset.act&&$('#view').contains(ae)?'[data-act]'+Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(v)}"]`).join(''):null;
-  document.body.dataset.tab=S.tab;bgMarket();
+  document.body.dataset.tab=S.tab;bgMarket();document.documentElement.classList.toggle("nosb",S.tab==="prz");
   {const st=pantryStuck(),pb=$('#pausebar');if(pb){pb.hidden=!st;if(st)pb.innerHTML=`<b>Gra wstrzymana</b><span>W spiżarni zabrakło miejsca na nowe towary. Rozłóż je na półki albo wyrzuć do kosza.</span>${S.tab!=='spiz'?'<button class="btn sm pri" data-act="gospiz">Do spiżarni</button>':''}`}}
   $('#view').innerHTML=({pola:vPola,prz:vPrz,spiz:vSpiz,targ:vTarg,ulep:vUlep,ksiega:vKsiega,kron:vKron})[S.tab]();
   {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
