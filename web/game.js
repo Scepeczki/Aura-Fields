@@ -780,7 +780,7 @@ function vPrz(){const h=HL();if(hSel&&!h.cells[hSel]&&!h.items[hSel])hSel=null;c
   const cr=carry?carryInfo():'';
   return `<div class="sec hallsec">${trayDock()}<div class="hallmain"><div class="sechead"><h2>Przetwórnia</h2>
     <div class="htabs">${S.halls.map((x,i)=>`<button class="htab ${i===S.hall?'on':''}" data-act="hall" data-i="${i}">Hala ${i+1} <small>${x.w}×${x.h}</small></button>`).join('')}<button class="htab add ${S.coins<hallCost()?'poor':''}" data-act="newhall">+ Nowa hala <b>${fmtZ(hallCost())}</b></button></div></div>
-    <p class="more">${busy} z ${allM} ${plural(allM,'maszyny','maszyn','maszyn')} pracuje. Przeciągnij towar ze spiżarni (prawa krawędź) przed maszynę i włóż partie przyciskami +1, +5, max. Maszynę chwytasz i przeciągasz, <span class="kbd">R</span> obraca, prawy przycisk to opcje, podwójne kliknięcie to szczegóły.</p>
+    <p class="more">${busy} z ${allM} ${plural(allM,'maszyny','maszyn','maszyn')} pracuje. Przeciągnij towar ze spiżarni (prawa krawędź) przed maszynę i włóż partie przyciskami +1, +5, max. Maszynę chwytasz i przeciągasz, <span class="kbd">R</span> obraca, prawy przycisk to opcje, podwójne kliknięcie to szczegóły. Shift i przeciąganie po kilku kratkach rozkłada towar po równo.</p>
     ${ml}${cr}
     <div class="hwrap"><div class="hboard ${chain.size?'chain':''}" style="--cols:${h.w}">${g}</div></div>${add}</div></div>
     ${magBar()}${pantryDrawer()}`}
@@ -1285,7 +1285,7 @@ document.addEventListener('dragend',()=>{if(dragging){dragKey=null;dragging=fals
 function dropOk(key,src){const h=HL(),c=h.cells[key];if(src.k==='s'||src.k==='m')return !(c&&key!==src.key)&&!sumQ(h.items[key]);
   if(c){const [x,y]=hxy(key),[ix,iy]=inXY(c,x,y);return hin(h,ix,iy)&&!h.cells[hk(ix,iy)]}return true}
 document.addEventListener('dragstart',e=>{const s=e.target.closest&&e.target.closest('[data-hdrag]');if(!s)return;const p=s.dataset.hdrag.split(':');
-  hDrag=p[0]==='c'?{k:'c',key:p[1],id:p[2]}:p[0]==='m'?{k:'m',key:p[1]}:p[0]==='s'?{k:'s',id:p[1],lvl:+p[2]||null}:{k:p[0],id:p[1]};dragging=true;carry=null;hideCtx();
+  hSplit=[];hDrag=p[0]==='c'?{k:'c',key:p[1],id:p[2]}:p[0]==='m'?{k:'m',key:p[1]}:p[0]==='s'?{k:'s',id:p[1],lvl:+p[2]||null}:{k:p[0],id:p[1]};dragging=true;carry=null;hideCtx();
   e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','hala')}catch(_){}
   const d=$('#dimg'),h=HL();if(d){let src,n='';
     if(hDrag.k==='p'){src='items/'+hDrag.id+'.webp';n=dropQ(e,inv(hDrag.id))}else if(hDrag.k==='c'){src='items/'+hDrag.id+'.webp';n=dropQ(e,(h.items[hDrag.key]||{})[hDrag.id]||0)}
@@ -1293,16 +1293,26 @@ document.addEventListener('dragstart',e=>{const s=e.target.closest&&e.target.clo
     d.querySelector('img').src=src;const b=d.querySelector('b');b.textContent=n;b.hidden=n==='';try{e.dataTransfer.setDragImage(d,30,30)}catch(_){}}
   if(hDrag.k==='p'||hDrag.k==='c')snd('pick_'+itemSnd(hDrag.id))});
 const hTarget=e=>e.target.closest&&(e.target.closest('.hc[data-k]')||e.target.closest('[data-hbin]')||e.target.closest('[data-pdrawer]')||e.target.closest('[data-hback]')||e.target.closest('.magbar'));
-document.addEventListener('dragover',e=>{if(!hDrag)return;const t=hTarget(e);document.querySelectorAll('.hc.drop,.hc.nodrop').forEach(x=>x!==t&&x.classList.remove('drop','nodrop'));if(!t)return;e.preventDefault();
+// rozkładanie: kratki zebrane podczas przeciągania z wciśniętym Shiftem (kolejność przejścia), każda najwyżej raz
+let hSplit=[];
+const splitTarget=key=>{const h=HL(),c=h.cells[key];if(!c)return key;const [x,y]=hxy(key),[ix,iy]=inXY(c,x,y),ik=hk(ix,iy);return hin(h,ix,iy)&&!h.cells[ik]?ik:null};
+function splitDrop(src,keys){const h=HL(),have=src.k==='p'?inv(src.id):(h.items[src.key]||{})[src.id]||0,n=keys.length,each=Math.floor(have/n);
+  if(!each){toast(`Za mało, żeby rozłożyć na ${n} ${plural(n,'kratkę','kratki','kratek')}.`);return}
+  keys.forEach(k=>{if(src.k==='p')add(src.id,-each);else takeH(h,src.key,src.id,each);putH(h,k,src.id,each)});
+  snd('drop_'+itemSnd(src.id));toast(`${ITEMS[src.id].n}: po ${each} na ${n} ${plural(n,'kratkę','kratki','kratek')}${have-each*n?`, ${have-each*n} zostaje`:''}`)}
+document.addEventListener('dragover',e=>{if(!hDrag)return;const t=hTarget(e);
+  if(e.shiftKey&&(hDrag.k==='p'||hDrag.k==='c')&&t&&t.dataset.k){const k=splitTarget(t.dataset.k);if(k&&k!==hDrag.key&&!hSplit.includes(k)){hSplit.push(k);const el=document.querySelector(`.hc[data-k="${k}"]`);if(el)el.classList.add('split')}}
+  document.querySelectorAll('.hc.drop,.hc.nodrop').forEach(x=>x!==t&&x.classList.remove('drop','nodrop'));if(!t)return;e.preventDefault();
   if(t.dataset.hbin){t.classList.add('over');return}
   if(t.dataset.pdrawer)return;
   if(t.dataset.hback){t.classList.add('over');return}
   if(t.dataset.k){const ok=dropOk(t.dataset.k,hDrag);t.classList.toggle('drop',ok);t.classList.toggle('nodrop',!ok);e.dataTransfer.dropEffect=ok?'move':'none'}});
-document.addEventListener('drop',e=>{if(!hDrag)return;e.preventDefault();const t=hTarget(e),src=hDrag;hDrag=null;dragging=false;
-  if(t&&t.dataset.k)hallDrop(t.dataset.k,src,e);else if(t&&t.dataset.hbin)hallTrash(src,e);else if(t&&(t.dataset.pdrawer||t.dataset.hback))hallBack(src,e);
+document.addEventListener('drop',e=>{if(!hDrag)return;e.preventDefault();const t=hTarget(e),src=hDrag,sp=hSplit;hDrag=null;hSplit=[];dragging=false;
+  if(e.shiftKey&&sp.length>1&&t&&t.dataset.k)splitDrop(src,sp);
+  else if(t&&t.dataset.k)hallDrop(t.dataset.k,src,e);else if(t&&t.dataset.hbin)hallTrash(src,e);else if(t&&(t.dataset.pdrawer||t.dataset.hback))hallBack(src,e);
   else if(t&&t.classList.contains('magbar')&&src.k==='m'){stashM(HL(),src.key);toast('Maszyna wróciła do magazynu','gold')}
   pdOpen=false;save();render()});
-document.addEventListener('dragend',()=>{if(hDrag){hDrag=null;dragging=false;pdOpen=false;render()}});
+document.addEventListener('dragend',()=>{hSplit=[];if(hDrag){hDrag=null;dragging=false;pdOpen=false;render()}});
 document.addEventListener('pointerover',e=>{if(!e.target.closest)return;const c=e.target.closest('.hc[data-k]');hHover=c?c.dataset.k:null;if(e.pointerType!=='mouse'||dragging)return;
   const d=null;if(false){pdOpen=false;document.querySelectorAll('[data-pdrawer].open').forEach(x=>x.classList.remove('open'))}});
 document.addEventListener('dblclick',e=>{const c=e.target.closest&&e.target.closest('.hc[data-k]');if(c&&HL().cells[c.dataset.k])openMach(c.dataset.k)});
