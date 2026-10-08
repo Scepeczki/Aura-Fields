@@ -650,7 +650,7 @@ function render(){
   const sy=window.scrollY;
   // zachowaj fokus klawiatury mimo przebudowy widoku
   const ae=document.activeElement, fk=ae&&ae.dataset&&ae.dataset.act&&$('#view').contains(ae)?'[data-act]'+Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(v)}"]`).join(''):null;
-  document.body.dataset.tab=S.tab;bgMarket();document.documentElement.classList.toggle("nosb",S.tab==="prz");document.body.classList.toggle("pdpin",S.tab==="prz"&&!!S.pdPin);
+  document.body.dataset.tab=S.tab;bgMarket();document.documentElement.classList.toggle("nosb",S.tab==="prz");
   {const st=pantryStuck(),pb=$('#pausebar');if(pb){pb.hidden=!st;if(st)pb.innerHTML=`<b>Gra wstrzymana</b><span>W spiżarni zabrakło miejsca na nowe towary. Rozłóż je na półki albo wyrzuć do kosza.</span>${S.tab!=='spiz'?'<button class="btn sm pri" data-act="gospiz">Do spiżarni</button>':''}`}}
   $('#view').innerHTML=({pola:vPola,prz:vPrz,spiz:vSpiz,targ:vTarg,ulep:vUlep,ksiega:vKsiega,kron:vKron})[S.tab]();
   {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
@@ -800,7 +800,7 @@ function pantryDrawer(){ensureShelfPos();const q=hqty();
     return n?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-act="ppick" data-click="1" data-id="${k}" title="${esc(ITEMS[k].n)}: ${n}">${itemSvg(k)}<b>${n}</b><small>${esc(ITEMS[k].n)}</small></span>`
       :`<span class="pd-s dim" title="${esc(ITEMS[k].n)}: wszystko na wystawie w sklepie">${itemSvg(k)}<b>0</b><small>${esc(ITEMS[k].n)}</small></span>`};
   const tray=S.tray.filter(k=>k&&inv(k)>0);
-  return `<aside class="pdrawer ${pdOpen||S.pdPin?'open':''} ${S.pdPin?'pinned':''}" data-pdrawer="1"><button class="pdh" data-act="pdtoggle" title="${S.pdPin?'Kliknij, żeby odpiąć':'Kliknij, żeby spiżarnia została otwarta'}">Spiżarnia${S.pdPin?' ✕':''}</button><div class="pan"><div class="pin">
+  return `<aside class="pdrawer ${S.pdPin?'open pinned':''}" data-pdrawer="1"><button class="pdh" data-act="pdtoggle" title="${S.pdPin?'Zamknij spiżarnię':'Otwórz spiżarnię'}">Spiżarnia${S.pdPin?' ✕':''}</button><div class="pan"><div class="pin">
     <div class="pdtop"><b>Spiżarnia</b><button class="pd-bin" data-hbin="1" data-act="hbin" data-click="1" title="Kosz: przeciągnij tu towar, żeby go wyrzucić">${TRASH}<span>Kosz</span></button><span class="pdq">Przenoś: ${[1,5,'max'].map(v=>`<button class="${q===v?'on':''}" data-act="hq" data-v="${v}">${v}</button>`).join('')}</span></div>
     <p class="more">Przeciągnij towar do hali albo kliknij go, a potem kratkę. Prawy przycisk kładzie go od razu przed maszyną. Z hali odkładasz tu przeciągnięciem, a do kosza wyrzucasz.</p>
     ${tray.length?`<div class="pd-sh"><span class="pd-l">Do rozłożenia</span><div class="pd-g">${tray.map(sl).join('')}</div></div>`:''}
@@ -819,6 +819,14 @@ function hallDrop(key,src,e){const h=HL(),c=h.cells[key];let tk=key;
 function hallTrash(src,e){const h=HL();let n=0;
   if(src.k==='p'){n=dropQ(e,inv(src.id));if(n)add(src.id,-n)}else if(src.k==='c'){n=dropQ(e,(h.items[src.key]||{})[src.id]||0);if(n)takeH(h,src.key,src.id,n)}
   if(n){feed('trash|'+src.id,itemSvg(src.id),-n,ITEMS[src.id].n,'Wyrzucone do kosza',false,'spend');snd('trash');placeItems()}}
+function hallSpot(h,id){const io=new Set();for(const k in h.cells){const c=h.cells[k],[x,y]=hxy(k);io.add(hk(...inXY(c,x,y)));io.add(hk(...outXY(c,x,y)))}
+  let same=null,free=null,any=null;
+  for(let y=0;y<h.h;y++)for(let x=0;x<h.w;x++){const k=hk(x,y);if(h.cells[k])continue;const it=h.items[k];
+    if(it&&it[id]&&Object.keys(it).length===1&&!io.has(k)){same=same||k;continue}if(sumQ(it))continue;if(!io.has(k))free=free||k;else any=any||k}
+  return same||free||any}
+
+function toHall(id,n){const h=HL(),k=hallSpot(h,id);if(!k){toast('W hali nie ma wolnego miejsca. Dokup rząd.');return 0}n=Math.min(n,inv(id));if(!n)return 0;
+  add(id,-n);putH(h,k,id,n);snd('drop_'+itemSnd(id));toast(`${ITEMS[id].n} ×${n} w hali ${S.hall+1}`);return n}
 function hallBack(src,e){const h=HL();if(src.k!=='c')return;const n=dropQ(e,(h.items[src.key]||{})[src.id]||0);if(!n)return;takeH(h,src.key,src.id,n);add(src.id,n);snd('drop_'+itemSnd(src.id))}
 // menu pod prawym przyciskiem na kratce hali
 function showHallCtx(key,x,y){const m=$('#ctx'),h=HL(),c=h.cells[key],it=h.items[key],items=[];if(!m)return;
@@ -830,16 +838,15 @@ function showHallCtx(key,x,y){const m=$('#ctx'),h=HL(),c=h.cells[key],it=h.items
     if(ml)items.push(['hmill','✕',`Zabierz młynarza ${S.millers.indexOf(ml)+1}`,'']);
     else S.millers.forEach((mm,k)=>{if(!mm.off)items.push(['hmill',MILLER_ART,`Przydziel młynarza ${k+1}`,mm.at?'przejdzie od innej maszyny':'dokłada towar i odnosi mąkę',false,k])});
     items.push(['hstash','⤓','Odeślij do magazynu','']);items.push(['hinfo','ⓘ','Szczegóły','2× klik'])}
-  else {const qn=hqty();if(it&&sumQ(it)){Object.keys(it).forEach(i=>items.push(['hback1',icon(i),`${ITEMS[i].n} do spiżarni`,`${it[i]} szt.`,false,i]));if(Object.keys(it).length>1)items.push(['hbackall','⤴','Wszystko do spiżarni',''])}
-    // kładzenie ze spiżarni na tę kratkę: najpierw to, co już tu leży, potem największe zapasy
-    const here=it?Object.keys(it):[];Object.keys(S.inv).filter(i=>inv(i)>0).sort((a,b)=>(here.includes(b)-here.includes(a))||inv(b)-inv(a)).slice(0,8)
-      .forEach(i=>items.push(['hput',icon(i),`Połóż: ${ITEMS[i].n}`,`ze spiżarni ${qn==='max'?'wszystko':'×'+qn} · masz ${inv(i)}`,false,i]))}
+  else {if(it&&sumQ(it)){Object.keys(it).forEach(i=>items.push(['hback1',icon(i),`${ITEMS[i].n} do spiżarni`,`${it[i]} szt.`,false,i]));if(Object.keys(it).length>1)items.push(['hbackall','⤴','Wszystko do spiżarni',''])}
+}
   if(!items.length)return;
   m.innerHTML=`<div class="ctxh">${c?`${esc(M[c.m].n)} · poziom ${c.lvl}`:'Kratka'}</div>${items.map(([a,ic,t,s,dis,v])=>`<button class="ctxi" data-act="${a}" data-k="${key}" ${v!=null?`data-v="${v}"`:''} ${dis?'disabled':''}><span class="ci">${/^</.test(ic)?ic:`<span class="x">${ic}</span>`}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
   m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px'}
 // menu pod prawym na towarze w szufladzie spiżarni: połóż przed maszyną, która go przerabia, albo wskaż kratkę
 function showPantryCtx(id,x,y){const m=$('#ctx'),h=HL(),qn=hqty(),items=[];if(!m)return;
   for(const key in h.cells){const c=h.cells[key];if(!(RBY[c.m]||[]).some(r=>r.in[id]))continue;const [a,b]=hxy(key);items.push(['hput',mart(c.m),`Połóż przed: ${M[c.m].n}`,`kratka ${a+1}, ${b+1}`,false,id,key])}
+  items.push(['tohallp','⇥','Przenieś do hali',`${qn==='max'?'wszystko':qn+' szt.'} na wolne miejsce`,false,id]);
   items.push(['ppick','✥','Wskaż kratkę w hali…','kliknij potem kratkę albo maszynę',false,id]);
   m.innerHTML=`<div class="ctxh">${esc(ITEMS[id].n)} · przenieś ${qn==='max'?'wszystko':qn}</div>`+items.map(([a,ic,t,s,dis,v,k])=>`<button class="ctxi" data-act="${a}" data-id="${v}" data-v="${v}" ${k?`data-k="${k}"`:''}><span class="ci">${/^</.test(ic)?ic:`<span class="x">${ic}</span>`}</span><span><b>${t}</b><small>${s}</small></span></button>`).join('');
   m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;m.style.left=Math.max(8,Math.min(x-w,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px'}
@@ -977,6 +984,7 @@ function showCtx(el,x,y){const m=$('#ctx');if(!m)return;let items=[],title='';
   else {const k=el.dataset.dk;if(!k){hideCtx();return}title=ITEMS[k].n;
     items.push(['ctxshelf',`data-k="${k}"`,'<span class="x">⇡</span>','Odłóż na półkę','Na pierwsze wolne miejsce']);
     if(el.dataset.o!=null) items.push(['ctxtray',`data-k="${k}"`,'<span class="x">⇣</span>','Do rozłożenia','']);}
+  {const k=el.dataset.i!=null?S.shelf[+el.dataset.i]:el.dataset.dk;if(k&&inv(k)>0){const qn=hqty();items.unshift(['tohall',`data-k="${k}" data-q="${qn}"`,'<span class="x">⇥</span>','Przenieś do hali',`${qn==='max'?'wszystko':qn+' szt.'} na wolne miejsce w hali ${S.hall+1}`],['tohall',`data-k="${k}" data-q="max"`,'<span class="x">⇥</span>','Przenieś wszystko do hali',`${inv(k)} szt.`])}}
   {const k=el.dataset.i!=null?S.shelf[+el.dataset.i]:el.dataset.dk;if(k&&inv(k)>0)items.push(['ptrash',`data-k="${k}"`,TRASH,'Wyrzuć do kosza',`Cały zapas: ${inv(k)}`]);}
   if(!items.length){hideCtx();return}
   m.innerHTML=`<div class="ctxh">${esc(title)}</div>${items.map(([a,d,ic,t,s])=>`<button class="ctxi" data-act="${a}" ${d}><span class="ci">${ic}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
@@ -1216,7 +1224,9 @@ const ACT={
  hback1:d=>{hideCtx();const h=HL(),n=takeH(h,d.k,d.v,1e9);if(n)add(d.v,n);render()},
  hbackall:d=>{hideCtx();collectH(HL(),d.k);render()},
  hq:d=>{S.hq=d.v==='max'?'max':+d.v;render()},
- pdtoggle:()=>{S.pdPin=!S.pdPin;pdOpen=S.pdPin;render()},
+ pdtoggle:()=>{S.pdPin=!S.pdPin;render()},
+ tohall:d=>{hideCtx();toHall(d.k,d.q==='max'?inv(d.k):+d.q);save();render()},
+ tohallp:d=>{hideCtx();const q=hqty();toHall(d.v,q==='max'?inv(d.v):q);save();render()},
  hput:d=>{hideCtx();const key=d.k;if(!key){carry={k:'p',id:d.v};render();return}hallDrop(key,{k:'p',id:d.v},null);save();render()},
  hup:d=>{hideCtx();const c=HL().cells[d.k];if(!c||c.lvl>=MLVMAX)return;const cost=mUpCost(c);if(!pay(cost,`${M[c.m].n}: poziom ${c.lvl+1}`))return;c.lvl++;snd('level');
    toast(c.lvl===MLV_AUTO?`${M[c.m].n}: tryb ciągły odblokowany`:`${M[c.m].n}: poziom ${c.lvl}`,'gold');if(sheetMode==='mach')drawMach();render()},
@@ -1284,7 +1294,7 @@ document.addEventListener('dragstart',e=>{const s=e.target.closest&&e.target.clo
 const hTarget=e=>e.target.closest&&(e.target.closest('.hc[data-k]')||e.target.closest('[data-hbin]')||e.target.closest('[data-pdrawer]')||e.target.closest('[data-hback]')||e.target.closest('.magbar'));
 document.addEventListener('dragover',e=>{if(!hDrag)return;const t=hTarget(e);document.querySelectorAll('.hc.drop,.hc.nodrop').forEach(x=>x!==t&&x.classList.remove('drop','nodrop'));if(!t)return;e.preventDefault();
   if(t.dataset.hbin){t.classList.add('over');return}
-  if(t.dataset.pdrawer){if(!pdOpen){pdOpen=true;t.classList.add('open')}return}
+  if(t.dataset.pdrawer)return;
   if(t.dataset.hback){t.classList.add('over');return}
   if(t.dataset.k){const ok=dropOk(t.dataset.k,hDrag);t.classList.toggle('drop',ok);t.classList.toggle('nodrop',!ok);e.dataTransfer.dropEffect=ok?'move':'none'}});
 document.addEventListener('drop',e=>{if(!hDrag)return;e.preventDefault();const t=hTarget(e),src=hDrag;hDrag=null;dragging=false;
@@ -1293,7 +1303,7 @@ document.addEventListener('drop',e=>{if(!hDrag)return;e.preventDefault();const t
   pdOpen=false;save();render()});
 document.addEventListener('dragend',()=>{if(hDrag){hDrag=null;dragging=false;pdOpen=false;render()}});
 document.addEventListener('pointerover',e=>{if(!e.target.closest)return;const c=e.target.closest('.hc[data-k]');hHover=c?c.dataset.k:null;if(e.pointerType!=='mouse'||dragging)return;
-  const d=e.target.closest('[data-pdrawer]');if(d&&!pdOpen){pdOpen=true;d.classList.add('open')}else if(!d&&pdOpen&&!S.pdPin){pdOpen=false;document.querySelectorAll('[data-pdrawer].open').forEach(x=>x.classList.remove('open'))}});
+  const d=null;if(false){pdOpen=false;document.querySelectorAll('[data-pdrawer].open').forEach(x=>x.classList.remove('open'))}});
 document.addEventListener('dblclick',e=>{const c=e.target.closest&&e.target.closest('.hc[data-k]');if(c&&HL().cells[c.dataset.k])openMach(c.dataset.k)});
 document.addEventListener('keydown',e=>{if(!S||S.tab!=='prz'||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
   if(e.code==='KeyR'&&!e.ctrlKey&&!e.metaKey){if((carry&&carry.k==='s')||(hDrag&&hDrag.k==='s')){hRot=(hRot+1)%4;toast(['Nowa maszyna: wyjście w prawo','Nowa maszyna: wyjście w dół','Nowa maszyna: wyjście w lewo','Nowa maszyna: wyjście w górę'][hRot])}
