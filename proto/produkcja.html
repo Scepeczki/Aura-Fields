@@ -205,6 +205,30 @@ h2{font-family:var(--f-display);font-size:1.15rem}
 /* pola lekko przezroczyste */
 .cell{background:linear-gradient(180deg,rgba(255,236,200,.05),rgba(0,0,0,.1)),repeating-linear-gradient(90deg,rgba(90,63,38,.5) 0 calc(var(--cell)/3 - 1px),rgba(52,36,22,.5) calc(var(--cell)/3 - 1px) calc(var(--cell)/3));border-color:rgba(255,236,200,.08)}
 .board-wrap{background:rgba(22,16,10,.45)}
+/* ===== STYL JAK DAWNE LINIE PRODUKCYJNE ===== */
+.mach{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;padding:5px 4px 4px;border-radius:12px;border:1.5px dashed rgba(236,188,76,.35);background:rgba(20,14,9,.72);backdrop-filter:blur(4px)}
+.mach.work{border:1.5px solid rgba(140,196,90,.85);background:rgba(28,40,18,.6);box-shadow:0 0 18px -6px rgba(140,196,90,.7)}
+.mach.block,.mach.bad{border:1.5px solid rgba(224,112,90,.8)}
+.mach{overflow:hidden}.mach .ring{position:relative;width:calc(var(--cell)*.42);height:calc(var(--cell)*.42);flex:none;margin-top:2px}
+.mach .ring svg{position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);transform:rotate(-90deg)}
+.mach .ring .rt{fill:rgba(0,0,0,.35);stroke:rgba(255,236,200,.12);stroke-width:4}
+.mach .ring .rp{fill:none;stroke:var(--gold);stroke-width:4;stroke-linecap:round}
+.mach .ring img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+.mach.work .ring img,.mach.block .ring img{filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+.mach .mn{font:700 .72rem var(--f-body);color:var(--tx);line-height:1.1;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mach .ms{font:500 .66rem var(--f-num);color:var(--mut);line-height:1.1;white-space:nowrap}
+.mach .ms.work{color:#a8d878}.mach .ms.block,.mach .ms.bad{color:var(--red)}
+.mach .mbtn{display:flex;gap:3px;margin-top:auto;flex-wrap:nowrap}
+.mach .mbtn button{padding:1px 5px;border-radius:6px;border:1px solid rgba(236,188,76,.45);background:rgba(10,7,4,.85);color:var(--tx);font:700 .66rem var(--f-num);line-height:1.5}
+.mach .mbtn button:hover{background:var(--gold);color:#2a1d0c}.mach .mbtn button:disabled{opacity:.3;cursor:default;background:rgba(10,7,4,.85);color:var(--tx)}
+.mach .mx{position:absolute;top:3px;right:4px;font:700 .68rem var(--f-num);color:#10200a;background:#8cc45a;border-radius:999px;padding:0 6px;z-index:2}
+.mach .st,.mach .bar,.mach .inq{display:none}
+.flow i.a{border-left-color:var(--gold)}.flow i.b{border-left-color:var(--gold)}
+.items{flex-direction:column;gap:2px}
+.items .stk{width:calc(var(--cell)*.5);height:calc(var(--cell)*.5)}
+.items .stk b{right:-10px;bottom:-6px;background:#4f8a2c;color:#fff;border:2px solid #1a120b;border-radius:999px;padding:0 6px;font-size:.78rem}
+.items .inm{order:2;font:500 .68rem var(--f-body);color:var(--mut);max-width:96%;text-align:center;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:6px}
+.items.two{flex-direction:row}.items.two .stk{width:calc(var(--cell)*.36);height:calc(var(--cell)*.36)}
 </style>
 </head>
 <body>
@@ -247,7 +271,7 @@ const MECH=[
  ['C','Taśmy i wrota','Buduj taśmociągi, wrota spiżarni (wydają wybrany towar) i skrzynie (odsyłają do spiżarni).'],
  ['D','Zamówienia','Na kratce ustaw „zasilaj ze spiżarni” albo „odsyłaj do spiżarni”. Towar przenosi się sam.'],
 ];
-const CAP_FLOOR=99, CAP_BELT=3, CARRY=10, WK_SPEED=2.2;
+const CAP_FLOOR=Infinity, CAP_BELT=3, CARRY=10, WK_SPEED=2.2;
 // ---------- stan ----------
 const KEY='aura-proto-produkcja-5';
 function fresh(){return {money:20000,speed:3,free:false,qty:5,mech:{C:0,D:0},exec:'now',
@@ -401,14 +425,19 @@ function renderBoard(){const f=F();fitCells();
       const cls=['cell'];if(big)cls.push('mbig');if(IN[key])cls.push('in');if(OUT[key])cls.push('out');if(hot.has(key))cls.push('hot');if(sel===key)cls.push('sel');
       let inner='';
       if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st==='bad'?'bad':c.st==='ready'?'ready':'wait');
-        inner=`<div class="mach ${st}" draggable="true" data-drag="mv:${key}" title="${MP[c.m].n}${r?': '+r.verb:''}"><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt=""><div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
-          ${c.job?`<div class="bar"><i style="width:${c.job.p/c.job.t*100}%"></i></div>`:''}${st==='block'?'<span class="st block" title="Kratka wyjścia jest pełna albo zajęta">pełno</span>':st==='bad'?'<span class="st bad" title="Przed maszyną leży coś, czego ona nie przerabia (albo za mało na partię)">?</span>':c.auto?'<span class="st auto" title="Tryb ciągły: sama bierze z kratek wejścia">ciągle</span>':st==='wait'?'<span class="st wait">pusto</span>':''}
-          ${queued(c)?`<span class="inq" title="Partie włożone do maszyny i czekające">${queued(c)}</span>`:''}
+        const fd=feedable(f,key),q=queued(c),pr=c.job?c.job.p/c.job.t:0,left=c.job?Math.ceil((c.job.t-c.job.p)/S.speed):0,C=2*Math.PI*30;
+        inner=`<div class="mach ${st}" draggable="true" data-drag="mv:${key}" title="${MP[c.m].n}${r?': '+r.verb:''}">
+          <div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
+          ${q?`<span class="mx" title="Partie czekające w maszynie">×${q}</span>`:''}
+          <div class="ring"><svg viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="30" class="rt"/>${c.job?`<circle cx="34" cy="34" r="30" class="rp" style="stroke-dasharray:${C};stroke-dashoffset:${C*(1-pr)}"/>`:''}</svg><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt="" draggable="false"></div>
+          <span class="mn">${MP[c.m].n}</span>
+          <span class="ms ${st}">${c.job?(st==='block'?'wyjście pełne':`${left} s`):st==='bad'?'nie przerobi tego':c.auto?'tryb ciągły':fd.n?'gotowa':'pusto'}</span>
+          ${c.auto?'':`<span class="mbtn"><button data-act="feed" data-c="${key}" data-q="1" ${fd.n?'':'disabled'}>+1</button><button data-act="feed" data-c="${key}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button data-act="feed" data-c="${key}" data-q="max" ${fd.n?'':'disabled'}title="Włóż wszystko, co leży przed maszyną (${fd.n})">max</button></span>`}
           </div>`}
       else if(c&&c.t==='belt')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="belt"></div></div>`;
       else if(c&&c.t==='hatch')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="hatch"><span style="color:#cfe8f6;font-size:20px">➜</span></div></div>${c.filter?`<div class="items"><div class="stk" style="width:28px;height:28px;opacity:.9">${ic(c.filter)}</div></div>`:''}`;
       else if(c&&c.t==='chest')inner=`<div class="chest">skrzynia<br>⬇ spiżarnia</div>`;
-      if(it&&tot(it)){const ids=Object.keys(it);inner+=`<div class="items ${ids.length>1?'two':''}"><div class="stk" ${true?`draggable="true" data-drag="c:${key}:${ids[0]}"`:''} title="${ids.map(i=>nm(i)+': '+it[i]).join('\n')}">${ic(ids[0])}<b>${it[ids[0]]}</b></div>${ids[1]?`<div class="stk" draggable="true" data-drag="c:${key}:${ids[1]}" title="${nm(ids[1])}: ${it[ids[1]]}">${ic(ids[1])}<b>${it[ids[1]]}</b></div>`:''}${ids.length>2?`<span class="more">+${ids.length-2}</span>`:''}</div>`}
+      if(it&&tot(it)){const ids=Object.keys(it);inner+=`<div class="items ${ids.length>1?'two':''}">${ids.length===1?`<span class="inm">${nm(ids[0])}</span>`:''}<div class="stk" ${true?`draggable="true" data-drag="c:${key}:${ids[0]}"`:''} title="${ids.map(i=>nm(i)+': '+it[i]).join('\n')}">${ic(ids[0])}<b>${it[ids[0]]}</b></div>${ids[1]?`<div class="stk" draggable="true" data-drag="c:${key}:${ids[1]}" title="${nm(ids[1])}: ${it[ids[1]]}">${ic(ids[1])}<b>${it[ids[1]]}</b></div>`:''}${ids.length>2?`<span class="more">+${ids.length-2}</span>`:''}</div>`}
       const o=f.orders[key];if(o&&S.mech.D)inner+=`<span class="badge" title="Zasilaj ze spiżarni: ${nm(o.id)}, utrzymuj ${o.keep}">${ic(o.id)}${o.keep}</span>`;
       if(f.send[key]&&S.mech.D)inner+=`<span class="badge send" title="Odsyłaj do spiżarni">⤴</span>`;
       h+=`<div class="${cls.join(' ')}" style="${pos}" data-cell="${key}">${inner}</div>`}}
@@ -420,7 +449,7 @@ function placeWorkers(){const f=F(),cells=$('board').querySelectorAll('.wk');con
   S.wk.filter(w=>w.f===S.cur).forEach((w,i)=>{const el=cells[i];if(!el)return;el.style.left=(w.x*step+step/2-1.5)+'px';el.style.top=(w.y*step+step/2-1.5)+'px'})}
 let hoverKey=null;
 const cellPx=()=>parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))+3;
-function drawMbar(){const b=document.getElementById('mbar');if(!b)return;const f=F(),key=mbKey(),c=key&&f.cells[key];
+function drawMbar(){const b=document.getElementById('mbar');if(!b)return;b.hidden=true;return;const f=F(),key=mbKey(),c=key&&f.cells[key];
   if(!c||c.t!=='machine'||tool){b.hidden=true;return}const [x,y]=pk(key),st=cellPx(),fd=feedable(f,key);
   b.innerHTML=c.auto?'<small>tryb ciągły</small>':`<small>${fd.n?'włóż':'brak wkładu'}</small><button data-act="feed" data-c="${key}" data-q="1" ${fd.n?'':'disabled'}>1</button><button data-act="feed" data-c="${key}" data-q="5" ${fd.n?'':'disabled'}>5</button><button data-act="feed" data-c="${key}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' '+fd.n:''}</button>`;
   b.hidden=false;b.style.left=(x*st+st/2-b.offsetWidth/2)+'px';b.style.top=Math.max(0,y*st-b.offsetHeight-4)+'px'}
@@ -507,7 +536,7 @@ const ACT={
   fire:()=>{const i=S.wk.map(w=>w.f).lastIndexOf(S.cur);if(i>=0){const w=S.wk[i];if(w.load)S.pantry[w.load.id]=(S.pantry[w.load.id]||0)+w.load.q;S.wk.splice(i,1)}save()},
 };
 document.addEventListener('click',e=>{hideCtx(e);const b=e.target.closest('[data-act]');if(b&&!b.disabled){ACT[b.dataset.act](b.dataset);$('ctx').hidden=true;render()}});
-document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0||e.target.closest('.feed')||e.target.closest('#mbar'))return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
+document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0||e.target.closest('.mbtn')||e.target.closest('.feed')||e.target.closest('#mbar'))return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
   if(tool&&tool.k==='drop'){const f=F(),[tx,ty]=target(f,...pk(key),tool.id);if(!fromPantry(f,tx,ty,tool.id,S.qty==='max'?999:S.qty))toast('Tu się nie zmieści.');tool=null;save();render();return}
   if(tool){place(tool.k==='machine'||tool.k==='move'?(hoverKey||key):key);render();return}if(e.target.closest('[data-drag]'))return;sel=sel===key?null:key;render()});
 addEventListener('pointerup',()=>{ptrDown=false});
