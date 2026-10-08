@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Przetwórnia: piaskownica</title>
 <style>
-:root{--bg:#120d09;--panel:rgba(30,22,15,.94);--panel2:#241a12;--bd:rgba(236,188,76,.28);--bd2:rgba(236,188,76,.6);--tx:#f1e4c8;--mut:#b9a888;--gold:#ecbc4c;--green:#8cc45a;--amber:#e09a3a;--red:#e0705a;--blue:#6fb4e0;--cell:72px}
+:root{--bg:#120d09;--panel:rgba(30,22,15,.94);--panel2:#241a12;--bd:rgba(236,188,76,.28);--bd2:rgba(236,188,76,.6);--tx:#f1e4c8;--mut:#b9a888;--gold:#ecbc4c;--green:#8cc45a;--amber:#e09a3a;--red:#e0705a;--blue:#6fb4e0;--cell:86px}
 *{box-sizing:border-box}
 body{margin:0;user-select:none;-webkit-user-select:none;background:radial-gradient(circle at 50% 0,#2a1d12,#0d0906 70%) fixed;color:var(--tx);font:14px/1.4 "Segoe UI",system-ui,sans-serif;min-height:100vh}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -107,6 +107,29 @@ input,select{user-select:auto}
 .feed button:hover{background:var(--gold);color:#2a1d0c}.feed button:disabled{opacity:.3;cursor:default;background:rgba(20,14,9,.92);color:var(--gold)}
 .inq{position:absolute;left:5px;top:4px;font:700 .72rem ui-monospace,monospace;padding:1px 6px;border-radius:6px;background:rgba(111,166,74,.9);color:#10200a}
 .st.auto{color:var(--blue)}
+/* szuflada spiżarni przy prawej krawędzi */
+#drawer{position:fixed;top:0;right:0;bottom:0;z-index:40;display:flex;pointer-events:none}
+#drawer .handle{pointer-events:auto;align-self:center;width:30px;height:180px;border-radius:12px 0 0 12px;background:linear-gradient(180deg,#5a4024,#3a2a18);border:1px solid var(--bd2);border-right:0;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font:700 .85rem Georgia,serif;color:var(--gold);letter-spacing:.08em;box-shadow:-4px 0 14px rgba(0,0,0,.5)}
+#drawer .pan{pointer-events:auto;width:0;overflow:hidden;transition:width .22s ease;background:#18110b;border-left:1px solid var(--bd2);box-shadow:-10px 0 30px rgba(0,0,0,.6)}
+#drawer.open .pan{width:420px}
+#drawer .in{width:420px;height:100%;overflow:auto;padding:14px}
+.shelf{margin:0 0 12px}
+.shelf .sl{font:700 .72rem system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 4px 2px}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:6px;border-radius:10px;background:linear-gradient(180deg,rgba(255,236,200,.03),rgba(0,0,0,.2));border-bottom:6px solid #6a4a2e}
+.slot{position:relative;height:74px;border-radius:9px;border:1px solid rgba(255,236,200,.08);background:rgba(0,0,0,.22);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.slot img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+.slot b{position:absolute;right:4px;top:4px;font:700 .72rem ui-monospace,monospace;color:var(--gold);background:#1a120b;border:1px solid var(--bd2);border-radius:6px;padding:0 4px}
+.slot span{font-size:.62rem;color:var(--mut);max-width:100%;padding:0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.full{cursor:grab}.slot.full:hover{border-color:var(--bd2)}
+.slot.drop{background:rgba(236,188,76,.22)}
+.tray .slots{border-bottom-color:#8a5a2e;grid-template-columns:repeat(4,1fr)}
+/* pasek wkładania nad maszyną */
+#mbar{position:absolute;z-index:6;display:flex;gap:4px;align-items:center;padding:4px 6px;border-radius:10px;background:rgba(20,14,9,.96);border:1px solid var(--bd2);box-shadow:0 6px 18px rgba(0,0,0,.6);white-space:nowrap}
+#mbar[hidden]{display:none}
+#mbar button{min-width:30px;padding:2px 8px;border-radius:7px;border:1px solid var(--bd2);background:#2a1d12;color:var(--gold);font:700 .8rem ui-monospace,monospace}
+#mbar button:hover{background:var(--gold);color:#2a1d0c}#mbar button:disabled{opacity:.3;cursor:default;background:#2a1d12;color:var(--gold)}
+#mbar small{color:var(--mut);font-size:.75rem;margin-right:2px}
+.items.two{gap:2px}.items.two .stk{width:36px;height:36px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1d12;border:1px solid var(--bd2);border-radius:10px;padding:8px 14px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
 kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4px;font-size:.8rem}
@@ -129,12 +152,13 @@ kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4p
   <section>
     <div class="ftabs" id="ftabs"></div>
     <div class="board-wrap"><div class="board" id="board"></div></div>
-    <p class="hint">Maszyna zajmuje 2×2 kratki. Bierze wkład z dwóch kratek <span style="color:var(--green)">przed sobą (zielone)</span> i wyrzuca na dwie kratki <span style="color:var(--amber)">za sobą (pomarańczowe)</span>: produkt na pierwszą, produkt uboczny na drugą. Wyjście jednej maszyny może być wejściem następnej. <kbd>R</kbd> obraca, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
+    <p class="hint">Maszyna bierze wkład z kratki <span style="color:var(--green)">przed sobą (zielona)</span> i wyrzuca produkt (i uboczny obok niego) na kratkę <span style="color:var(--amber)">za sobą (pomarańczowa)</span>. Najedź na maszynę, żeby włożyć 1, 5 albo max partii. Wyjście jednej maszyny może być wejściem następnej. <kbd>R</kbd> obraca, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
   </section>
   <div class="info" id="info"></div>
 </main>
 <div id="ctx" hidden></div>
 <div id="toast"></div>
+<div id="drawer"><div class="handle">Spiżarnia</div><div class="pan"><div class="in" id="shelves"></div></div></div>
 <div id="dimg"><img alt=""><b></b></div>
 <script src="../web/data.js"></script>
 <script>
@@ -152,7 +176,7 @@ const MECH=[
 ];
 const CAP_FLOOR=99, CAP_BELT=3, CARRY=10, WK_SPEED=2.2;
 // ---------- stan ----------
-const KEY='aura-proto-produkcja-2';
+const KEY='aura-proto-produkcja-3';
 function fresh(){return {money:20000,speed:3,free:false,qty:5,mech:{C:0,D:0},exec:'now',
   pantry:{k_psz:100,k_zyt:60,k_jec:40,n_gry:40,ziem:30,kolby:20,wapno:20},
   store:{mlo:1,zar:1},workers:0,cur:0,
@@ -172,8 +196,8 @@ const pay=c=>{if(S.free)return true;if(S.money<c){toast('Za mało pieniędzy.');
 const items=(f,key)=>f.items[key]||(f.items[key]={});
 const tot=o=>Object.values(o||{}).reduce((a,b)=>a+b,0);
 // maszyna zajmuje 2×2 kratki od (x,y); wchodzi z dwóch kratek przed nią, wychodzi na dwie kratki za nią
-const mCells=(x,y)=>[[x,y],[x+1,y],[x,y+1],[x+1,y+1]];
-function sideCells(x,y,d){if(d===0)return [[x+2,y],[x+2,y+1]];if(d===2)return [[x-1,y],[x-1,y+1]];if(d===1)return [[x,y+2],[x+1,y+2]];return [[x,y-1],[x+1,y-1]]}
+const mCells=(x,y)=>[[x,y]];
+function sideCells(x,y,d){const [dx,dy]=DV[d];return [[x+dx,y+dy]]}
 const inCells=(f,x,y)=>sideCells(x,y,(f.cells[k(x,y)].dir+2)%4);
 const outCells=(f,x,y)=>sideCells(x,y,f.cells[k(x,y)].dir);
 // kratka → klucz budowli, która na niej stoi (maszyna zajmuje cztery)
@@ -213,7 +237,7 @@ function tick(dt){const g=dt*S.speed;
   S.facts.forEach((f,fi)=>{
     for(const key in f.cells){const c=f.cells[key];if(c.t!=='machine')continue;const [x,y]=pk(key);
       if(c.job){c.job.p=Math.min(c.job.t,c.job.p+g);
-        if(c.job.p>=c.job.t){const r=RECIPES[c.job.r],[A,Bc]=outCells(f,x,y);
+        if(c.job.p>=c.job.t){const r=RECIPES[c.job.r],outs=outCells(f,x,y),A=outs[0],Bc=outs[1]||outs[0];
           // główny produkt na pierwszą kratkę wyjścia, produkty uboczne na drugą (gdy się nie da, też na pierwszą)
           const plan=Object.entries(r.out).map(([o,q])=>{let p=ITEMS[o].kind==='by'?Bc:A;if(!canPut(f,p[0],p[1],o,q))p=p===Bc?A:Bc;return [o,q,p]});
           if(plan.every(([o,q,p])=>canPut(f,p[0],p[1],o,q))){plan.forEach(([o,q,p])=>put(f,p[0],p[1],o,q));c.job=null;c.st='';}
@@ -261,14 +285,20 @@ function render(){
   $('speed').value=S.speed;$('free').checked=S.free;
   $('mechs').innerHTML=MECH.map(([id,n,d])=>`<button class="mech ${S.mech[id]?'on':''}" data-act="mech" data-m="${id}"><b>${id}. ${n}</b><small>${d}</small></button>`).join('')+
     (S.mech.D?`<div class="exec">Zamówienia wykonują: <button class="btn sm ${S.exec==='now'?'on':''}" data-act="exec" data-v="now">od razu, same</button><button class="btn sm ${S.exec==='wk'?'on':''}" data-act="exec" data-v="wk">młynarze (chodzą)</button></div>`:'');
-  renderLeft();renderBoard();renderInfo()}
+  renderLeft();renderShelves();renderBoard();renderInfo()}
+const SH_N=4, SH_W=8;
+// każdy rodzaj towaru ma swoje miejsce na półce; nowe trafiają na pierwsze wolne
+function syncSlots(){S.slots=S.slots||Array(SH_N*SH_W).fill(null);const on=new Set();S.slots=S.slots.map(id=>id&&(S.pantry[id]||0)>0?(on.add(id),id):null);
+  Object.keys(S.pantry).forEach(id=>{if((S.pantry[id]||0)>0&&!on.has(id)){const i=S.slots.indexOf(null);if(i>=0){S.slots[i]=id;on.add(id)}}})}
+function renderShelves(){if(dragging||ptrDown||hov.has('drawer-act'))return;syncSlots();const sl=i=>{const id=S.slots[i];
+    return id?`<div class="slot full" draggable="true" data-drag="p:${id}" data-slot="${i}" title="${nm(id)}: ${S.pantry[id]}. Prawy przycisk: połóż w hali">${ic(id)}<b>${S.pantry[id]}</b><span>${nm(id)}</span></div>`:`<div class="slot" data-slot="${i}"></div>`};
+  let h=`<h2>Spiżarnia</h2><p class="hint">Przeciągnij towar do hali: na kratkę albo na maszynę (trafi przed nią). Z hali przeciągasz z powrotem na półkę. Prawy przycisk na towarze kładzie go od razu przed maszyną.</p>
+   <div class="qsel">Przenoś: ${[1,5,'max'].map(q=>`<button class="btn sm ${S.qty===q?'on':''}" data-act="qty" data-q="${q}">${q}</button>`).join('')}</div>`;
+  for(let s=0;s<SH_N;s++)h+=`<div class="shelf"><div class="sl">Półka ${s+1}</div><div class="slots">${Array.from({length:SH_W},(_,j)=>sl(s*SH_W+j)).join('')}</div></div>`;
+  h+=`<div class="row"><select id="addsel">${Object.values(ITEMS).filter(i=>i.kind==='raw'||i.kind==='supply').map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select><button class="btn sm" data-act="addp">+50 (test)</button></div>`;
+  $('shelves').innerHTML=h}
 function renderLeft(){if(dragging)return;
-  const pan=Object.keys(S.pantry).filter(id=>S.pantry[id]>0).sort((a,b)=>nm(a).localeCompare(nm(b),'pl'));
-  let h=`<h2>Spiżarnia</h2><p class="hint">Przeciągnij towar na kratkę albo na maszynę (trafi na jej wejście). Tak samo przenosisz towar między kratkami i z powrotem tutaj.</p>
-   <div class="qsel">Przenoś: ${[1,5,'max'].map(q=>`<button class="btn sm ${S.qty===q?'on':''}" data-act="qty" data-q="${q}">${q}</button>`).join('')}</div>
-   ${pan.map(id=>`<div class="row" ${true?`draggable="true" data-drag="p:${id}"`:''} title="${nm(id)}">${ic(id)}<span class="n">${nm(id)}</span><span class="q">${S.pantry[id]}</span></div>`).join('')||'<p class="hint">Pusto.</p>'}
-   <div class="row"><select id="addsel">${Object.values(ITEMS).filter(i=>i.kind==='raw'||i.kind==='supply').map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select><button class="btn sm" data-act="addp">+50</button></div>
-   <h2>Maszyny <small>kliknij, potem kratkę</small></h2><div class="tools">`;
+  let h=`<h2>Maszyny <small>kliknij, potem kratkę</small></h2><div class="tools">`;
   MACH.forEach(([id])=>{const n=S.store[id]||0;h+=`<button class="tool ${tool&&tool.k==='machine'&&tool.m===id?'on':''}" data-act="tool" data-k="machine" data-m="${id}" title="${MP[id].d}"><img src="../web/machines/${id}.webp" alt=""><span>${MP[id].n}</span><span class="c">${n?`w magazynie: ${n}`:`kup: ${S.free?0:MP[id].p} zł`}</span></button>`});
   h+='</div>';
   if(S.mech.C)h+=`<h2>Budowle</h2><div class="tools">
@@ -287,44 +317,50 @@ function renderBoard(){const f=F();
   for(let y=0;y<f.h;y++){h+=`<div class="gut" style="grid-column:1;grid-row:${y+1}">${y===dy0?'<div class="door">drzwi do spiżarni</div>':''}</div>`;
     for(let x=0;x<f.w;x++){const key=k(x,y),c=f.cells[key],it=f.items[key];
       if(occ[key]&&occ[key]!==key)continue;
-      const big=c&&c.t==='machine',pos=`grid-column:${x+2}${big?'/span 2':''};grid-row:${y+1}${big?'/span 2':''}`;
+      const big=false,pos=`grid-column:${x+2}${big?'/span 2':''};grid-row:${y+1}${big?'/span 2':''}`;
       const cls=['cell'];if(big)cls.push('mbig');if(IN[key])cls.push('in');if(OUT[key])cls.push('out');if(hot.has(key))cls.push('hot');if(sel===key)cls.push('sel');
       let inner='';
       if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st==='bad'?'bad':c.st==='ready'?'ready':'wait');
         inner=`<div class="mach ${st}" title="${MP[c.m].n}${r?': '+r.verb:''}"><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt=""><div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
           ${c.job?`<div class="bar"><i style="width:${c.job.p/c.job.t*100}%"></i></div>`:''}${st==='block'?'<span class="st block" title="Kratka wyjścia jest pełna albo zajęta">pełno</span>':st==='bad'?'<span class="st bad" title="Przed maszyną leży coś, czego ona nie przerabia (albo za mało na partię)">?</span>':c.auto?'<span class="st auto" title="Tryb ciągły: sama bierze z kratek wejścia">ciągle</span>':st==='wait'?'<span class="st wait">pusto</span>':''}
-          ${queued(c)?`<span class="inq" title="Partie włożone do maszyny i czekające">w środku: ${queued(c)}</span>`:''}
-          ${(()=>{const fd=feedable(f,key);return c.auto?'':`<div class="feed" title="Włóż do maszyny z kratek przed nią"><button data-act="feed" data-c="${key}" data-q="1" ${fd.n?'':'disabled'}>1</button><button data-act="feed" data-c="${key}" data-q="5" ${fd.n?'':'disabled'}>5</button><button data-act="feed" data-c="${key}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' '+fd.n:''}</button></div>`})()}</div>`}
+          ${queued(c)?`<span class="inq" title="Partie włożone do maszyny i czekające">${queued(c)}</span>`:''}
+          </div>`}
       else if(c&&c.t==='belt')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="belt"></div></div>`;
       else if(c&&c.t==='hatch')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="hatch"><span style="color:#cfe8f6;font-size:20px">➜</span></div></div>${c.filter?`<div class="items"><div class="stk" style="width:28px;height:28px;opacity:.9">${ic(c.filter)}</div></div>`:''}`;
       else if(c&&c.t==='chest')inner=`<div class="chest">skrzynia<br>⬇ spiżarnia</div>`;
-      if(it&&tot(it)){const ids=Object.keys(it);inner+=`<div class="items"><div class="stk" ${true?`draggable="true" data-drag="c:${key}:${ids[0]}"`:''} title="${ids.map(i=>nm(i)+': '+it[i]).join('\n')}">${ic(ids[0])}<b>${it[ids[0]]}</b></div>${ids.length>1?`<span class="more">+${ids.length-1}</span>`:''}</div>`}
+      if(it&&tot(it)){const ids=Object.keys(it);inner+=`<div class="items ${ids.length>1?'two':''}"><div class="stk" ${true?`draggable="true" data-drag="c:${key}:${ids[0]}"`:''} title="${ids.map(i=>nm(i)+': '+it[i]).join('\n')}">${ic(ids[0])}<b>${it[ids[0]]}</b></div>${ids[1]?`<div class="stk" draggable="true" data-drag="c:${key}:${ids[1]}" title="${nm(ids[1])}: ${it[ids[1]]}">${ic(ids[1])}<b>${it[ids[1]]}</b></div>`:''}${ids.length>2?`<span class="more">+${ids.length-2}</span>`:''}</div>`}
       const o=f.orders[key];if(o&&S.mech.D)inner+=`<span class="badge" title="Zasilaj ze spiżarni: ${nm(o.id)}, utrzymuj ${o.keep}">${ic(o.id)}${o.keep}</span>`;
       if(f.send[key]&&S.mech.D)inner+=`<span class="badge send" title="Odsyłaj do spiżarni">⤴</span>`;
       h+=`<div class="${cls.join(' ')}" style="${pos}" data-cell="${key}">${inner}</div>`}}
   $('board').style.gridTemplateColumns=`44px repeat(${f.w},var(--cell))`;
-  $('board').innerHTML=h+'<div id="ghost"></div>'+S.wk.filter(w=>w.f===S.cur).map((w,i)=>`<div class="wk" data-w="${i}"><img src="../web/people/mlynarz.webp" alt="">${w.load?`<i>${ic(w.load.id)}</i>`:''}</div>`).join('');
-  placeWorkers();drawGhost()}
+  $('board').innerHTML=h+'<div id="ghost"></div><div id="mbar" hidden></div>'+S.wk.filter(w=>w.f===S.cur).map((w,i)=>`<div class="wk" data-w="${i}"><img src="../web/people/mlynarz.webp" alt="">${w.load?`<i>${ic(w.load.id)}</i>`:''}</div>`).join('');
+  placeWorkers();drawGhost();drawMbar()}
 function placeWorkers(){const f=F(),cells=$('board').querySelectorAll('.wk');const step=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))+3;
   S.wk.filter(w=>w.f===S.cur).forEach((w,i)=>{const el=cells[i];if(!el)return;el.style.left=(44+3+w.x*step+step/2-1.5)+'px';el.style.top=(w.y*step+step/2-1.5)+'px'})}
 let hoverKey=null;
 const cellPx=()=>parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))+3;
+function drawMbar(){const b=document.getElementById('mbar');if(!b)return;const f=F(),key=mbKey(),c=key&&f.cells[key];
+  if(!c||c.t!=='machine'||tool){b.hidden=true;return}const [x,y]=pk(key),st=cellPx(),fd=feedable(f,key);
+  b.innerHTML=c.auto?'<small>tryb ciągły</small>':`<small>${fd.n?'włóż':'brak wkładu'}</small><button data-act="feed" data-c="${key}" data-q="1" ${fd.n?'':'disabled'}>1</button><button data-act="feed" data-c="${key}" data-q="5" ${fd.n?'':'disabled'}>5</button><button data-act="feed" data-c="${key}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' '+fd.n:''}</button>`;
+  b.hidden=false;b.style.left=(44+3+x*st+st/2-b.offsetWidth/2)+'px';b.style.top=Math.max(0,y*st-b.offsetHeight-4)+'px'}
+let mbHover=null;
+const mbKey=()=>{const f=F();if(mbHover&&f.cells[mbHover]&&f.cells[mbHover].t==='machine')return mbHover;if(sel&&f.cells[sel]&&f.cells[sel].t==='machine')return sel;return null};
 function drawGhost(){const g=document.getElementById('ghost');if(!g)return;g.innerHTML='';const f=F();
   if(!tool||!hoverKey||(tool.k!=='machine'&&!(tool.k==='move'&&f.cells[tool.from]&&f.cells[tool.from].t==='machine')))return;
   const [x,y]=pk(hoverKey),st=cellPx(),L=(cx)=>44+3+cx*st,T=(cy)=>cy*st,ok=fits(f,x,y,tool.k==='move'?tool.from:null);
-  let h=`<div class="ghost ${ok?'':'bad'}" style="left:${L(x)}px;top:${T(y)}px;width:${2*st-3}px;height:${2*st-3}px"></div>`;
+  let h=`<div class="ghost ${ok?'':'bad'}" style="left:${L(x)}px;top:${T(y)}px;width:${st-3}px;height:${st-3}px"></div>`;
   sideCells(x,y,(rot+2)%4).forEach(([a,b])=>h+=`<div class="gside i" style="left:${L(a)}px;top:${T(b)}px;width:${st-3}px;height:${st-3}px"></div>`);
   sideCells(x,y,rot).forEach(([a,b])=>h+=`<div class="gside o" style="left:${L(a)}px;top:${T(b)}px;width:${st-3}px;height:${st-3}px"></div>`);
   g.innerHTML=h}
 // czy maszyna 2×2 zmieści się z lewym górnym rogiem w (x,y); skip = klucz przenoszonej maszyny
 function fits(f,x,y,skip){const occ=occMap(f);return mCells(x,y).every(([a,b])=>inb(f,a,b)&&(!occ[k(a,b)]||occ[k(a,b)]===skip)&&!tot(f.items[k(a,b)]))}
-document.addEventListener('pointermove',e=>{const c=e.target.closest&&e.target.closest('[data-cell]');const nk=c?c.dataset.cell:null;
-  if(nk!==hoverKey){hoverKey=nk;drawGhost()}});
+document.addEventListener('pointermove',e=>{if(e.target.closest&&e.target.closest('#mbar'))return;const c=e.target.closest&&e.target.closest('[data-cell]');const nk=c?c.dataset.cell:null;
+  if(nk!==hoverKey){hoverKey=nk;drawGhost()}const m=nk&&F().cells[nk]&&F().cells[nk].t==='machine'?nk:null;if(m!==mbHover){mbHover=m;drawMbar()}});
 function renderInfo(){const f=F();let h='';
   if(tool){h+=`<h2>Stawianie</h2><p class="hint">Kliknij wolną kratkę. <kbd>R</kbd> obraca (teraz: ${['wyjście w prawo','wyjście w dół','wyjście w lewo','wyjście w górę'][rot]}). <kbd>Esc</kbd> kończy.</p><button class="btn sm" data-act="rot">Obróć ↻</button> <button class="btn sm" data-act="notool">Gotowe</button>`}
   if(!sel){$('info').innerHTML=h+`<h2>Wybierz kratkę</h2><p class="hint">Kliknij maszynę albo kratkę, żeby zobaczyć, co na niej jest i co można z nią zrobić.</p>
     <div class="sec"><h2>Co testujemy</h2><p class="hint">Na górze włączasz sposoby zasilania maszyn. Każdy możesz testować osobno albo razem z innymi. Postęp zapisuje się w tej przeglądarce.</p>
-    <p class="hint"><b>Łańcuch na start:</b> postaw Młocarnię, a obok niej Żarna tak, żeby pomarańczowe kratki młocarni były zielonymi kratkami żaren (między maszynami jedna wolna kolumna). Potem przeciągnij kłosy pszenicy na młocarnię i kliknij na niej 1, 5 albo max: tyle partii włożysz do środka. To, co wyjdzie, przenieś na żarna i włóż tak samo.</p></div>`;return}
+    <p class="hint"><b>Łańcuch na start:</b> postaw Młocarnię, a dwie kratki dalej Żarna, tak żeby pomarańczowa kratka młocarni była zieloną kratką żaren. Potem przeciągnij kłosy pszenicy na młocarnię i kliknij na niej 1, 5 albo max: tyle partii włożysz do środka. To, co wyjdzie, przenieś na żarna i włóż tak samo.</p></div>`;return}
   const [x,y]=pk(sel),c=f.cells[sel],it=f.items[sel]||{};
   if(c&&c.t==='machine'){const ins=inCells(f,x,y),outs=outCells(f,x,y),r=c.job&&RECIPES[c.job.r];
     h+=`<h2>${MP[c.m].n}</h2><p class="hint">${MP[c.m].d}</p>
@@ -351,7 +387,7 @@ function stackList(it,key){const ids=Object.keys(it);if(!ids.length)return '<p c
   return ids.map(i=>`<div class="row">${ic(i)}<span class="n">${nm(i)}</span><span class="q">${it[i]}</span><button class="btn sm" data-act="back" data-c="${key}" data-i="${i}" title="Do spiżarni">⤴</button></div>`).join('')}
 // ---------- akcje ----------
 function place(key){const f=F(),[x,y]=pk(key);
-  if(tool.k==='machine'){if(!fits(f,x,y)){toast('Maszyna zajmuje 2×2 wolne kratki (bez towaru).');return}
+  if(tool.k==='machine'){if(!fits(f,x,y)){toast('Maszyna potrzebuje wolnej kratki (bez towaru).');return}
     if(!(S.store[tool.m]>0)){if(!pay(MP[tool.m].p))return;S.store[tool.m]=(S.store[tool.m]||0)+1}
     S.store[tool.m]--;f.cells[key]={t:'machine',m:tool.m,dir:rot,job:null,st:'wait'};if(!S.store[tool.m]){tool=null}sel=key}
   else if(tool.k==='move'){const src=tool.from,c=f.cells[src];if(!c){tool=null;return}
@@ -364,6 +400,8 @@ const ACT={
   feed:d=>{const n=feed(F(),d.c,d.q);if(n)toast(`Włożono ${n} ${n===1?'partię':n<5?'partie':'partii'}`);save()},
   auto:()=>{const c=F().cells[sel];if(c){c.auto=!c.auto;save()}},
   unq:()=>{const c=F().cells[sel];if(c){unqueue(c);save()}},
+  dropat:d=>{const f=F(),[x,y]=pk(d.c),q=S.qty==='max'?999:S.qty;if(!fromPantry(f,x,y,d.i,q))toast('Tu się nie zmieści.');save()},
+  droppick:d=>{tool={k:'drop',id:d.i};openDrawer(false);toast('Kliknij kratkę albo maszynę w hali.')},
   qty:d=>{S.qty=d.q==='max'?'max':+d.q;save()},
   exec:d=>{S.exec=d.v;save()},
   reset:()=>{if(!confirm('Wyczyścić piaskownicę?'))return;S=fresh();sel=null;tool=null;save()},
@@ -378,13 +416,15 @@ const ACT={
   stash:()=>{const f=F(),c=f.cells[sel];if(!c)return;if(c.t==='machine'){unqueue(c);S.store[c.m]=(S.store[c.m]||0)+1;if(c.job){const r=RECIPES[c.job.r];Object.entries(r.in).forEach(([i,q])=>S.pantry[i]=(S.pantry[i]||0)+q)}}delete f.cells[sel];save()},
   give:d=>{const f=F(),[x,y]=pk(d.c);if(!inb(f,x,y))return;const n=fromPantry(f,x,y,d.i,+d.q);if(!n)toast('Nie mieści się albo brak w spiżarni.');save()},
   back:d=>{toPantry(F(),d.c,d.i);save()},
+  backq:d=>{const f=F(),n=take(f,d.c,d.i,S.qty==='max'?1e9:S.qty);if(n)S.pantry[d.i]=(S.pantry[d.i]||0)+n;save()},
   collect:d=>{const f=F(),it=f.items[d.c];if(it)Object.keys(it).forEach(i=>toPantry(f,d.c,i));save()},
   pin:d=>{const c=F().cells[sel];if(c){c.pin=c.pin===+d.r?null:+d.r;save()}},
   hire:()=>{if(!pay(1000))return;const [x,y]=DOOR(F());S.wk.push({f:S.cur,x,y,st:'idle',load:null,task:null});save()},
   fire:()=>{const i=S.wk.map(w=>w.f).lastIndexOf(S.cur);if(i>=0){const w=S.wk[i];if(w.load)S.pantry[w.load.id]=(S.pantry[w.load.id]||0)+w.load.q;S.wk.splice(i,1)}save()},
 };
 document.addEventListener('click',e=>{hideCtx(e);const b=e.target.closest('[data-act]');if(b&&!b.disabled){ACT[b.dataset.act](b.dataset);$('ctx').hidden=true;render()}});
-document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0||e.target.closest('.feed'))return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
+document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0||e.target.closest('.feed')||e.target.closest('#mbar'))return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
+  if(tool&&tool.k==='drop'){const f=F(),[tx,ty]=target(f,...pk(key),tool.id);if(!fromPantry(f,tx,ty,tool.id,S.qty==='max'?999:S.qty))toast('Tu się nie zmieści.');tool=null;save();render();return}
   if(tool){place(tool.k==='machine'||tool.k==='move'?(hoverKey||key):key);render();return}if(e.target.closest('[data-drag]'))return;sel=sel===key?null:key;render()});
 addEventListener('pointerup',()=>{ptrDown=false});addEventListener('pointercancel',()=>{ptrDown=false});addEventListener('blur',()=>{ptrDown=false});
 ['left','info'].forEach(id=>{$(id).addEventListener('mouseenter',()=>hov.add(id));$(id).addEventListener('mouseleave',()=>hov.delete(id))});
@@ -401,12 +441,17 @@ document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.
   if(e.key==='Delete'&&sel&&F().cells[sel]){ACT.stash();render()}});
 // prawy przycisk: opcje kratki albo maszyny
 function hideCtx(e){const m=$('ctx');if(!m)return;if(e&&m.contains(e.target))return;m.hidden=true}
-document.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-cell]');if(!cell)return;e.preventDefault();sel=cell.dataset.cell;tool=null;render();
+document.addEventListener('contextmenu',e=>{const slot=e.target.closest('.slot.full');if(slot){e.preventDefault();const id=S.slots[+slot.dataset.slot],f=F(),q=S.qty==='max'?999:S.qty,items=[];
+    for(const key in f.cells){const c=f.cells[key];if(c.t!=='machine'||!canProcess(c.m,id))continue;const [x,y]=pk(key),[ix,iy]=inCells(f,x,y)[0];if(inb(f,ix,iy))items.push(['dropat',`↳ Przed: ${MP[c.m].n} (${x+1}, ${y+1})`,k(ix,iy)])}
+    items.push(['droppick','✥ Wskaż kratkę w hali…','']);
+    const m=$('ctx');m.innerHTML=`<div class="h">${nm(id)} · przenieś ${S.qty}</div>`+items.map(([a,t,cc])=>`<button data-act="${a}" data-c="${cc}" data-i="${id}">${t}</button>`).join('');
+    m.hidden=false;m.style.left=Math.min(e.clientX,innerWidth-260)+'px';m.style.top=Math.min(e.clientY,innerHeight-m.offsetHeight-10)+'px';return}
+  const cell=e.target.closest('[data-cell]');if(!cell)return;e.preventDefault();sel=cell.dataset.cell;tool=null;render();
   const f=F(),c=f.cells[sel],items=[];
   if(c){if(c.t!=='chest')items.push(['rotsel','↻ Obróć']);items.push(['movesel','✥ Przenieś']);items.push(['stash',c.t==='machine'?'⤓ Do magazynu':'✕ Rozbierz'])}
-  const it=f.items[sel];if(it&&tot(it))items.push(['collect','⤴ Wszystko z kratki do spiżarni',sel]);
+  const it=f.items[sel];if(it&&tot(it)){Object.keys(it).forEach(i=>items.push(['backq',`⤴ ${nm(i)} do spiżarni (${S.qty==='max'?'wszystko':S.qty})`,sel,i]));items.push(['collect','⤴ Wszystko z kratki do spiżarni',sel])}
   if(c&&c.t==='machine')outCells(f,...pk(sel)).forEach((p,i)=>{const ok=k(...p);if(tot(f.items[ok]))items.push(['collect',i?'⤴ Odbierz produkty uboczne':'⤴ Odbierz produkt',ok])});
-  const m=$('ctx');m.innerHTML=`<div class="h">${c?(c.t==='machine'?MP[c.m].n:{belt:'Taśmociąg',hatch:'Wrota spiżarni',chest:'Skrzynia'}[c.t]):'Kratka'}</div>`+items.map(([a,t,cc])=>`<button data-act="${a}" ${cc?`data-c="${cc}"`:''}>${t}</button>`).join('')+'<div class="h">Reszta opcji jest w panelu po prawej.</div>';
+  const m=$('ctx');m.innerHTML=`<div class="h">${c?(c.t==='machine'?MP[c.m].n:{belt:'Taśmociąg',hatch:'Wrota spiżarni',chest:'Skrzynia'}[c.t]):'Kratka'}</div>`+items.map(([a,t,cc,ii])=>`<button data-act="${a}" ${cc?`data-c="${cc}"`:''} ${ii?`data-i="${ii}"`:''}>${t}</button>`).join('')+'<div class="h">Reszta opcji jest w panelu po prawej.</div>';
   m.hidden=false;m.style.left=Math.min(e.clientX,innerWidth-230)+'px';m.style.top=Math.min(e.clientY,innerHeight-m.offsetHeight-10)+'px'});
 // przeciąganie (mechanika B)
 let drag=null;
@@ -414,19 +459,27 @@ const dragQ=e=>e.shiftKey?999:e.altKey?1:S.qty==='max'?999:S.qty;
 document.addEventListener('dragstart',e=>{const s=e.target.closest('[data-drag]');if(!s)return;drag=s.dataset.drag;dragging=true;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',drag)}catch(_){}
   const p=drag.split(':'),f=F(),id=p[0]==='p'?p[1]:p[2],have=p[0]==='p'?(S.pantry[id]||0):((f.items[p[1]]||{})[id]||0),d=$('dimg');
   d.querySelector('img').src='../web/items/'+id+'.webp';d.querySelector('b').textContent=Math.min(have,dragQ(e));try{e.dataTransfer.setDragImage(d,26,26)}catch(_){}});
-document.addEventListener('dragover',e=>{if(!drag)return;const c=e.target.closest('[data-cell]')||e.target.closest('#left');if(c){e.preventDefault();document.querySelectorAll('.drop').forEach(x=>x!==c&&x.classList.remove('drop'));if(c.dataset.cell)c.classList.add('drop')}});
+document.addEventListener('dragover',e=>{if(!drag)return;const c=e.target.closest('[data-cell]')||e.target.closest('[data-slot]')||e.target.closest('#drawer');if(c){e.preventDefault();document.querySelectorAll('.drop').forEach(x=>x!==c&&x.classList.remove('drop'));if(c.dataset.cell||c.dataset.slot)c.classList.add('drop')}});
 document.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const f=F(),q=dragQ(e),parts=drag.split(':');
   const cell=e.target.closest('[data-cell]');
   if(cell){const [tx,ty]=target(f,...pk(cell.dataset.cell),parts[0]==='p'?parts[1]:parts[2]);
     if(parts[0]==='p'){if(!fromPantry(f,tx,ty,parts[1],q))toast('Tu się nie zmieści.')}
     else {const n=take(f,parts[1],parts[2],q);if(n){if(canPut(f,tx,ty,parts[2],n))put(f,tx,ty,parts[2],n);else{put(f,...pk(parts[1]),parts[2],n);toast('Tu się nie zmieści.')}}}}
-  else if(e.target.closest('#left')&&parts[0]==='c'){const n=take(f,parts[1],parts[2],q);if(n)S.pantry[parts[2]]=(S.pantry[parts[2]]||0)+n}
+  else if(e.target.closest('#drawer')){const slot=e.target.closest('[data-slot]'),id=parts[0]==='p'?parts[1]:parts[2];
+    if(parts[0]==='c'){const n=take(f,parts[1],parts[2],q);if(n)S.pantry[id]=(S.pantry[id]||0)+n}
+    // przestawienie na półce: towar idzie na wskazane miejsce (zamiana z tym, co tam było)
+    if(slot){syncSlots();const to=+slot.dataset.slot,from=S.slots.indexOf(id);if(from>=0&&from!==to){S.slots[from]=S.slots[to];S.slots[to]=id}}}
   drag=null;dragging=false;save();render()});
 document.addEventListener('dragend',()=>{drag=null;dragging=false;document.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop'));render()});
+const drawer=$('drawer');let drawerT=0;
+const openDrawer=v=>{clearTimeout(drawerT);if(v)drawer.classList.add('open');else drawerT=setTimeout(()=>drawer.classList.remove('open'),250)};
+drawer.addEventListener('mouseenter',()=>openDrawer(true));drawer.addEventListener('mouseleave',()=>openDrawer(false));
+drawer.addEventListener('dragenter',()=>openDrawer(true));
+drawer.addEventListener('mouseover',e=>{if(e.target.closest('select,button'))hov.add('drawer-act');else hov.delete('drawer-act')});
 // pętla
 let last=performance.now(),lastR=0,lastSave=0;
 function loop(now){const dt=Math.min(.25,(now-last)/1000);last=now;tick(dt);
-  if(now-lastR>250&&!dragging){lastR=now;const a=document.activeElement,typing=a&&/SELECT|INPUT/.test(a.tagName);if(!ptrDown||now-ptrDown>1200)renderBoard();if(!typing&&!hov.has('info'))renderInfo();if(!typing&&!hov.has('left'))renderLeft();$('money').textContent=S.free?'zakupy za darmo':Math.round(S.money).toLocaleString('pl-PL')+' zł'}
+  if(now-lastR>250&&!dragging){lastR=now;const a=document.activeElement,typing=a&&/SELECT|INPUT/.test(a.tagName);if(!ptrDown||now-ptrDown>1200)renderBoard();if(!typing&&!hov.has('info'))renderInfo();if(!typing&&!hov.has('left'))renderLeft();if(!typing)renderShelves();$('money').textContent=S.free?'zakupy za darmo':Math.round(S.money).toLocaleString('pl-PL')+' zł'}
   else placeWorkers();
   if(now-lastSave>3000){lastSave=now;save()}}
 render();setInterval(()=>loop(performance.now()),50);
