@@ -783,13 +783,17 @@ function vPrz(){const h=HL();if(hSel&&!h.cells[hSel]&&!h.items[hSel])hSel=null;c
     <p class="more">${busy} z ${allM} ${plural(allM,'maszyny','maszyn','maszyn')} pracuje. Przeciągnij towar ze spiżarni (prawa krawędź) przed maszynę i włóż partie przyciskami +1, +5, max. Maszynę chwytasz i przeciągasz, <span class="kbd">R</span> obraca, prawy przycisk to opcje, podwójne kliknięcie to szczegóły.</p>
     ${ml}${cr}
     <div class="hwrap"><div class="hboard ${chain.size?'chain':''}" style="--cols:${h.w}">${g}</div></div>${add}</div>
-    ${magBar()}${pantryDrawer()}`}
+    ${magBar()}${pantryDrawer()}${trayDock()}`}
 function carryInfo(){const c=carry,n=c.k==='p'?Math.min(hqty()==='max'?inv(c.id):hqty(),inv(c.id)):c.k==='c'?(()=>{const have=(HL().items[c.key]||{})[c.id]||0;return Math.min(hqty()==='max'?have:hqty(),have)})():1;
   const what=c.k==='s'||c.k==='m'?`${mart(c.id||HL().cells[c.key].m)}<b>${esc(M[c.id||HL().cells[c.key].m].n)}</b>`:`${icon(c.id)}<b>${esc(ITEMS[c.id].n)} ×${n}</b>`;
   return `<div class="hcarry">${what}<span>${c.k==='s'?'Kliknij wolną kratkę, żeby postawić. R obraca.':c.k==='m'?'Kliknij wolną kratkę, żeby przenieść.':'Kliknij kratkę albo maszynę. Kliknięcie spiżarni odkłada towar z powrotem.'}</span><button class="btn sm" data-act="hcancel">Anuluj</button></div>`}
 // magazyn: kupione, a jeszcze nie postawione maszyny
 function magBar(){const grp=[];MACH.forEach(([id])=>{[...new Set(S.mag.filter(x=>x.m===id).map(x=>x.lvl))].sort((a,b)=>b-a).forEach(l=>grp.push([id,l]))});const ids=grp;
   return `<div class="magbar"><div class="mlbl"><b>Magazyn</b><small>${ids.length?'przeciągnij maszynę na halę':'pusty'}</small></div>${ids.length?ids.map(([id,l])=>`<button class="mtile ${carry&&carry.k==='s'&&carry.id===id&&carry.lvl===l?'on':''}" draggable="true" data-hdrag="s:${id}:${l}" data-act="spick" data-click="1" data-id="${id}" data-v="${l}" title="${esc(M[id].d)}">${mart(id)}<span>${esc(M[id].n)}${l>1?` · poz. ${l}`:''}</span><b>${mStock(id,l)}</b></button>`).join(''):`<span class="mempty">Kupione maszyny pojawią się tutaj. Kupisz je w <button class="lnk" data-act="tab" data-v="ulep">Sklepie</button>.</span>`}</div>`}
+// „Do rozłożenia” na stałe po lewej stronie hali (nie przewija się z halą): tu trafiają świeże plony
+function trayDock(){ensureShelfPos();const n=S.tray.filter(k=>k&&inv(k)>0).length,stuck=pantryStuck();
+  return `<aside class="tdock ${stuck?'bad':''}" data-hback="1" title="Do rozłożenia: świeże plony i towar bez miejsca na półce. Przeciągnij do hali albo z hali tutaj."><b class="tdl">Do rozłożenia <span class="num">${n}/${TRAY_N}</span></b>
+    ${S.tray.map(k=>k&&inv(k)>0?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-act="ppick" data-click="1" data-id="${k}" title="${esc(ITEMS[k].n)}: ${inv(k)}">${itemSvg(k)}<b>${inv(k)}</b><small>${esc(ITEMS[k].n)}</small></span>`:'<span class="pd-s"></span>').join('')}</aside>`}
 // szuflada spiżarni przy prawej krawędzi: te same półki co w zakładce Spiżarnia
 function pantryDrawer(){ensureShelfPos();const q=hqty();
   const sl=k=>{if(!k||hold(k)<=0)return '<span class="pd-s"></span>';const n=inv(k);
@@ -1277,13 +1281,14 @@ document.addEventListener('dragstart',e=>{const s=e.target.closest&&e.target.clo
     else src='machines/'+(hDrag.id||h.cells[hDrag.key].m)+'.webp';
     d.querySelector('img').src=src;const b=d.querySelector('b');b.textContent=n;b.hidden=n==='';try{e.dataTransfer.setDragImage(d,30,30)}catch(_){}}
   if(hDrag.k==='p'||hDrag.k==='c')snd('pick_'+itemSnd(hDrag.id))});
-const hTarget=e=>e.target.closest&&(e.target.closest('.hc[data-k]')||e.target.closest('[data-hbin]')||e.target.closest('[data-pdrawer]')||e.target.closest('.magbar'));
+const hTarget=e=>e.target.closest&&(e.target.closest('.hc[data-k]')||e.target.closest('[data-hbin]')||e.target.closest('[data-pdrawer]')||e.target.closest('[data-hback]')||e.target.closest('.magbar'));
 document.addEventListener('dragover',e=>{if(!hDrag)return;const t=hTarget(e);document.querySelectorAll('.hc.drop,.hc.nodrop').forEach(x=>x!==t&&x.classList.remove('drop','nodrop'));if(!t)return;e.preventDefault();
   if(t.dataset.hbin){t.classList.add('over');return}
   if(t.dataset.pdrawer){if(!pdOpen){pdOpen=true;t.classList.add('open')}return}
+  if(t.dataset.hback){t.classList.add('over');return}
   if(t.dataset.k){const ok=dropOk(t.dataset.k,hDrag);t.classList.toggle('drop',ok);t.classList.toggle('nodrop',!ok);e.dataTransfer.dropEffect=ok?'move':'none'}});
 document.addEventListener('drop',e=>{if(!hDrag)return;e.preventDefault();const t=hTarget(e),src=hDrag;hDrag=null;dragging=false;
-  if(t&&t.dataset.k)hallDrop(t.dataset.k,src,e);else if(t&&t.dataset.hbin)hallTrash(src,e);else if(t&&t.dataset.pdrawer)hallBack(src,e);
+  if(t&&t.dataset.k)hallDrop(t.dataset.k,src,e);else if(t&&t.dataset.hbin)hallTrash(src,e);else if(t&&(t.dataset.pdrawer||t.dataset.hback))hallBack(src,e);
   else if(t&&t.classList.contains('magbar')&&src.k==='m'){stashM(HL(),src.key);toast('Maszyna wróciła do magazynu','gold')}
   pdOpen=false;save();render()});
 document.addEventListener('dragend',()=>{if(hDrag){hDrag=null;dragging=false;pdOpen=false;render()}});
