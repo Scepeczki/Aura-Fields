@@ -900,7 +900,8 @@ function placeItems(){ensureShelfPos();
   const on=placed(),keys=new Set([...Object.keys(S.inv),...S.shop.filter(x=>x&&x.q>0).map(x=>x.k)]);
   for(const k of keys){if(hold(k)<=0||on.has(k))continue;
     const j=findTray(); if(j>=0){S.tray[j]=k;on.add(k);dirty=true}}}
-const pantryStuck=()=>{ensureShelfPos();return overflowItems().length>0};
+// towar, który właśnie wrócił do spiżarni (np. z hali), najpierw trafia na swoje miejsce; dopiero to, co się nie zmieści, wstrzymuje grę
+const pantryStuck=()=>{ensureShelfPos();placeItems();return overflowItems().length>0};
 function trash(k){const q=inv(k);if(!q)return;S.inv[k]=0;delete S.rot[k];
   const i=S.shelf.indexOf(k);if(i>=0&&rule(i)!=='pin')S.shelf[i]=null;const j=S.tray.indexOf(k);if(j>=0)S.tray[j]=null;
   if(pSel===k){pSel=null;pMove=false}
