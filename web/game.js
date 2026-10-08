@@ -647,7 +647,7 @@ function render(){
   document.querySelectorAll('.hud [data-v]').forEach(b=>b.classList.toggle('on',S.tab===b.dataset.v));
   const gm=goalMin();
   $('#goal').innerHTML=g?`<div class="goal ${gm?'min':''}"><span class="gico">${lico(ICO.sprout)}</span><button class="gl" data-act="goalmin" title="${gm?'Pokaż cel':'Zwiń'}">Cel ${S.goal+1} z ${GOALS.length}<span aria-hidden="true">${gm?'▴':'▾'}</span></button><span class="gt">${esc(g[0])}</span><span class="gr">${COIN}+${g[2]} zł</span></div>`:'';
-  const sy=window.scrollY;
+  const sy=window.scrollY,keep=[...document.querySelectorAll('[data-keep]')].map(el=>[el.dataset.keep,el.scrollTop]);
   // zachowaj fokus klawiatury mimo przebudowy widoku
   const ae=document.activeElement, fk=ae&&ae.dataset&&ae.dataset.act&&$('#view').contains(ae)?'[data-act]'+Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(v)}"]`).join(''):null;
   document.body.dataset.tab=S.tab;bgMarket();document.documentElement.classList.toggle("nosb",S.tab==="prz");
@@ -656,6 +656,8 @@ function render(){
   {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
   if(fk){const el=$('#view').querySelector(fk);if(el)el.focus({preventScroll:true})}
   if(Math.abs(window.scrollY-sy)>2) window.scrollTo(0,sy);
+  // przewijane okienka (szuflada spiżarni, Do rozłożenia) zostają tam, gdzie gracz je przewinął
+  keep.forEach(([k,t])=>{const el=document.querySelector(`[data-keep="${k}"]`);if(el)el.scrollTop=t});
   if(sheetMode==='plot') drawSheet(); else if(sheetMode==='seeds') drawSeeds(); else if(sheetMode==='list') drawList(); else if(sheetMode==='mach') drawMach();
   progress();
 }
@@ -792,18 +794,17 @@ function magBar(){const grp=[];MACH.forEach(([id])=>{[...new Set(S.mag.filter(x=
   return `<div class="magbar"><div class="mlbl"><b>Magazyn</b><small>${ids.length?'przeciągnij maszynę na halę':'pusty'}</small></div>${ids.length?ids.map(([id,l])=>`<button class="mtile ${carry&&carry.k==='s'&&carry.id===id&&carry.lvl===l?'on':''}" draggable="true" data-hdrag="s:${id}:${l}" data-act="spick" data-click="1" data-id="${id}" data-v="${l}" title="${esc(M[id].d)}">${mart(id)}<span>${esc(M[id].n)}${l>1?` · poz. ${l}`:''}</span><b>${mStock(id,l)}</b></button>`).join(''):`<span class="mempty">Kupione maszyny pojawią się tutaj. Kupisz je w <button class="lnk" data-act="tab" data-v="ulep">Sklepie</button>.</span>`}</div>`}
 // „Do rozłożenia” na stałe po lewej stronie hali (nie przewija się z halą): tu trafiają świeże plony
 function trayDock(){ensureShelfPos();const n=S.tray.filter(k=>k&&inv(k)>0).length,stuck=pantryStuck();
-  return `<aside class="tdock ${stuck?'bad':''}" data-hback="1" title="Do rozłożenia: świeże plony i towar bez miejsca na półce. Przeciągnij do hali albo z hali tutaj."><b class="tdl">Do rozłożenia <span class="num">${n}/${TRAY_N}</span></b>
-    ${S.tray.map(k=>k&&inv(k)>0?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-id="${k}" title="${esc(ITEMS[k].n)}: ${inv(k)}">${itemSvg(k)}<b>${inv(k)}</b><small>${esc(ITEMS[k].n)}</small></span>`:'<span class="pd-s"></span>').join('')}</aside>`}
+  return `<aside class="tdock ${stuck?'bad':''}" data-hback="1" data-keep="tdock" title="Do rozłożenia: świeże plony i towar bez miejsca na półce. Przeciągnij do hali albo z hali tutaj."><b class="tdl">Do rozłożenia <span class="num">${n}/${TRAY_N}</span></b>
+    ${S.tray.map(k=>k&&inv(k)>0?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-id="${k}" title="${esc(ITEMS[k].n)}: ${inv(k)}">${itemSvg(k)}<b>${inv(k)}</b><small>${esc(ITEMS[k].n)}</small></span>`:'<span class="pd-s"></span>').join('')}<button class="pd-bin" data-hbin="1" data-act="hbin" data-click="1" title="Kosz: przeciągnij tu towar, żeby go wyrzucić">${TRASH}<span>Kosz</span></button></aside>`}
 // szuflada spiżarni przy prawej krawędzi: te same półki co w zakładce Spiżarnia
 function pantryDrawer(){ensureShelfPos();const q=hqty();
   const sl=k=>{if(!k||hold(k)<=0)return '<span class="pd-s"></span>';const n=inv(k);
     return n?`<span class="pd-s full" draggable="true" data-hdrag="p:${k}" data-id="${k}" title="${esc(ITEMS[k].n)}: ${n}">${itemSvg(k)}<b>${n}</b><small>${esc(ITEMS[k].n)}</small></span>`
       :`<span class="pd-s dim" title="${esc(ITEMS[k].n)}: wszystko na wystawie w sklepie">${itemSvg(k)}<b>0</b><small>${esc(ITEMS[k].n)}</small></span>`};
   const tray=S.tray.filter(k=>k&&inv(k)>0);
-  return `<aside class="pdrawer ${S.pdPin?'open pinned':''}" data-pdrawer="1"><button class="pdh" data-act="pdtoggle" title="${S.pdPin?'Zamknij spiżarnię':'Otwórz spiżarnię'}">Spiżarnia${S.pdPin?' ✕':''}</button><div class="pan"><div class="pin">
-    <div class="pdtop"><b>Spiżarnia</b><button class="pd-bin" data-hbin="1" data-act="hbin" data-click="1" title="Kosz: przeciągnij tu towar, żeby go wyrzucić">${TRASH}<span>Kosz</span></button><span class="pdq">Przenoś: ${[1,5,'max'].map(v=>`<button class="${q===v?'on':''}" data-act="hq" data-v="${v}">${v}</button>`).join('')}</span></div>
-    <p class="more">Przeciągnij towar do hali albo kliknij go, a potem kratkę. Prawy przycisk kładzie go od razu przed maszyną. Z hali odkładasz tu przeciągnięciem, a do kosza wyrzucasz.</p>
-    ${tray.length?`<div class="pd-sh"><span class="pd-l">Do rozłożenia</span><div class="pd-g">${tray.map(sl).join('')}</div></div>`:''}
+  return `<aside class="pdrawer ${S.pdPin?'open pinned':''}" data-pdrawer="1"><button class="pdh" data-act="pdtoggle" title="${S.pdPin?'Zamknij spiżarnię':'Otwórz spiżarnię'}">Spiżarnia${S.pdPin?' ✕':''}</button><div class="pan"><div class="pin" data-keep="pdrawer">
+    <div class="pdtop"><b>Spiżarnia</b><span class="pdq">Przenoś: ${[1,5,'max'].map(v=>`<button class="${q===v?'on':''}" data-act="hq" data-v="${v}">${v}</button>`).join('')}</span></div>
+    <p class="more">Przeciągnij towar do hali albo kliknij go, a potem kratkę. Prawy przycisk kładzie go od razu przed maszyną. Z hali odkładasz tu przeciągnięciem. Kosz jest pod „Do rozłożenia” obok hali.</p>
     ${shelfOrder().map(s=>`<div class="pd-sh"><span class="pd-l">${esc((S.shelfNames||[])[s]||`Półka ${s+1}`)}</span><div class="pd-g">${S.shelf.slice(s*SHELF_W,(s+1)*SHELF_W).map(sl).join('')}</div></div>`).join('')}
   </div></div></aside>`}
 // upuszczenie towaru albo maszyny na kratkę hali
