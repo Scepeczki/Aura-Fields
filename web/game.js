@@ -661,13 +661,15 @@ const jobPct=(id,k)=>{const j=S.m[id].run[k];return j?Math.min(1,j.prog/RECIPES[
 function ring(pct,attr){return `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="26" class="rbg"/><circle cx="30" cy="30" r="26" class="rfg" ${attr||''} style="stroke-dasharray:${RING_C.toFixed(2)};stroke-dashoffset:${(RING_C*(1-pct)).toFixed(2)}"/></svg>`}
 // slot przedmiotu jak w ekwipunku: ikona, w rogu ilość na partię, na dole zapas
 function slot(id,{tag,count,cls,title}={}){return `<span class="slot ${cls||''}" title="${esc(title||ITEMS[id].n)}">${itemSvg(id)}${tag!=null?`<i class="tag">${tag}</i>`:''}${count!=null?`<b class="cnt">${count}</b>`:''}</span>`}
-function canMake(f){const v={...S.inv};
+// ile mąki f wyjdzie z zapasów (pierwsza ścieżka z Księgi); pend: także z tego, co jest w maszynach i kolejkach
+function canMake(f,pend){const v={...S.inv};
+  if(pend)for(const id in S.m){const m=S.m[id];m.q.forEach(r=>{for(const o in RECIPES[r].out)v[o]=(v[o]||0)+RECIPES[r].out[o]});m.run.forEach(j=>{for(const o in RECIPES[j.r].out)v[o]=(v[o]||0)+RECIPES[j.r].out[o]})}
   for(const s of chainOf(f)){if(!s.r)continue;const r=s.r;let n=Infinity;for(const i in r.in)n=Math.min(n,Math.floor((v[i]||0)/r.in[i]));
     if(!n||n===Infinity)continue;for(const i in r.in)v[i]-=n*r.in[i];for(const o in r.out)v[o]=(v[o]||0)+n*r.out[o]}
   return Math.floor(v[f]||0)}
 const POTICO='<svg class="bico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h11M11 7l5 5-5 5"/><path d="M19 5v14"/></svg>';
-const potChipF=f=>{const n=canMake(f);return `<i class="fp ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: masz ${inv(f)}, razem z przerobieniem zapasów ${n}">${itemSvg(f)}<b class="num">${n}</b></i>`};
-const potChip=f=>{const n=canMake(f);return `<span class="pot ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: masz ${inv(f)}, a z zapasów w spiżarni zrobisz razem ${n}">${POTICO}<b class="num">${n}</b></span>`};
+const potChipF=f=>{const n=canMake(f,true);return `<i class="fp ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: łącznie ${n}, czyli worki w spiżarni (${inv(f)}) i wszystko, co z zapasów i maszyn da się jeszcze na nią przerobić">${itemSvg(f)}<b class="num">${n}</b></i>`};
+const potChip=f=>{const n=Math.max(0,canMake(f)-inv(f));return `<span class="pot ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: z zapasów w spiżarni zrobisz jeszcze ${n} (gotowe worki: ${inv(f)})">${POTICO}<b class="num">${n}</b></span>`};
 // uprawy w kolejności Księgi mąk: dział i kolejność pierwszej mąki, do której prowadzą
 const BOOK_CROPS=(()=>{const out=[],seen=new Set();FLOURS.forEach(f=>{const c=chainOf(f).find(s=>s.crop);if(c&&!seen.has(c.crop.id)){seen.add(c.crop.id);out.push(c.crop)}});
   CROPS.forEach(c=>{if(!seen.has(c.id))out.push(c)});return out})();
@@ -1054,7 +1056,7 @@ function importSave(){const inp=document.createElement('input');inp.type='file';
 function pay(c,src){if(S.coins<c)return false;S.coins-=c;dirty=true;if(src&&c){spendFeed(c,src);snd('buy')}return true}
 const ACT={
  tab:d=>{S.tab=d.v;if(d.v!=='pola')sowSel=null;closeSheet();render();sndUpdate();window.scrollTo(0,0);if(d.v==='ksiega'||d.v==='kron')snd('page')},
- plot:(d,b)=>{const i=+d.i,p=S.plots[i];if(isReady(p)){harvest(i);render()}else if(sowSel&&!p.crop){if(sowAt(i,b))sowPaint=true}else openPlot(i)},
+ plot:(d,b)=>{const i=+d.i,p=S.plots[i];if(isReady(p)){harvest(i);render()}else if(!p.crop){if(sowSel){if(sowAt(i,b))sowPaint=true}else openSeeds()}else openPlot(i)},
  sowpick:()=>openSeeds(),
  sowend:()=>sowEnd(),
  sowsel:d=>{const here=d.here&&sheetPlot>=0?sheetPlot:-1;sowSel=d.c;if(here>=0)sowAt(here);closeSheet();S.tab='pola';render()},
