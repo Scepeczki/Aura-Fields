@@ -554,7 +554,7 @@ const resCost=id=>{const r=resDef(id);return Math.round(r[4]*Math.pow(r[5],res(i
 const resReq=id=>{const r=resDef(id);return r[6]+r[7]*res(id)};
 const resAvail=id=>{const r=resDef(id);return res(id)<r[3]&&S.lvl>=resReq(id)&&S.coins>=resCost(id)};
 
-function hudTick(){
+function hudTick(){if(S.tab==="targ")bgMarket();
   $('#coins').textContent=fmtZ(S.coins);
   $('#clock').innerHTML=`<b>${SEASONS[seasonN()].n}, dzień ${dayN()%SD+1}/${SD}</b><span>${clock()} · ${WEATHER[S.wx].n} · rok ${yearN()}</span>`;
   $('#lvlLbl').textContent='Poziom '+S.lvl; $('#xpTxt').textContent=`${Math.floor(S.xp)} / ${xpNeed(S.lvl)} PD`;
@@ -562,6 +562,10 @@ function hudTick(){
   $('#coll').textContent=nMade()+'/'+FLOURS.length; $('#achc').textContent=Object.keys(S.ach).length+'/'+ACH.length;
 }
 const goalMin=()=>S.goalMin!=null?S.goalMin:innerWidth<600; // na telefonie cel domyślnie zwinięty
+// tło targu: pora roku, a noc przenika się z dniem jak niebo
+let bgMk='';
+function bgMarket(){const s=BG_SEASON[seasonN()];if(s!==bgMk){bgMk=s;const d=$('.bgmk.day'),n=$('.bgmk.night');if(d)d.style.backgroundImage=`url(bg/targ-${s}-dzien.webp)`;if(n)n.style.backgroundImage=`url(bg/targ-${s}-noc.webp)`}
+  const h=hourF();let L=h>=5&&h<=20?Math.sin(Math.PI*(h-5)/15):0;L=Math.min(1,L*1.7);document.body.style.setProperty('--night',(1-L).toFixed(3))}
 function render(){
   dirty=false; lastRender=performance.now();
   hudTick();
@@ -578,7 +582,7 @@ function render(){
   const sy=window.scrollY;
   // zachowaj fokus klawiatury mimo przebudowy widoku
   const ae=document.activeElement, fk=ae&&ae.dataset&&ae.dataset.act&&$('#view').contains(ae)?'[data-act]'+Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(v)}"]`).join(''):null;
-  document.body.dataset.tab=S.tab;
+  document.body.dataset.tab=S.tab;bgMarket();
   {const st=pantryStuck(),pb=$('#pausebar');if(pb){pb.hidden=!st;if(st)pb.innerHTML=`<b>Gra wstrzymana</b><span>W spiżarni zabrakło miejsca na nowe towary. Rozłóż je na półki albo wyrzuć do kosza.</span>${S.tab!=='spiz'?'<button class="btn sm pri" data-act="gospiz">Do spiżarni</button>':''}`}}
   $('#view').innerHTML=({pola:vPola,prz:vPrz,spiz:vSpiz,targ:vTarg,ulep:vUlep,ksiega:vKsiega,kron:vKron})[S.tab]();
   {const h2=$('#view').querySelector('.sechead h2');if(h2&&TABICO[S.tab])h2.insertAdjacentHTML('afterbegin',`<svg class="h2ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TABICO[S.tab]}</svg>`)}
@@ -657,6 +661,17 @@ const jobPct=(id,k)=>{const j=S.m[id].run[k];return j?Math.min(1,j.prog/RECIPES[
 function ring(pct,attr){return `<svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="26" class="rbg"/><circle cx="30" cy="30" r="26" class="rfg" ${attr||''} style="stroke-dasharray:${RING_C.toFixed(2)};stroke-dashoffset:${(RING_C*(1-pct)).toFixed(2)}"/></svg>`}
 // slot przedmiotu jak w ekwipunku: ikona, w rogu ilość na partię, na dole zapas
 function slot(id,{tag,count,cls,title}={}){return `<span class="slot ${cls||''}" title="${esc(title||ITEMS[id].n)}">${itemSvg(id)}${tag!=null?`<i class="tag">${tag}</i>`:''}${count!=null?`<b class="cnt">${count}</b>`:''}</span>`}
+function canMake(f){const v={...S.inv};
+  for(const s of chainOf(f)){if(!s.r)continue;const r=s.r;let n=Infinity;for(const i in r.in)n=Math.min(n,Math.floor((v[i]||0)/r.in[i]));
+    if(!n||n===Infinity)continue;for(const i in r.in)v[i]-=n*r.in[i];for(const o in r.out)v[o]=(v[o]||0)+n*r.out[o]}
+  return Math.floor(v[f]||0)}
+const POTICO='<svg class="bico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h11M11 7l5 5-5 5"/><path d="M19 5v14"/></svg>';
+const potChipF=f=>{const n=canMake(f);return `<i class="fp ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: masz ${inv(f)}, razem z przerobieniem zapasów ${n}">${itemSvg(f)}<b class="num">${n}</b></i>`};
+const potChip=f=>{const n=canMake(f);return `<span class="pot ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: masz ${inv(f)}, a z zapasów w spiżarni zrobisz razem ${n}">${POTICO}<b class="num">${n}</b></span>`};
+// uprawy w kolejności Księgi mąk: dział i kolejność pierwszej mąki, do której prowadzą
+const BOOK_CROPS=(()=>{const out=[],seen=new Set();FLOURS.forEach(f=>{const c=chainOf(f).find(s=>s.crop);if(c&&!seen.has(c.crop.id)){seen.add(c.crop.id);out.push(c.crop)}});
+  CROPS.forEach(c=>{if(!seen.has(c.id))out.push(c)});return out})();
+const BOOK_GROUPS=CATS.slice(1).map((n,i)=>[n,BOOK_CROPS.filter(c=>(c.cat||6)===i+1)]).filter(x=>x[1].length);
 function lineParts(f){const ch=chainOf(f);return {steps:ch.filter(s=>s.r),crop:ch.find(s=>s.crop)?.crop}}
 function lineActive(f){const {steps,crop}=lineParts(f);
   return [crop?crop.out:null,...steps.map(s=>s.out)].some(i=>i&&i!==f&&inv(i)>0)||steps.some(s=>inMachine(s.r)>0)||S.millers.some(m=>m.plan&&m.plan.f===f);}
@@ -692,7 +707,7 @@ function vPrz(){syncLines();
   h+=`<div class="lines">${S.lines.map((f,ix)=>{const {steps,crop}=lineParts(f);
     const fold=S.lineFold.includes(f),busy=steps.some(s=>S.m[s.r.m].run.some(j=>j.r===s.r.id)),last=steps.length?steps[steps.length-1].out:f;
     return `<div class="lrow ${fold?'fold':''}" data-line="${f}"><div class="lhead"><span class="lgrip" draggable="true" data-lf="${f}" title="Przeciągnij, żeby przestawić">⠿</span>
-      <button class="lx lfold" data-act="lfold" data-f="${f}" title="${fold?'Rozwiń':'Zwiń'} linię" aria-expanded="${!fold}">${fold?'▸':'▾'}</button>${icon(f)}<b>${esc(ITEMS[f].n)}</b>
+      <button class="lx lfold" data-act="lfold" data-f="${f}" title="${fold?'Rozwiń':'Zwiń'} linię" aria-expanded="${!fold}">${fold?'▸':'▾'}</button>${icon(f)}<b>${esc(ITEMS[f].n)}</b>${potChip(f)}
       ${fold?`<span class="lsum">${busy?'<i class="dot"></i>pracuje · ':''}masz ${inv(last)}</span>`:''}
       <span class="lmw">${lineMiller(f)}</span><button class="lx lhide" data-act="lhide" data-f="${f}" title="Usuń linię">✕</button></div>
       ${fold?'':`<div class="lpath">${crop?node(crop.out):''}${steps.map((s,i)=>`<span class="larr">${ARROW}</span>${step(s.r)}<span class="larr">${ARROW}</span>${node(s.out,i===steps.length-1)}`).join('')}</div>`}</div>`}).join('')}</div>`;
@@ -701,9 +716,9 @@ function vPrz(){syncLines();
 // arkusz: dodaj linię dowolnej mąki
 function openLineAdd(){sheetMode='lineadd';sheetPlot=-1;drawLineAdd();$('#sheet').hidden=false;$('#panel').scrollTop=0}
 function drawLineAdd(){syncLines();
-  let h=`<div class="ph"><div><h2>Dodaj linię</h2><p>Linia trafi na koniec listy. Szare mąki wymagają maszyny albo uprawy, której jeszcze nie masz.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
+  let h=`<div class="ph"><div><h2>Dodaj linię</h2><p>Linia trafi na koniec listy. Złota ramka: mąka już robiona. Liczba ze strzałką: tyle tej mąki zrobisz z tego, co masz w spiżarni. Szare wymagają maszyny albo uprawy, której jeszcze nie masz.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
   CATS.slice(1).forEach((c,ci)=>{const fl=FLOURS.filter(f=>ITEMS[f].cat===ci+1&&!S.lines.includes(f));if(!fl.length)return;
-    h+=`<div class="grp">${esc(c)}</div><div class="lgrid">${fl.map(f=>{const pr=chainProblem(f);return `<button class="lpick ${pr?'dim':''}" data-act="ladd" data-f="${f}" title="${esc(pr||ITEMS[f].src)}">${slot(f,{count:inv(f)})}<span><b>${esc(ITEMS[f].n)}</b><small>${pr?esc(pr):S.made[f]?'robiona':'jeszcze nie robiona'}${S.lineHide.includes(f)?' · usunięta':''}</small></span></button>`}).join('')}</div>`});
+    h+=`<div class="grp">${esc(c)}</div><div class="lgrid">${fl.map(f=>{const pr=chainProblem(f),md=!!S.made[f];return `<button class="lpick ${pr?'dim':''} ${md?'made':'new'}" data-act="ladd" data-f="${f}" title="${esc(pr||ITEMS[f].src)}">${slot(f,{count:inv(f)})}<span><b>${esc(ITEMS[f].n)}</b><small>${pr?esc(pr):md?`${STAR}w Księdze`:'jeszcze nie robiona'}${S.lineHide.includes(f)?' · usunięta':''}</small></span>${potChip(f)}</button>`}).join('')}</div>`});
   $('#panel').innerHTML=h;}
 const ioPlain=obj=>Object.entries(obj).map(([k,q])=>`${q}× ${ITEMS[k].n}`).join(' + ');
 
@@ -965,17 +980,19 @@ function sowEnd(){sowSel=null;sowPaint=false;render()}
 function seedCard(c,ref,pick){const lk=!unlocked(c),cost=seedCost(c),af=S.coins>=cost,free=sowFree(c.id);
   const ok=pick?!!ref:compatible(c,ref.env),tW=ref&&outdoor(ref)&&seasonN()!==3?toSeason(3):Infinity;
   const est=ref?c.g/plotRate({...ref,crop:c.id}):c.g, late=ok&&!lk&&est>tW;
-  const info=lk?`odblokujesz na poziomie ${c.lvl}`:!ok?`wymaga: ${ENV[c.env].toLowerCase()}`:`${fmtT(est)} · ${plotYield(ref,c.id)}× plon${c.r?' · wieloletnia':''}${pick?` · wolne pasujące: ${free}`:''}`;
+  const info=lk?`odblokujesz na poziomie ${c.lvl}`:!ok?`wymaga: ${ENV[c.env].toLowerCase()}`:`${fmtT(est)}${c.r?' · wieloletnia':''}${pick?` · wolne: ${free}`:''}`;
+  const yld=ok&&!lk?`<span class="yld" title="Plon z jednego zbioru: ${plotYield(ref,c.id)}× ${esc(ITEMS[c.out].n)} (${price(c.out)} zł/szt. surowo)">${itemSvg(c.out)}<b class="num">${plotYield(ref,c.id)}</b></span>`:'';
+  const fl=c.flours.slice(0,3),fpot=`<span class="fpots">${fl.map(f=>potChipF(f)).join('')}${c.flours.length>3?`<small>+${c.flours.length-3}</small>`:''}</span>`;
   const btns=pick?`<button class="btn sm ${!lk&&free?'pri':''}" data-act="sowsel" data-c="${c.id}" ${lk?'disabled':''} title="Wybierz i klikaj albo przeciągaj po poletkach">${cost} zł</button>${!lk&&!c.r&&free>1?`<button class="btn sm" data-act="plantall" data-c="${c.id}" ${af?'':'disabled'} title="Zasiej na wszystkich wolnych pasujących poletkach">×${free}</button>`:''}`
     :`<button class="btn sm ${ok&&af&&!lk?'pri':''}" data-act="plant" data-c="${c.id}" ${ok&&af&&!lk?'':'disabled'}>${cost} zł</button>${ok&&!lk&&free>1?`<button class="btn sm" data-act="sowsel" data-c="${c.id}" data-here="1" ${af?'':'disabled'} title="Zasiej tutaj i wybierz kolejne poletka">wiele</button>`:''}`;
   return `<div class="seed ${lk?'lock':ok?'':'off'} ${sowSel===c.id?'on':''}"><span class="sv">${cropThumb(c.id)}</span><div class="si"><b>${esc(c.n)}</b>
-    <span>${info}</span>${late?'<br><span class="down">nie zdąży przed zimą, przezimuje uśpiona</span>':''}<br><span>→ ${c.flours.length} ${plural(c.flours.length,'mąka','mąki','mąk')} · ${price(c.out)} zł/szt. surowo</span></div>
+    <span>${info}</span>${late?'<br><span class="down">nie zdąży przed zimą, przezimuje uśpiona</span>':''}<span class="srow">${yld}${fpot}</span></div>
     <div class="sb">${btns}</div></div>`}
 function openSeeds(){sheetMode='seeds';sheetPlot=-1;drawSeeds();$('#sheet').hidden=false;$('#panel').scrollTop=0}
 function drawSeeds(){const panel=$('#panel'),sc=panel.scrollTop;
   let h=`<div class="ph"><div><h2>Siew</h2><p>Wybierz nasiona, a potem klikaj wolne poletka albo przeciągnij po nich myszą. Przycisk ×N sieje od razu na wszystkich wolnych pasujących. W kasie ${fmtZ(S.coins)}.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
-  CROP_GROUPS.forEach(gr=>{h+=`<div class="grp">${gr}</div><div class="seeds">`;
-    CROPS.filter(c=>c.grp===gr).forEach(c=>{const ref=S.plots.find(p=>sowable(p,c.id))||S.plots.find(p=>compatible(c,p.env));h+=seedCard(c,ref,true)});h+='</div>'});
+  BOOK_GROUPS.forEach(([gr,list])=>{h+=`<div class="grp">${gr}</div><div class="seeds">`;
+    list.forEach(c=>{const ref=S.plots.find(p=>sowable(p,c.id))||S.plots.find(p=>compatible(c,p.env));h+=seedCard(c,ref,true)});h+='</div>'});
   panel.innerHTML=h;panel.scrollTop=sc}
 function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('#panel'),sc=panel.scrollTop;let h='';
   const fz=frozen(p);
@@ -988,8 +1005,8 @@ function drawSheet(){const i=sheetPlot,p=S.plots[i];if(!p)return;const panel=$('
     const tW=outdoor(p)&&seasonN()!==3?toSeason(3):Infinity;
     h=`<div class="ph"><div><h2>${fz?'Zima na polu':'Co zasiać?'}</h2><p>Poletko ${i+1} · ${ENV[p.env]} · gleba ${p.soil}/${SOILMAX}${p.spr?' · nawadniane':''} · w kasie ${fmtZ(S.coins)}</p></div><button class="btn sm" data-act="close">Zamknij</button></div>
     ${fz?`<p class="empty-note">Ziemia jest zamarznięta. Siać pod gołym niebem możesz od wiosny, czyli za <b class="num" data-ts="0"></b>. W tym czasie możesz użyźnić glebę albo przebudować poletko na szklarnię.</p>`:''}<p class="more">Glebę, nawadnianie i przebudowę poletka znajdziesz pod prawym przyciskiem na poletku. „Wiele” sieje tutaj i pozwala od razu klikać kolejne poletka.</p>`;
-    if(!fz) CROP_GROUPS.forEach(g=>{h+=`<div class="grp">${g}</div><div class="seeds">`;
-      CROPS.filter(c=>c.grp===g).forEach(c=>{h+=seedCard(c,p,false)});
+    if(!fz) BOOK_GROUPS.forEach(([g,list])=>{h+=`<div class="grp">${g}</div><div class="seeds">`;
+      list.forEach(c=>{h+=seedCard(c,p,false)});
       h+=`</div>`;});
   }
   panel.innerHTML=h; panel.scrollTop=sc; progress();}
