@@ -102,6 +102,11 @@ h2 small{font:400 .8rem system-ui;color:var(--mut)}
 #dimg b{position:absolute;right:-6px;bottom:-4px;font:700 .85rem ui-monospace,monospace;background:#1a120b;border:1px solid var(--bd2);color:var(--gold);border-radius:7px;padding:0 5px}
 .qsel{display:flex;gap:4px;align-items:center;margin:2px 0 8px;color:var(--mut);font-size:.85rem}
 input,select{user-select:auto}
+.feed{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:4px;z-index:3}
+.feed button{min-width:30px;padding:2px 7px;border-radius:7px;border:1px solid var(--bd2);background:rgba(20,14,9,.92);color:var(--gold);font:700 .78rem ui-monospace,monospace}
+.feed button:hover{background:var(--gold);color:#2a1d0c}.feed button:disabled{opacity:.3;cursor:default;background:rgba(20,14,9,.92);color:var(--gold)}
+.inq{position:absolute;left:5px;top:4px;font:700 .72rem ui-monospace,monospace;padding:1px 6px;border-radius:6px;background:rgba(111,166,74,.9);color:#10200a}
+.st.auto{color:var(--blue)}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1d12;border:1px solid var(--bd2);border-radius:10px;padding:8px 14px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
 kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4px;font-size:.8rem}
@@ -190,6 +195,18 @@ function target(f,x,y,id){const o=occMap(f)[k(x,y)],c=o&&f.cells[o];if(!c||c.t!=
 // receptury maszyny, które da się zrobić z tego, co leży na wejściu
 function pickRecipe(f,c,it){const list=(RBY[c.m]||[]).filter(r=>!c.pin||r.id===c.pin);return list.find(r=>Object.entries(r.in).every(([i,q])=>(it[i]||0)>=q))}
 const canProcess=(m,id)=>(RBY[m]||[]).some(r=>r.in[id]);
+// co leży na kratkach wejścia maszyny (razem) i ile pełnych partii da się z tego włożyć
+function inputs(f,x,y){const ins=inCells(f,x,y).filter(p=>inb(f,...p)),it={};ins.forEach(p=>{const t=f.items[k(...p)]||{};for(const i in t)it[i]=(it[i]||0)+t[i]});return {ins,it}}
+function feedable(f,key){const c=f.cells[key],[x,y]=pk(key),{it}=inputs(f,x,y),r=pickRecipe(f,c,it);if(!r)return {r:null,n:0};
+  return {r,n:Math.min(...Object.entries(r.in).map(([i,q])=>Math.floor((it[i]||0)/q)))}}
+function feed(f,key,q){const c=f.cells[key],[x,y]=pk(key),{ins}=inputs(f,x,y),{r,n}=feedable(f,key);
+  if(!r||!n){toast('Przed maszyną nie leży nic, co ona przerabia (albo za mało na jedną partię).');return 0}
+  const m=q==='max'?n:Math.min(n,+q);
+  Object.entries(r.in).forEach(([i,qq])=>{let left=qq*m;ins.forEach(p=>{if(left>0)left-=take(f,k(...p),i,left)})});
+  c.queue=c.queue||[];const last=c.queue[c.queue.length-1];if(last&&last.r===r.id)last.n+=m;else c.queue.push({r:r.id,n:m});return m}
+// partie czekające w środku wracają do spiżarni
+function unqueue(c){(c.queue||[]).forEach(({r,n})=>Object.entries(RECIPES[r].in).forEach(([i,q])=>S.pantry[i]=(S.pantry[i]||0)+q*n));c.queue=[]}
+const queued=c=>(c.queue||[]).reduce((a,b)=>a+b.n,0);
 // ---------- symulacja ----------
 let acc={belt:0,ord:0,hatch:0};
 function tick(dt){const g=dt*S.speed;
@@ -201,10 +218,11 @@ function tick(dt){const g=dt*S.speed;
           const plan=Object.entries(r.out).map(([o,q])=>{let p=ITEMS[o].kind==='by'?Bc:A;if(!canPut(f,p[0],p[1],o,q))p=p===Bc?A:Bc;return [o,q,p]});
           if(plan.every(([o,q,p])=>canPut(f,p[0],p[1],o,q))){plan.forEach(([o,q,p])=>put(f,p[0],p[1],o,q));c.job=null;c.st='';}
           else c.st='block'}}
-      if(!c.job){const ins=inCells(f,x,y).filter(p=>inb(f,...p)),it={};ins.forEach(p=>{const t=f.items[k(...p)]||{};for(const i in t)it[i]=(it[i]||0)+t[i]});
-        const r=pickRecipe(f,c,it);
-        if(r){Object.entries(r.in).forEach(([i,q])=>{let left=q;ins.forEach(p=>{if(left>0)left-=take(f,k(...p),i,left)})});c.job={r:r.id,p:0,t:BASE_T(r)};c.st=''}
-        else c.st=Object.keys(it).length?'bad':'wait'}}});
+      if(!c.job&&queued(c)){const q=c.queue[0],r=RECIPES[q.r];c.job={r:q.r,p:0,t:BASE_T(r)};c.st='';if(!--q.n)c.queue.shift()}
+      if(!c.job){const {ins,it}=inputs(f,x,y);
+        if(c.auto){const r=pickRecipe(f,c,it);
+          if(r){Object.entries(r.in).forEach(([i,q])=>{let left=q;ins.forEach(p=>{if(left>0)left-=take(f,k(...p),i,left)})});c.job={r:r.id,p:0,t:BASE_T(r)};c.st='';continue}}
+        c.st=Object.keys(it).length?(feedable(f,key).n?'ready':'bad'):'wait'}}});
   if(S.mech.C){acc.belt+=g;while(acc.belt>=.45){acc.belt-=.45;S.facts.forEach(beltStep)}
     acc.hatch+=g;while(acc.hatch>=.6){acc.hatch-=.6;S.facts.forEach(hatchStep)}}
   if(S.mech.D&&S.exec==='now'){acc.ord+=g;while(acc.ord>=.4){acc.ord-=.4;S.facts.forEach(orderStep)}}
@@ -272,9 +290,11 @@ function renderBoard(){const f=F();
       const big=c&&c.t==='machine',pos=`grid-column:${x+2}${big?'/span 2':''};grid-row:${y+1}${big?'/span 2':''}`;
       const cls=['cell'];if(big)cls.push('mbig');if(IN[key])cls.push('in');if(OUT[key])cls.push('out');if(hot.has(key))cls.push('hot');if(sel===key)cls.push('sel');
       let inner='';
-      if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st||'wait');
+      if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st==='bad'?'bad':c.st==='ready'?'ready':'wait');
         inner=`<div class="mach ${st}" title="${MP[c.m].n}${r?': '+r.verb:''}"><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt=""><div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
-          ${c.job?`<div class="bar"><i style="width:${c.job.p/c.job.t*100}%"></i></div>`:''}${st==='block'?'<span class="st block" title="Kratka wyjścia jest pełna albo zajęta">pełno</span>':st==='bad'?'<span class="st bad" title="Na wejściu leży coś, czego ta maszyna nie przerabia (albo za mało)">?</span>':st==='wait'?'<span class="st wait">czeka</span>':''}</div>`}
+          ${c.job?`<div class="bar"><i style="width:${c.job.p/c.job.t*100}%"></i></div>`:''}${st==='block'?'<span class="st block" title="Kratka wyjścia jest pełna albo zajęta">pełno</span>':st==='bad'?'<span class="st bad" title="Przed maszyną leży coś, czego ona nie przerabia (albo za mało na partię)">?</span>':c.auto?'<span class="st auto" title="Tryb ciągły: sama bierze z kratek wejścia">ciągle</span>':st==='wait'?'<span class="st wait">pusto</span>':''}
+          ${queued(c)?`<span class="inq" title="Partie włożone do maszyny i czekające">w środku: ${queued(c)}</span>`:''}
+          ${(()=>{const fd=feedable(f,key);return c.auto?'':`<div class="feed" title="Włóż do maszyny z kratek przed nią"><button data-act="feed" data-c="${key}" data-q="1" ${fd.n?'':'disabled'}>1</button><button data-act="feed" data-c="${key}" data-q="5" ${fd.n?'':'disabled'}>5</button><button data-act="feed" data-c="${key}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' '+fd.n:''}</button></div>`})()}</div>`}
       else if(c&&c.t==='belt')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="belt"></div></div>`;
       else if(c&&c.t==='hatch')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="hatch"><span style="color:#cfe8f6;font-size:20px">➜</span></div></div>${c.filter?`<div class="items"><div class="stk" style="width:28px;height:28px;opacity:.9">${ic(c.filter)}</div></div>`:''}`;
       else if(c&&c.t==='chest')inner=`<div class="chest">skrzynia<br>⬇ spiżarnia</div>`;
@@ -304,12 +324,15 @@ function renderInfo(){const f=F();let h='';
   if(tool){h+=`<h2>Stawianie</h2><p class="hint">Kliknij wolną kratkę. <kbd>R</kbd> obraca (teraz: ${['wyjście w prawo','wyjście w dół','wyjście w lewo','wyjście w górę'][rot]}). <kbd>Esc</kbd> kończy.</p><button class="btn sm" data-act="rot">Obróć ↻</button> <button class="btn sm" data-act="notool">Gotowe</button>`}
   if(!sel){$('info').innerHTML=h+`<h2>Wybierz kratkę</h2><p class="hint">Kliknij maszynę albo kratkę, żeby zobaczyć, co na niej jest i co można z nią zrobić.</p>
     <div class="sec"><h2>Co testujemy</h2><p class="hint">Na górze włączasz sposoby zasilania maszyn. Każdy możesz testować osobno albo razem z innymi. Postęp zapisuje się w tej przeglądarce.</p>
-    <p class="hint"><b>Łańcuch na start:</b> postaw Młocarnię, a obok niej Żarna tak, żeby pomarańczowe kratki młocarni były zielonymi kratkami żaren (między maszynami jedna wolna kolumna). Potem przeciągnij kłosy pszenicy na młocarnię.</p></div>`;return}
+    <p class="hint"><b>Łańcuch na start:</b> postaw Młocarnię, a obok niej Żarna tak, żeby pomarańczowe kratki młocarni były zielonymi kratkami żaren (między maszynami jedna wolna kolumna). Potem przeciągnij kłosy pszenicy na młocarnię i kliknij na niej 1, 5 albo max: tyle partii włożysz do środka. To, co wyjdzie, przenieś na żarna i włóż tak samo.</p></div>`;return}
   const [x,y]=pk(sel),c=f.cells[sel],it=f.items[sel]||{};
   if(c&&c.t==='machine'){const ins=inCells(f,x,y),outs=outCells(f,x,y),r=c.job&&RECIPES[c.job.r];
     h+=`<h2>${MP[c.m].n}</h2><p class="hint">${MP[c.m].d}</p>
-      <p>${c.job?(c.st==='block'?'<b style="color:var(--red)">Stoi: kratka wyjścia pełna</b>':`<b style="color:var(--green)">${r.verb}</b> · ${Math.ceil((c.job.t-c.job.p)/S.speed)} s`):c.st==='bad'?'<b style="color:var(--red)">Na wejściu jest coś, czego nie przerobi (albo za mało)</b>':'Czeka na wkład'}</p>
+      <p>${c.job?(c.st==='block'?'<b style="color:var(--red)">Stoi: kratka wyjścia pełna</b>':`<b style="color:var(--green)">${r.verb}</b> · ${Math.ceil((c.job.t-c.job.p)/S.speed)} s`):c.st==='bad'?'<b style="color:var(--red)">Przed maszyną leży coś, czego nie przerobi (albo za mało na partię)</b>':'Czeka, aż coś do niej włożysz'}</p>
       <button class="btn sm" data-act="rotsel">Obróć ↻</button> <button class="btn sm" data-act="movesel">Przenieś</button> <button class="btn sm" data-act="stash">Do magazynu</button>
+      <div class="sec"><b>Włóż do maszyny</b> <small class="hint">z kratek przed nią</small>${(()=>{const fd=feedable(f,sel);return fd.n?`<div class="row">${Object.entries(fd.r.in).map(([i,q])=>`${q}×${ic(i)}`).join(' + ')} <small class="hint">na partię, starczy na ${fd.n}</small></div><div class="qbtn" style="margin:0"><button class="btn sm" data-act="feed" data-c="${sel}" data-q="1">1</button><button class="btn sm" data-act="feed" data-c="${sel}" data-q="5">5</button><button class="btn sm" data-act="feed" data-c="${sel}" data-q="max">max (${fd.n})</button></div>`:'<p class="hint">Przed maszyną nie leży nic, co ona przerabia. Przeciągnij towar na jej zielone kratki (albo na samą maszynę).</p>'})()}
+      ${queued(c)?`<p>W środku czeka: <b>${queued(c)}</b> ${queued(c)===1?'partia':'partii'} <button class="btn sm" data-act="unq">Wyjmij do spiżarni</button></p>`:''}
+      <label class="row" style="padding-left:0"><input type="checkbox" data-act="auto" ${c.auto?'checked':''}> Tryb ciągły: sama bierze wszystko, co leży przed nią</label></div>
       <div class="sec"><b>Wejście</b> <small class="hint">dwie kratki przed maszyną</small>${ins.map(p=>inb(f,...p)?stackList(f.items[k(...p)]||{},k(...p)):'<p class="hint" style="color:var(--red)">poza halą</p>').join('')}</div>
       <div class="sec"><b>Wyjście</b> <small class="hint">produkt / produkt uboczny</small>${outs.map(p=>inb(f,...p)?stackList(f.items[k(...p)]||{},k(...p)):'<p class="hint" style="color:var(--red)">poza halą</p>').join('')}</div>
       <div class="sec"><b>Receptury</b> <small class="hint">kliknij, żeby przypiąć jedną</small>${(RBY[c.m]||[]).map(r=>`<div class="rec ${c.pin===r.id?'on':''}" data-act="pin" data-r="${r.id}" style="cursor:pointer">${Object.entries(r.in).map(([i,q])=>`${q}×${ic(i)}`).join(' + ')} → ${Object.entries(r.out).map(([i,q])=>`${q}×${ic(i)}`).join(' + ')} <small style="color:var(--mut)">${Math.round(BASE_T(r))} s</small></div>`).join('')}</div>`}
@@ -338,6 +361,9 @@ function place(key){const f=F(),[x,y]=pk(key);
   save()}
 const ACT={
   mech:d=>{S.mech[d.m]=S.mech[d.m]?0:1;save()},
+  feed:d=>{const n=feed(F(),d.c,d.q);if(n)toast(`Włożono ${n} ${n===1?'partię':n<5?'partie':'partii'}`);save()},
+  auto:()=>{const c=F().cells[sel];if(c){c.auto=!c.auto;save()}},
+  unq:()=>{const c=F().cells[sel];if(c){unqueue(c);save()}},
   qty:d=>{S.qty=d.q==='max'?'max':+d.q;save()},
   exec:d=>{S.exec=d.v;save()},
   reset:()=>{if(!confirm('Wyczyścić piaskownicę?'))return;S=fresh();sel=null;tool=null;save()},
@@ -349,7 +375,7 @@ const ACT={
   newfact:()=>{if(!pay(4000))return;S.facts.push(newFact('Przetwórnia '+(S.facts.length+1),6,5));S.cur=S.facts.length-1;sel=null;save()},
   rotsel:()=>{const c=F().cells[sel];if(c){c.dir=(c.dir+1)%4;save()}},
   movesel:()=>{const c=F().cells[sel];if(c){tool={k:'move',from:sel};rot=c.dir}},
-  stash:()=>{const f=F(),c=f.cells[sel];if(!c)return;if(c.t==='machine'){S.store[c.m]=(S.store[c.m]||0)+1;if(c.job){const r=RECIPES[c.job.r];Object.entries(r.in).forEach(([i,q])=>S.pantry[i]=(S.pantry[i]||0)+q)}}delete f.cells[sel];save()},
+  stash:()=>{const f=F(),c=f.cells[sel];if(!c)return;if(c.t==='machine'){unqueue(c);S.store[c.m]=(S.store[c.m]||0)+1;if(c.job){const r=RECIPES[c.job.r];Object.entries(r.in).forEach(([i,q])=>S.pantry[i]=(S.pantry[i]||0)+q)}}delete f.cells[sel];save()},
   give:d=>{const f=F(),[x,y]=pk(d.c);if(!inb(f,x,y))return;const n=fromPantry(f,x,y,d.i,+d.q);if(!n)toast('Nie mieści się albo brak w spiżarni.');save()},
   back:d=>{toPantry(F(),d.c,d.i);save()},
   collect:d=>{const f=F(),it=f.items[d.c];if(it)Object.keys(it).forEach(i=>toPantry(f,d.c,i));save()},
@@ -358,7 +384,7 @@ const ACT={
   fire:()=>{const i=S.wk.map(w=>w.f).lastIndexOf(S.cur);if(i>=0){const w=S.wk[i];if(w.load)S.pantry[w.load.id]=(S.pantry[w.load.id]||0)+w.load.q;S.wk.splice(i,1)}save()},
 };
 document.addEventListener('click',e=>{hideCtx(e);const b=e.target.closest('[data-act]');if(b&&!b.disabled){ACT[b.dataset.act](b.dataset);$('ctx').hidden=true;render()}});
-document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0)return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
+document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0||e.target.closest('.feed'))return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
   if(tool){place(tool.k==='machine'||tool.k==='move'?(hoverKey||key):key);render();return}if(e.target.closest('[data-drag]'))return;sel=sel===key?null:key;render()});
 addEventListener('pointerup',()=>{ptrDown=false});addEventListener('pointercancel',()=>{ptrDown=false});addEventListener('blur',()=>{ptrDown=false});
 ['left','info'].forEach(id=>{$(id).addEventListener('mouseenter',()=>hov.add(id));$(id).addEventListener('mouseleave',()=>hov.delete(id))});
