@@ -718,9 +718,9 @@ function vPrz(){syncLines();
 // arkusz: dodaj linię dowolnej mąki
 function openLineAdd(){sheetMode='lineadd';sheetPlot=-1;drawLineAdd();$('#sheet').hidden=false;$('#panel').scrollTop=0}
 function drawLineAdd(){syncLines();
-  let h=`<div class="ph"><div><h2>Dodaj linię</h2><p>Linia trafi na koniec listy. Liczba ze strzałką: tyle tej mąki zrobisz z tego, co masz w spiżarni. Szare wymagają maszyny albo uprawy, której jeszcze nie masz.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
-  CATS.slice(1).forEach((c,ci)=>{const fl=FLOURS.filter(f=>ITEMS[f].cat===ci+1&&!S.lines.includes(f));if(!fl.length)return;
-    h+=`<div class="grp">${esc(c)}</div><div class="lgrid">${fl.map(f=>{const pr=chainProblem(f),md=!!S.made[f];return `<button class="lpick ${pr?'dim':''} ${md?'made':'new'}" data-act="ladd" data-f="${f}" title="${esc(pr||ITEMS[f].src)}">${slot(f,{count:inv(f)})}<span><b>${esc(ITEMS[f].n)}</b><small>${pr?esc(pr):md?'robiona':'jeszcze nie robiona'}${S.lineHide.includes(f)?' · usunięta':''}</small></span>${potChip(f)}</button>`}).join('')}</div>`});
+  let h=`<div class="ph"><div><h2>Dodaj linię</h2><p>Linia trafi na koniec listy. Przygaszone mąki już mają linię. Liczba ze strzałką: tyle tej mąki jeszcze zrobisz z tego, co masz w spiżarni i w maszynach. Szare wymagają maszyny albo uprawy, której jeszcze nie masz.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
+  CATS.slice(1).forEach((c,ci)=>{const fl=FLOURS.filter(f=>ITEMS[f].cat===ci+1);if(!fl.length)return;
+    h+=`<div class="grp">${esc(c)}</div><div class="lgrid">${fl.map(f=>{const pr=chainProblem(f),md=!!S.made[f],has=S.lines.includes(f);return `<button class="lpick ${pr?'dim':''} ${has?'used':''}" ${has?'disabled':'data-act="ladd"'} data-f="${f}" title="${has?'Ta linia już jest w Przetwórni':esc(pr||ITEMS[f].src)}">${slot(f,{count:inv(f)})}<span><b>${esc(ITEMS[f].n)}</b><small>${has?'już jest linia':pr?esc(pr):md?'robiona':'jeszcze nie robiona'}${S.lineHide.includes(f)?' · usunięta':''}</small></span>${potChip(f)}</button>`}).join('')}</div>`});
   $('#panel').innerHTML=h;}
 const ioPlain=obj=>Object.entries(obj).map(([k,q])=>`${q}× ${ITEMS[k].n}`).join(' + ');
 
