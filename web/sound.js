@@ -75,7 +75,9 @@ const SFX={}, fileMode=location.protocol==='file:';
 const CAT={targ:'crowd',jazz:'music',drzwi:'fx',tryby:'mach',zarna:'mach',sypanie:'mach',sito:'mach',ogien:'mach',wrzatek:'mach',krople:'mach',plukanie:'mach',krojenie:'mach',prasa:'mach',suszarnia:'mach','w-orzech':'mach'};
 const catOf=n=>CAT[n]||(n.startsWith('w-')?'fx':'amb');
 // głośność kanału (dla elementów <audio>, które idą obok Web Audio)
-const catGain=c=>{if(!st||!st.on||document.hidden)return 0;const v=st.vols||{};return (c==='fx'?1.2:1.6)*(v.all==null?.7:v.all)*(v[c]==null?1:v[c])};
+// czy grać, gdy okno jest zminimalizowane albo karta w tle (ustawienie gracza)
+const muted=()=>document.hidden&&!(st&&st.bg);
+const catGain=c=>{if(!st||!st.on||muted())return 0;const v=st.vols||{};return (c==='fx'?1.2:1.6)*(v.all==null?.7:v.all)*(v[c]==null?1:v[c])};
 function sfx(name){let x=SFX[name];if(x)return x;x=SFX[name]={ok:false,g:null,el:null,vol:0};
   const viaEl=()=>{const el=new Audio('sfx/'+name+'.ogg');el.loop=true;el.volume=0;el.preload='auto';x.el=el;
     el.addEventListener('canplaythrough',()=>{x.ok=true},{once:true});el.addEventListener('error',()=>{x.fail=true})};
@@ -151,7 +153,7 @@ const CHORDS=[[48,55,64,71],[45,52,60,67],[41,48,57,64],[43,50,59,62],[48,55,64,
 const SCALE=[72,74,76,79,81,84,86,88];
 let lastTab=null, musT=null, musStep=0;
 function music(){const E=60/70/2,now=T();if(musT==null||musT<now)musT=now+.15;
-  while(musT<now+.4){const at=musT-now,bar=Math.floor(musStep/8)%CHORDS.length,b=musStep%8,ch=CHORDS[bar];
+  while(musT<now+.8){const at=musT-now,bar=Math.floor(musStep/8)%CHORDS.length,b=musStep%8,ch=CHORDS[bar];
     if(b===0){note(ch[0]-12,at,.05,3.6);ch.slice(1).forEach((m,i)=>note(m,at+i*.03,.016,3.2))}
     if(b===4)note(ch[0],at,.02,2.4);
     if(Math.random()<(b%2?.3:.55)){const tones=SCALE.filter(m=>ch.some(c=>(m-c)%12===0));const m=Math.random()<.65&&tones.length?pick(tones):pick(SCALE);note(m,at,R(.022,.034),2.2)}
@@ -232,19 +234,19 @@ function ensure(){if(ac)return true;const C=window.AudioContext||window.webkitAu
   try{ac=new C();out=filt('lowpass',16000);const comp=ac.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=3;out.connect(comp);comp.connect(ac.destination);
     for(const c of ['fx','amb','mach','crowd','music']){BUS[c]=gain(0);BUS[c].connect(out)}ambBus=BUS.amb;fxBus=BUS.fx;
     pink=noiseBuf('pink');brown=noiseBuf('brown');buildBeds();shotLoad('drzwi');shotLoad('w-zbior');shotLoad('w-siew');
-    document.addEventListener('visibilitychange',()=>{if(!ac)return;if(document.hidden){ac.suspend();sfxMuteAll()}else if(st&&st.on)ac.resume()});
+    document.addEventListener('visibilitychange',()=>{if(!ac)return;if(muted()){ac.suspend();sfxMuteAll()}else if(st&&st.on)ac.resume()});
     return true}catch(e){ac=null;return false}}
 const fxLast={};
 window.AuraSound={
   // s = {on, vols:{all,fx,amb,mach,crowd,music}, tab, wx, season, hour, run:{maszyna:liczba partii}}
   update(s){st=s;if(!s.on&&!ac)return;if(!ensure())return;
     if(!s.on){if(ac.state==='running')ac.suspend();sfxMuteAll();return}
-    if(ac.state==='suspended'&&!document.hidden)ac.resume();
+    if(ac.state==='suspended'&&!muted())ac.resume();
     for(const c in BUS)glide(BUS[c].gain,catGain(c),.08);
     const now=performance.now(),sw=s.tab!==lastTab;if(!sw&&now-lastTick<90)return;lastTick=now;lastTab=s.tab;
     if(sw&&s.tab!=='pola')stopField();
     if(sw&&s.tab==='ulep')shot('drzwi',.6,.35);
     apply(s,sw?.04:1.2);schedule(s)},
-  fx(type){if(!st||!st.on||!ensure()||document.hidden)return;const now=performance.now();if(now-(fxLast[type]||0)<70)return;fxLast[type]=now;if(ac.state==='suspended')ac.resume();try{(FX[type]||FX.click)()}catch(e){}}
+  fx(type){if(!st||!st.on||!ensure()||muted())return;const now=performance.now();if(now-(fxLast[type]||0)<70)return;fxLast[type]=now;if(ac.state==='suspended')ac.resume();try{(FX[type]||FX.click)()}catch(e){}}
 };
 })();

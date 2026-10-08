@@ -415,7 +415,7 @@ let AC=null, gest=false;
 // odgłosy akcji i tło każdego miejsca są w sound.js
 function snd(type){ if(!S||!S.sound||!gest||silent) return; if(window.AuraSound) AuraSound.fx(type);}
 function sndUpdate(){if(!window.AuraSound||!gest||!S)return;const run={};for(const id in S.m){const n=S.m[id].owned?S.m[id].run.length:0;if(n)run[id]=n}
-  AuraSound.update({on:!!S.sound,vols:vols(),tab:S.tab,wx:S.wx,season:seasonN(),hour:hourF(),run})}
+  AuraSound.update({on:!!S.sound,bg:S.bgSound!==false,vols:vols(),tab:S.tab,wx:S.wx,season:seasonN(),hour:hourF(),run})}
 // głośności kanałów 0..1 (ogólna, akcje, otoczenie, maszyny, targ, muzyka); stare zapisy: vol i amb
 const VOLS=[['all','Ogólna'],['fx','Efekty akcji'],['amb','Otoczenie i pogoda'],['mach','Maszyny'],['crowd','Gwar na targu'],['music','Muzyka w sklepie']];
 function vols(){if(!S.vols){S.vols={all:S.vol==null?.7:S.vol,fx:1,amb:S.amb===false?0:1,mach:1,crowd:1,music:1}}return S.vols}
@@ -956,6 +956,7 @@ function vKron(){
    <div class="toolbar"><button class="btn pri" data-act="export">Zapisz kopię do pliku</button><button class="btn" data-act="import">Wczytaj kopię z pliku</button></div></div>
    <div class="sec"><div class="sechead"><h2>Ustawienia</h2><span class="more">Aura Fields · wersja ${VERSION}</span></div><div class="toolbar">
    <button class="btn" data-act="sound">${S.sound?'Wycisz dźwięki':'Włącz dźwięki'}</button>
+   <button class="btn ${S.bgSound!==false?'on':''}" data-act="bgsound" ${S.sound?'':'disabled'} title="Czy dźwięk gra dalej, gdy zminimalizujesz okno gry">Dźwięk po zminimalizowaniu: ${S.bgSound!==false?'gra':'cichnie'}</button>
    </div><div class="vols">${VOLS.map(([k,n])=>`<label class="volr ${k==='all'?'main':''}"><span>${n}</span><input type="range" data-volk="${k}" min="0" max="100" value="${Math.round(vols()[k]*100)}" ${S.sound?'':'disabled'}><b class="num">${Math.round(vols()[k]*100)}%</b></label>`).join('')}</div><div class="toolbar">
    <button class="btn warn" data-act="reset">${resetArm?'Kliknij jeszcze raz, by skasować postęp':'Zacznij od nowa'}</button></div></div>`;
   return h;
@@ -1129,6 +1130,7 @@ const ACT={
  planstop:d=>{const ml=S.millers[+d.k];if(ml)ml.plan=null;if(sheetMode==='plan')closeSheet();render()},
  millerOff:d=>{const ml=S.millers[+d.k];ml.off=!ml.off;render()},
  sound:()=>{S.sound=!S.sound;sndUpdate();render()},
+ bgsound:()=>{S.bgSound=S.bgSound===false;sndUpdate();render()},
  export:exportSave, import:importSave,
  reset:()=>{if(!resetArm){resetArm=true;render();setTimeout(()=>{resetArm=false;if(S.tab==='kron')render()},4000);return}
    resetArm=false;silent=true;S=repair(newState());if(S._arrange)delete S._arrange;stageCache=[];advance(0.01,true);silent=false;save();render();toast('Nowa gra')},
@@ -1276,7 +1278,7 @@ function loop(){const wall=Date.now(),now=performance.now();const dt=Math.min(14
   if(dt>10){silent=true;advance(dt,true);silent=false;dirty=true} else advance(dt);
   if(now-lastCheck>1000){lastCheck=now;checkProgress()}
   if(wall-lastSave>4000){lastSave=wall;save()}
-  if(document.hidden) return; // w tle tylko liczymy, bez rysowania
+  if(document.hidden){if(S.bgSound!==false)sndUpdate();return} // w tle tylko liczymy (i gra dźwięk, jeśli gracz chce), bez rysowania
   sndUpdate();
   if(dirty&&now-lastRender>150&&!dragging&&!ptrDown) render(); else {progress();hudTick()}}
 // tyknięcia z osobnego wątku: timery workera są w tle dławione dużo słabiej niż strony
