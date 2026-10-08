@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Przetwórnia: piaskownica</title>
+<style>
+:root{--bg:#120d09;--panel:rgba(30,22,15,.94);--panel2:#241a12;--bd:rgba(236,188,76,.28);--bd2:rgba(236,188,76,.6);--tx:#f1e4c8;--mut:#b9a888;--gold:#ecbc4c;--green:#8cc45a;--amber:#e09a3a;--red:#e0705a;--blue:#6fb4e0;--cell:72px}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 50% 0,#2a1d12,#0d0906 70%) fixed;color:var(--tx);font:14px/1.4 "Segoe UI",system-ui,sans-serif;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--bd);background:rgba(15,11,8,.85);position:sticky;top:0;z-index:20}
+header h1{font:700 1.25rem Georgia,serif;margin:0;color:var(--gold)}
+.money{font:700 1rem ui-monospace,Consolas,monospace;color:var(--gold);padding:4px 12px;border:1px solid var(--bd2);border-radius:999px}
+.sp{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--panel2);border:1px solid var(--bd);border-radius:9px;padding:5px 11px}
+.btn:hover{border-color:var(--bd2)}.btn.on{background:var(--gold);color:#2a1d0c;border-color:var(--gold);font-weight:700}
+.btn.sm{padding:3px 8px;font-size:.85rem}.btn:disabled{opacity:.4;cursor:default}
+select,input[type=number]{background:var(--panel2);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:4px 6px;font:inherit}
+.mechs{display:flex;gap:8px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--bd);background:rgba(20,15,10,.7);align-items:flex-start}
+.mech{max-width:260px;text-align:left;background:var(--panel2);border:1px solid var(--bd);border-radius:12px;padding:8px 11px;opacity:.6}
+.mech.on{opacity:1;border-color:var(--gold);box-shadow:0 0 14px -6px var(--gold)}
+.mech b{display:block;color:var(--gold)}.mech small{color:var(--mut);display:block;margin-top:2px}
+.exec{display:flex;gap:6px;align-items:center;color:var(--mut);font-size:.85rem;padding-top:6px}
+main{display:grid;grid-template-columns:270px 1fr 300px;gap:14px;padding:14px 18px;align-items:start}
+aside,.info{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px;max-height:calc(100vh - 170px);overflow:auto;position:sticky;top:150px}
+h2{font:700 1rem Georgia,serif;color:var(--gold);margin:6px 0 8px}
+h2 small{font:400 .8rem system-ui;color:var(--mut)}
+.row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px}
+.row:hover{background:rgba(255,236,200,.05)}
+.row img{width:30px;height:30px;object-fit:contain;flex:none}
+.row .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .q{font:700 .9rem ui-monospace,Consolas,monospace;color:var(--gold)}
+.row[draggable=true]{cursor:grab}
+.hint{color:var(--mut);font-size:.82rem;margin:4px 0 8px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;border:1px solid var(--bd);border-radius:10px;background:var(--panel2);font-size:.78rem;text-align:center}
+.tool img{width:44px;height:44px;object-fit:contain}
+.tool.on{border-color:var(--gold);background:rgba(236,188,76,.15)}
+.tool .c{font:700 .75rem ui-monospace,monospace;color:var(--gold)}
+.ftabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.board-wrap{overflow:auto;padding:6px 6px 14px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid var(--bd)}
+.board{position:relative;display:grid;gap:3px;width:max-content}
+.cell{position:relative;width:var(--cell);height:var(--cell);border-radius:8px;background:repeating-linear-gradient(45deg,#2a2017 0 6px,#261c14 6px 12px);border:1px solid rgba(255,236,200,.06)}
+.cell:hover{border-color:var(--bd2)}
+.cell.sel{outline:2px solid var(--gold);outline-offset:1px}
+.cell.in{box-shadow:inset 0 0 0 2px rgba(140,196,90,.55)}
+.cell.out{box-shadow:inset 0 0 0 2px rgba(224,154,58,.55)}
+.cell.in.out{box-shadow:inset 0 0 0 2px rgba(140,196,90,.55),inset 0 0 0 4px rgba(224,154,58,.55)}
+.cell.hot.in{box-shadow:inset 0 0 0 3px var(--green)}.cell.hot.out{box-shadow:inset 0 0 0 3px var(--amber)}
+.cell.drop{background:rgba(236,188,76,.25)}
+.cell.ghost::after{content:"";position:absolute;inset:4px;border:2px dashed var(--gold);border-radius:8px;pointer-events:none}
+.gut{width:44px;height:var(--cell);display:flex;align-items:center;justify-content:center}
+.door{width:40px;height:62px;border-radius:8px 8px 2px 2px;background:linear-gradient(#6a4a2e,#4a3220);border:2px solid #8a6a40;display:flex;align-items:center;justify-content:center;font-size:.6rem;text-align:center;color:#f1e4c8;line-height:1.1}
+.mach{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#3a2c1e,#1d150e);border-radius:8px;border:1px solid var(--bd)}
+.mach img{width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));pointer-events:none}
+.mach.work{border-color:var(--green)}.mach.block{border-color:var(--red)}.mach.bad{border-color:var(--red);border-style:dashed}
+.flow{position:absolute;inset:0;pointer-events:none}
+.flow i{position:absolute;top:50%;width:0;height:0;border:7px solid transparent;margin-top:-7px}
+.flow i.a{left:-2px;border-left-color:var(--green)}
+.flow i.b{right:-9px;border-left-color:var(--amber)}
+.bar{position:absolute;left:6px;right:6px;bottom:4px;height:4px;border-radius:2px;background:rgba(0,0,0,.5);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green)}
+.st{position:absolute;top:3px;right:4px;font-size:.7rem;font-weight:700;padding:0 4px;border-radius:5px;background:rgba(0,0,0,.6)}
+.st.block{color:var(--red)}.st.wait{color:var(--mut)}.st.bad{color:var(--red)}
+.belt{position:absolute;inset:6px;border-radius:6px;background:repeating-linear-gradient(90deg,#3a3a3a 0 8px,#2c2c2c 8px 16px);border:1px solid #555;display:flex;align-items:center;justify-content:center}
+.belt::after{content:"➜";color:#9a9a9a;font-size:22px}
+.hatch{position:absolute;inset:4px;border-radius:8px;background:linear-gradient(#4a6a8a,#2c4058);border:1px solid var(--blue);display:flex;align-items:center;justify-content:center}
+.hatch img{width:60%;height:60%;object-fit:contain}
+.chest{position:absolute;inset:6px;border-radius:6px;background:linear-gradient(#7a5a32,#4e3720);border:2px solid #a07a44;display:flex;align-items:center;justify-content:center;font-size:.65rem;text-align:center}
+.rot{position:absolute;inset:0;pointer-events:none}
+.items{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.items .stk{position:relative;width:44px;height:44px;pointer-events:auto}
+.items .stk img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+.items .stk b{position:absolute;right:-6px;bottom:-4px;font:700 .72rem ui-monospace,monospace;background:#1a120b;border:1px solid var(--bd2);color:var(--gold);border-radius:6px;padding:0 4px}
+.items .more{position:absolute;left:3px;top:3px;font-size:.65rem;color:var(--mut)}
+.badge{position:absolute;left:2px;bottom:2px;display:flex;align-items:center;gap:1px;font:700 .62rem ui-monospace,monospace;background:rgba(10,30,50,.85);border:1px solid var(--blue);border-radius:6px;padding:0 3px;color:#bfe0f5;pointer-events:none}
+.badge img{width:14px;height:14px}
+.badge.send{left:auto;right:2px;bottom:auto;top:2px;background:rgba(50,30,10,.85);border-color:var(--amber);color:#f5d6a8}
+.wk{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#f1e7d4;border:2px solid #8a6418;box-shadow:0 2px 6px rgba(0,0,0,.6);pointer-events:none;z-index:5;overflow:hidden;transition:none}
+.wk img{width:100%;height:100%;object-fit:cover}
+.wk i{position:absolute;right:-8px;bottom:-8px;width:18px;height:18px}
+.info .sec{border-top:1px solid var(--bd);padding-top:8px;margin-top:8px}
+.rec{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:.82rem;padding:3px 0}
+.rec img{width:22px;height:22px;object-fit:contain}
+.rec.on{color:var(--gold)}
+.qbtn{display:flex;gap:4px;margin-left:auto}
+#ctx{position:fixed;z-index:50;min-width:210px;background:#1d150e;border:1px solid var(--bd2);border-radius:12px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+#ctx[hidden]{display:none}
+#ctx button{display:flex;width:100%;gap:8px;align-items:center;background:none;border:0;padding:6px 8px;border-radius:8px;text-align:left}
+#ctx button:hover{background:rgba(236,188,76,.12)}
+#ctx .h{font-size:.8rem;color:var(--mut);padding:2px 8px 6px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1d12;border:1px solid var(--bd2);border-radius:10px;padding:8px 14px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.on{opacity:1}
+kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4px;font-size:.8rem}
+@media (max-width:1100px){main{grid-template-columns:1fr}aside,.info{position:static;max-height:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Przetwórnia: piaskownica</h1>
+  <span class="money" id="money"></span>
+  <span class="sp">
+    <label>Tempo <select id="speed"><option value="1">×1</option><option value="3">×3</option><option value="6">×6</option><option value="15">×15</option></select></label>
+    <label><input type="checkbox" id="free"> zakupy za darmo</label>
+    <button class="btn" data-act="reset">Zacznij od nowa</button>
+  </span>
+</header>
+<div class="mechs" id="mechs"></div>
+<main>
+  <aside id="left"></aside>
+  <section>
+    <div class="ftabs" id="ftabs"></div>
+    <div class="board-wrap"><div class="board" id="board"></div></div>
+    <p class="hint">Każda maszyna bierze wkład z kratki <span style="color:var(--green)">przed sobą (zielona)</span> i wyrzuca produkt na kratkę <span style="color:var(--amber)">za sobą (pomarańczowa)</span>. Kratka wyjścia jednej maszyny może być wejściem następnej. <kbd>R</kbd> obraca, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
+  </section>
+  <div class="info" id="info"></div>
+</main>
+<div id="ctx" hidden></div>
+<div id="toast"></div>
+<script src="../web/data.js"></script>
+<script>
+'use strict';
+// ---------- dane z gry ----------
+const BASE_T=r=>r.t/TM;                       // w piaskownicy czasy bazowe (bez mnożnika gry)
+const MP={};MACH.forEach(([id,n,d,p])=>MP[id]={id,n,d,p:p||300});
+const RBY={};RECIPES.forEach(r=>(RBY[r.m]=RBY[r.m]||[]).push(r));
+const DV=[[1,0],[0,1],[-1,0],[0,-1]];           // kierunek wyjścia: 0 prawo, 1 dół, 2 lewo, 3 góra
+const ic=id=>`<img src="../web/items/${id}.webp" alt="" draggable="false">`;
+const nm=id=>ITEMS[id]?ITEMS[id].n:id;
+const MECH=[
+ ['A','Ręcznie','Kliknij maszynę i wybierz, co do niej włożyć ze spiżarni. Wyjście odbierasz przyciskiem.'],
+ ['B','Przeciąganie','Przeciągnij towar ze spiżarni na kratkę albo na maszynę. Shift: wszystko, Alt: 1 sztuka, zwykle 10.'],
+ ['C','Taśmy i wrota','Buduj taśmociągi, wrota spiżarni (wydają wybrany towar) i skrzynie (odsyłają do spiżarni).'],
+ ['D','Zamówienia','Na kratce ustaw „zasilaj ze spiżarni” albo „odsyłaj do spiżarni”. Towar przenosi się sam.'],
+];
+const CAP_FLOOR=99, CAP_BELT=3, CARRY=10, WK_SPEED=2.2;
+// ---------- stan ----------
+const KEY='aura-proto-produkcja-1';
+function fresh(){return {money:20000,speed:3,free:false,mech:{A:1,B:1,C:0,D:0},exec:'now',
+  pantry:{k_psz:100,k_zyt:60,k_jec:40,n_gry:40,ziem:30,kolby:20,wapno:20},
+  store:{mlo:1,zar:1},workers:0,cur:0,
+  facts:[newFact('Przetwórnia 1',8,6)],wk:[]}}
+function newFact(name,w,h){return {name,w,h,cells:{},items:{},orders:{},send:{}}}
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!S||!S.facts)S=fresh();
+S.wk=(S.wk||[]).map(w=>({...w,load:null,task:null,path:null,st:'idle'}));
+const F=()=>S.facts[S.cur];
+const k=(x,y)=>x+','+y, pk=s=>s.split(',').map(Number);
+const inb=(f,x,y)=>x>=0&&y>=0&&x<f.w&&y<f.h;
+let tool=null, rot=0, sel=null, dragging=false, ptrDown=false;
+const hov=new Set();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
+const pay=c=>{if(S.free)return true;if(S.money<c){toast('Za mało pieniędzy.');return false}S.money-=c;return true};
+// ---------- kratki i towary ----------
+const items=(f,key)=>f.items[key]||(f.items[key]={});
+const tot=o=>Object.values(o||{}).reduce((a,b)=>a+b,0);
+function inOf(f,x,y){const c=f.cells[k(x,y)];const [dx,dy]=DV[c.dir];return [x-dx,y-dy]}
+function outOf(f,x,y){const c=f.cells[k(x,y)];const [dx,dy]=DV[c.dir];return [x+dx,y+dy]}
+// czy na kratkę można odłożyć towar (q sztuk id)
+function canPut(f,x,y,id,q){if(!inb(f,x,y))return false;const c=f.cells[k(x,y)];
+  if(c&&(c.t==='machine'||c.t==='hatch'))return false;if(c&&c.t==='chest')return true;
+  const it=f.items[k(x,y)]||{};if(c&&c.t==='belt')return tot(it)+q<=CAP_BELT;return (it[id]||0)+q<=CAP_FLOOR}
+function put(f,x,y,id,q){const c=f.cells[k(x,y)];if(c&&c.t==='chest'){S.pantry[id]=(S.pantry[id]||0)+q;return}const it=items(f,k(x,y));it[id]=(it[id]||0)+q}
+function take(f,key,id,q){const it=f.items[key];if(!it||!it[id])return 0;const n=Math.min(q,it[id]);it[id]-=n;if(!it[id])delete it[id];if(!Object.keys(it).length)delete f.items[key];return n}
+function toPantry(f,key,id){const n=take(f,key,id,1e9);if(n)S.pantry[id]=(S.pantry[id]||0)+n;return n}
+function fromPantry(f,x,y,id,q){const have=S.pantry[id]||0;let n=Math.min(q,have);
+  const c=f.cells[k(x,y)];if(c&&c.t==='belt')n=Math.min(n,CAP_BELT-tot(f.items[k(x,y)]));else n=Math.min(n,CAP_FLOOR-((f.items[k(x,y)]||{})[id]||0));
+  if(n<=0)return 0;S.pantry[id]-=n;if(!S.pantry[id])delete S.pantry[id];put(f,x,y,id,n);return n}
+// cel kładzenia: maszyna → jej kratka wejścia
+function target(f,x,y){const c=f.cells[k(x,y)];if(c&&c.t==='machine')return inOf(f,x,y);return [x,y]}
+// receptury maszyny, które da się zrobić z tego, co leży na wejściu
+function pickRecipe(f,c,it){const list=(RBY[c.m]||[]).filter(r=>!c.pin||r.id===c.pin);return list.find(r=>Object.entries(r.in).every(([i,q])=>(it[i]||0)>=q))}
+const canProcess=(m,id)=>(RBY[m]||[]).some(r=>r.in[id]);
+// ---------- symulacja ----------
+let acc={belt:0,ord:0,hatch:0};
+function tick(dt){const g=dt*S.speed;
+  S.facts.forEach((f,fi)=>{
+    for(const key in f.cells){const c=f.cells[key];if(c.t!=='machine')continue;const [x,y]=pk(key);
+      if(c.job){c.job.p=Math.min(c.job.t,c.job.p+g);
+        if(c.job.p>=c.job.t){const r=RECIPES[c.job.r],[ox,oy]=outOf(f,x,y);
+          if(Object.entries(r.out).every(([o,q])=>canPut(f,ox,oy,o,q))){Object.entries(r.out).forEach(([o,q])=>put(f,ox,oy,o,q));c.job=null;c.st='';}
+          else c.st='block'}}
+      if(!c.job){const [ix,iy]=inOf(f,x,y),it=f.items[k(ix,iy)]||{},r=inb(f,ix,iy)?pickRecipe(f,c,it):null;
+        if(r){Object.entries(r.in).forEach(([i,q])=>take(f,k(ix,iy),i,q));c.job={r:r.id,p:0,t:BASE_T(r)};c.st=''}
+        else c.st=Object.keys(it).length?'bad':'wait'}}});
+  if(S.mech.C){acc.belt+=g;while(acc.belt>=.45){acc.belt-=.45;S.facts.forEach(beltStep)}
+    acc.hatch+=g;while(acc.hatch>=.6){acc.hatch-=.6;S.facts.forEach(hatchStep)}}
+  if(S.mech.D&&S.exec==='now'){acc.ord+=g;while(acc.ord>=.4){acc.ord-=.4;S.facts.forEach(orderStep)}}
+  if(S.mech.D&&S.exec==='wk')workerStep(g);
+}
+function beltStep(f){const moves=[];
+  for(const key in f.cells){const c=f.cells[key];if(c.t!=='belt')continue;const it=f.items[key];if(!it)continue;
+    const id=Object.keys(it)[0],[x,y]=pk(key),[dx,dy]=DV[c.dir];moves.push([key,id,x+dx,y+dy])}
+  moves.forEach(([key,id,nx,ny])=>{if(!(f.items[key]||{})[id])return;if(canPut(f,nx,ny,id,1)){take(f,key,id,1);put(f,nx,ny,id,1)}})}
+function hatchStep(f){for(const key in f.cells){const c=f.cells[key];if(c.t!=='hatch'||!c.filter)continue;const [x,y]=pk(key),[dx,dy]=DV[c.dir];
+  if((S.pantry[c.filter]||0)>0&&canPut(f,x+dx,y+dy,c.filter,1)){S.pantry[c.filter]--;if(!S.pantry[c.filter])delete S.pantry[c.filter];put(f,x+dx,y+dy,c.filter,1)}}}
+function orderStep(f){for(const key in f.orders){const o=f.orders[key],[x,y]=pk(key),have=(f.items[key]||{})[o.id]||0;if(have<o.keep)fromPantry(f,x,y,o.id,Math.min(5,o.keep-have))}
+  for(const key in f.send){const it=f.items[key];if(it)Object.keys(it).forEach(id=>toPantry(f,key,id))}}
+// młynarze: chodzą od drzwi spiżarni do kratek z zamówieniami i z powrotem
+const DOOR=f=>[-1,Math.floor(f.h/2)];
+function workerStep(g){S.wk.forEach(w=>{const f=S.facts[w.f];if(!f)return;
+  if(w.st==='idle'){const t=findTask(f,w);if(!t)return;w.task=t;
+    if(t.kind==='bring'){const n=Math.min(CARRY,t.q,S.pantry[t.id]||0);if(!n)return;S.pantry[t.id]-=n;if(!S.pantry[t.id])delete S.pantry[t.id];w.load={id:t.id,q:n}}
+    w.st='go';w.path=pathTo([w.x,w.y],t.cell);w.d=0}
+  else if(w.st==='go'||w.st==='back'){w.d+=g*WK_SPEED;const L=w.path.len;const p=along(w.path,Math.min(w.d,L));w.x=p[0];w.y=p[1];
+    if(w.d>=L){if(w.st==='go'){const [cx,cy]=w.task.cell,key=k(cx,cy);
+        if(w.task.kind==='bring'){const n=Math.min(w.load.q,CAP_FLOOR-((f.items[key]||{})[w.load.id]||0));if(n>0)put(f,cx,cy,w.load.id,n);w.load.q-=n;if(!w.load.q)w.load=null}
+        else {const it=f.items[key];if(it){const id=Object.keys(it)[0];const n=take(f,key,id,CARRY);if(n)w.load={id,q:n}}}
+        w.st='back';w.path=pathTo([w.x,w.y],DOOR(f));w.d=0}
+      else {if(w.load){S.pantry[w.load.id]=(S.pantry[w.load.id]||0)+w.load.q;w.load=null}w.st='idle';w.task=null}}}})}
+function findTask(f,w){const busy=new Set(S.wk.filter(o=>o!==w&&o.task).map(o=>k(...o.task.cell)));
+  for(const key in f.send){if(busy.has(key))continue;if(tot(f.items[key]))return {kind:'fetch',cell:pk(key)}}
+  for(const key in f.orders){if(busy.has(key))continue;const o=f.orders[key],have=(f.items[key]||{})[o.id]||0;if(have<o.keep&&(S.pantry[o.id]||0)>0)return {kind:'bring',cell:pk(key),id:o.id,q:o.keep-have}}
+  return null}
+function pathTo(a,b){const pts=[a,[b[0],a[1]],b];let len=0;for(let i=1;i<pts.length;i++)len+=Math.abs(pts[i][0]-pts[i-1][0])+Math.abs(pts[i][1]-pts[i-1][1]);return {pts,len}}
+function along(p,d){for(let i=1;i<p.pts.length;i++){const a=p.pts[i-1],b=p.pts[i],l=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1]);if(d<=l||i===p.pts.length-1){const t=l?Math.min(1,d/l):1;return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}d-=l}return p.pts[p.pts.length-1]}
+// ---------- widok ----------
+const $=id=>document.getElementById(id);
+function render(){
+  $('money').textContent=S.free?'zakupy za darmo':Math.round(S.money).toLocaleString('pl-PL')+' zł';
+  $('speed').value=S.speed;$('free').checked=S.free;
+  $('mechs').innerHTML=MECH.map(([id,n,d])=>`<button class="mech ${S.mech[id]?'on':''}" data-act="mech" data-m="${id}"><b>${id}. ${n}</b><small>${d}</small></button>`).join('')+
+    (S.mech.D?`<div class="exec">Zamówienia wykonują: <button class="btn sm ${S.exec==='now'?'on':''}" data-act="exec" data-v="now">od razu, same</button><button class="btn sm ${S.exec==='wk'?'on':''}" data-act="exec" data-v="wk">młynarze (chodzą)</button></div>`:'');
+  renderLeft();renderBoard();renderInfo()}
+function renderLeft(){if(dragging)return;
+  const pan=Object.keys(S.pantry).filter(id=>S.pantry[id]>0).sort((a,b)=>nm(a).localeCompare(nm(b),'pl'));
+  let h=`<h2>Spiżarnia</h2>${S.mech.B?'<p class="hint">Przeciągnij na kratkę albo maszynę. Shift: wszystko, Alt: 1.</p>':''}
+   ${pan.map(id=>`<div class="row" ${S.mech.B?`draggable="true" data-drag="p:${id}"`:''} title="${nm(id)}">${ic(id)}<span class="n">${nm(id)}</span><span class="q">${S.pantry[id]}</span></div>`).join('')||'<p class="hint">Pusto.</p>'}
+   <div class="row"><select id="addsel">${Object.values(ITEMS).filter(i=>i.kind==='raw'||i.kind==='supply').map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select><button class="btn sm" data-act="addp">+50</button></div>
+   <h2>Maszyny <small>kliknij, potem kratkę</small></h2><div class="tools">`;
+  MACH.forEach(([id])=>{const n=S.store[id]||0;h+=`<button class="tool ${tool&&tool.k==='machine'&&tool.m===id?'on':''}" data-act="tool" data-k="machine" data-m="${id}" title="${MP[id].d}"><img src="../web/machines/${id}.webp" alt=""><span>${MP[id].n}</span><span class="c">${n?`w magazynie: ${n}`:`kup: ${S.free?0:MP[id].p} zł`}</span></button>`});
+  h+='</div>';
+  if(S.mech.C)h+=`<h2>Budowle</h2><div class="tools">
+    <button class="tool ${tool&&tool.k==='belt'?'on':''}" data-act="tool" data-k="belt"><div style="width:44px;height:44px;position:relative"><div class="belt" style="inset:8px"></div></div><span>Taśmociąg</span><span class="c">20 zł</span></button>
+    <button class="tool ${tool&&tool.k==='hatch'?'on':''}" data-act="tool" data-k="hatch"><div style="width:44px;height:44px;position:relative"><div class="hatch"></div></div><span>Wrota spiżarni</span><span class="c">300 zł</span></button>
+    <button class="tool ${tool&&tool.k==='chest'?'on':''}" data-act="tool" data-k="chest"><div style="width:44px;height:44px;position:relative"><div class="chest">⬇</div></div><span>Skrzynia do spiżarni</span><span class="c">150 zł</span></button></div>`;
+  if(S.mech.D&&S.exec==='wk'){const here=S.wk.filter(w=>w.f===S.cur).length;h+=`<h2>Młynarze <small>w tej hali: ${here}</small></h2><p class="hint">Chodzą od drzwi spiżarni (po lewej) z towarem do kratek z zamówieniami i odnoszą to, co ma wracać. Niosą do ${CARRY} sztuk.</p><button class="btn" data-act="hire">Zatrudnij młynarza · ${S.free?0:1000} zł</button>${here?` <button class="btn" data-act="fire">Zwolnij</button>`:''}`}
+  $('left').innerHTML=h}
+function renderBoard(){const f=F();
+  $('ftabs').innerHTML=S.facts.map((x,i)=>`<button class="btn ${i===S.cur?'on':''}" data-act="fact" data-i="${i}">${x.name} <small>${x.w}×${x.h}</small></button>`).join('')+
+   `<button class="btn sm" data-act="grow" data-d="w" ${f.w>=18?'disabled':''}>+ kolumna · ${S.free?0:f.h*60} zł</button><button class="btn sm" data-act="grow" data-d="h" ${f.h>=12?'disabled':''}>+ rząd · ${S.free?0:f.w*60} zł</button><button class="btn sm" data-act="newfact">Nowa hala · ${S.free?0:4000} zł</button>`;
+  // które kratki są wejściami i wyjściami maszyn
+  const IN={},OUT={},hot=new Set();
+  for(const key in f.cells){const c=f.cells[key];if(c.t!=='machine')continue;const [x,y]=pk(key);IN[k(...inOf(f,x,y))]=1;OUT[k(...outOf(f,x,y))]=1;if(sel===key){hot.add(k(...inOf(f,x,y)));hot.add(k(...outOf(f,x,y)))}}
+  const [dx0,dy0]=DOOR(f);let h='';
+  for(let y=0;y<f.h;y++){h+=`<div class="gut">${y===dy0?'<div class="door">drzwi do spiżarni</div>':''}</div>`;
+    for(let x=0;x<f.w;x++){const key=k(x,y),c=f.cells[key],it=f.items[key];
+      const cls=['cell'];if(IN[key])cls.push('in');if(OUT[key])cls.push('out');if(hot.has(key))cls.push('hot');if(sel===key)cls.push('sel');
+      let inner='';
+      if(c&&c.t==='machine'){const r=c.job&&RECIPES[c.job.r],st=c.job?(c.st==='block'?'block':'work'):(c.st||'wait');
+        inner=`<div class="mach ${st}" title="${MP[c.m].n}${r?': '+r.verb:''}"><img src="../web/machines/${c.m}${c.job&&c.st!=='block'?'-praca':''}.webp" alt=""><div class="flow" style="transform:rotate(${c.dir*90}deg)"><i class="a"></i><i class="b"></i></div>
+          ${c.job?`<div class="bar"><i style="width:${c.job.p/c.job.t*100}%"></i></div>`:''}${st==='block'?'<span class="st block" title="Kratka wyjścia jest pełna albo zajęta">pełno</span>':st==='bad'?'<span class="st bad" title="Na wejściu leży coś, czego ta maszyna nie przerabia (albo za mało)">?</span>':st==='wait'?'<span class="st wait">czeka</span>':''}</div>`}
+      else if(c&&c.t==='belt')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="belt"></div></div>`;
+      else if(c&&c.t==='hatch')inner=`<div class="rot" style="transform:rotate(${c.dir*90}deg)"><div class="hatch"><span style="color:#cfe8f6;font-size:20px">➜</span></div></div>${c.filter?`<div class="items"><div class="stk" style="width:28px;height:28px;opacity:.9">${ic(c.filter)}</div></div>`:''}`;
+      else if(c&&c.t==='chest')inner=`<div class="chest">skrzynia<br>⬇ spiżarnia</div>`;
+      if(it&&tot(it)){const ids=Object.keys(it);inner+=`<div class="items"><div class="stk" ${S.mech.B?`draggable="true" data-drag="c:${key}:${ids[0]}"`:''} title="${ids.map(i=>nm(i)+': '+it[i]).join('\n')}">${ic(ids[0])}<b>${it[ids[0]]}</b></div>${ids.length>1?`<span class="more">+${ids.length-1}</span>`:''}</div>`}
+      const o=f.orders[key];if(o&&S.mech.D)inner+=`<span class="badge" title="Zasilaj ze spiżarni: ${nm(o.id)}, utrzymuj ${o.keep}">${ic(o.id)}${o.keep}</span>`;
+      if(f.send[key]&&S.mech.D)inner+=`<span class="badge send" title="Odsyłaj do spiżarni">⤴</span>`;
+      h+=`<div class="${cls.join(' ')}" data-cell="${key}">${inner}</div>`}}
+  $('board').style.gridTemplateColumns=`44px repeat(${f.w},var(--cell))`;
+  $('board').innerHTML=h+S.wk.filter(w=>w.f===S.cur).map((w,i)=>`<div class="wk" data-w="${i}"><img src="../web/people/mlynarz.webp" alt="">${w.load?`<i>${ic(w.load.id)}</i>`:''}</div>`).join('');
+  placeWorkers()}
+function placeWorkers(){const f=F(),cells=$('board').querySelectorAll('.wk');const step=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))+3;
+  S.wk.filter(w=>w.f===S.cur).forEach((w,i)=>{const el=cells[i];if(!el)return;el.style.left=(44+3+w.x*step+step/2-1.5)+'px';el.style.top=(w.y*step+step/2-1.5)+'px'})}
+function renderInfo(){const f=F();let h='';
+  if(tool){h+=`<h2>Stawianie</h2><p class="hint">Kliknij wolną kratkę. <kbd>R</kbd> obraca (teraz: ${['wyjście w prawo','wyjście w dół','wyjście w lewo','wyjście w górę'][rot]}). <kbd>Esc</kbd> kończy.</p><button class="btn sm" data-act="rot">Obróć ↻</button> <button class="btn sm" data-act="notool">Gotowe</button>`}
+  if(!sel){$('info').innerHTML=h+`<h2>Wybierz kratkę</h2><p class="hint">Kliknij maszynę albo kratkę, żeby zobaczyć, co na niej jest i co można z nią zrobić.</p>
+    <div class="sec"><h2>Co testujemy</h2><p class="hint">Na górze włączasz sposoby zasilania maszyn. Każdy możesz testować osobno albo razem z innymi. Postęp zapisuje się w tej przeglądarce.</p>
+    <p class="hint"><b>Łańcuch na start:</b> postaw Młocarnię, a za nią Żarna tak, żeby pomarańczowa kratka młocarni była zieloną kratką żaren. Potem daj kłosy pszenicy na wejście młocarni.</p></div>`;return}
+  const [x,y]=pk(sel),c=f.cells[sel],it=f.items[sel]||{};
+  if(c&&c.t==='machine'){const [ix,iy]=inOf(f,x,y),[ox,oy]=outOf(f,x,y),ik=k(ix,iy),ok=k(ox,oy),iit=f.items[ik]||{},oit=f.items[ok]||{},r=c.job&&RECIPES[c.job.r];
+    h+=`<h2>${MP[c.m].n}</h2><p class="hint">${MP[c.m].d}</p>
+      <p>${c.job?(c.st==='block'?'<b style="color:var(--red)">Stoi: kratka wyjścia pełna</b>':`<b style="color:var(--green)">${r.verb}</b> · ${Math.ceil((c.job.t-c.job.p)/S.speed)} s`):c.st==='bad'?'<b style="color:var(--red)">Na wejściu jest coś, czego nie przerobi (albo za mało)</b>':'Czeka na wkład'}</p>
+      <button class="btn sm" data-act="rotsel">Obróć ↻</button> <button class="btn sm" data-act="movesel">Przenieś</button> <button class="btn sm" data-act="stash">Do magazynu</button>
+      <div class="sec"><b>Wejście</b> ${inb(f,ix,iy)?'':'<span style="color:var(--red)">poza halą</span>'}${stackList(iit,ik)}
+      ${S.mech.A?`<div class="hint">Włóż ze spiżarni:</div>${Object.keys(S.pantry).filter(i=>canProcess(c.m,i)).map(i=>`<div class="row">${ic(i)}<span class="n">${nm(i)} <small style="color:var(--mut)">(${S.pantry[i]})</small></span><span class="qbtn"><button class="btn sm" data-act="give" data-c="${ik}" data-i="${i}" data-q="1">1</button><button class="btn sm" data-act="give" data-c="${ik}" data-i="${i}" data-q="10">10</button><button class="btn sm" data-act="give" data-c="${ik}" data-i="${i}" data-q="999">wszystko</button></span></div>`).join('')||'<p class="hint">W spiżarni nie ma nic, co ta maszyna przerabia.</p>'}`:''}</div>
+      <div class="sec"><b>Wyjście</b> ${inb(f,ox,oy)?'':'<span style="color:var(--red)">poza halą</span>'}${stackList(oit,ok)}${tot(oit)&&S.mech.A?`<button class="btn sm" data-act="collect" data-c="${ok}">Odbierz wszystko do spiżarni</button>`:''}</div>
+      <div class="sec"><b>Receptury</b> <small class="hint">kliknij, żeby przypiąć jedną</small>${(RBY[c.m]||[]).map(r=>`<div class="rec ${c.pin===r.id?'on':''}" data-act="pin" data-r="${r.id}" style="cursor:pointer">${Object.entries(r.in).map(([i,q])=>`${q}×${ic(i)}`).join(' + ')} → ${Object.entries(r.out).map(([i,q])=>`${q}×${ic(i)}`).join(' + ')} <small style="color:var(--mut)">${Math.round(BASE_T(r))} s</small></div>`).join('')}</div>`}
+  else {h+=`<h2>${c?{belt:'Taśmociąg',hatch:'Wrota spiżarni',chest:'Skrzynia do spiżarni'}[c.t]:'Kratka'} <small>${x+1}, ${y+1}</small></h2>`;
+    if(c&&c.t!=='chest')h+=`<button class="btn sm" data-act="rotsel">Obróć ↻</button> `;if(c)h+=`<button class="btn sm" data-act="stash">Rozbierz</button>`;
+    if(c&&c.t==='hatch')h+=`<div class="sec"><b>Co wydaje ze spiżarni</b><select id="hfilter"><option value="">nic</option>${Object.keys(S.pantry).map(i=>`<option value="${i}" ${c.filter===i?'selected':''}>${nm(i)}</option>`).join('')}</select><p class="hint">Co chwilę kładzie 1 sztukę na kratce, w którą wskazuje strzałka.</p></div>`;
+    h+=`<div class="sec"><b>Leży tutaj</b>${stackList(it,sel)}</div>`;
+    if(S.mech.A&&(!c||c.t==='belt'))h+=`<div class="sec"><div class="hint">Połóż ze spiżarni:</div>${Object.keys(S.pantry).map(i=>`<div class="row">${ic(i)}<span class="n">${nm(i)}</span><span class="qbtn"><button class="btn sm" data-act="give" data-c="${sel}" data-i="${i}" data-q="10">10</button><button class="btn sm" data-act="give" data-c="${sel}" data-i="${i}" data-q="999">wszystko</button></span></div>`).join('')}</div>`}
+  if(S.mech.D&&!(c&&c.t!=='belt')){const o=f.orders[sel];
+    h+=`<div class="sec"><b>Zamówienia${S.exec==='wk'?' (młynarze)':''}</b>
+      <div class="row">Zasilaj ze spiżarni: <select id="ordsel"><option value="">nie</option>${Object.keys(ITEMS).filter(i=>(S.pantry[i]||0)>0||(o&&o.id===i)).map(i=>`<option value="${i}" ${o&&o.id===i?'selected':''}>${nm(i)}</option>`).join('')}</select></div>
+      <div class="row">utrzymuj <input type="number" id="ordkeep" min="1" max="99" value="${o?o.keep:10}" style="width:64px"> szt.</div>
+      <label class="row"><input type="checkbox" id="sendchk" ${f.send[sel]?'checked':''}> Odsyłaj wszystko z tej kratki do spiżarni</label></div>`}
+  $('info').innerHTML=h}
+function stackList(it,key){const ids=Object.keys(it);if(!ids.length)return '<p class="hint">pusto</p>';
+  return ids.map(i=>`<div class="row">${ic(i)}<span class="n">${nm(i)}</span><span class="q">${it[i]}</span><button class="btn sm" data-act="back" data-c="${key}" data-i="${i}" title="Do spiżarni">⤴</button></div>`).join('')}
+// ---------- akcje ----------
+function place(key){const f=F(),[x,y]=pk(key);if(f.cells[key]){toast('Tu już coś stoi.');return}
+  if(tool.k==='machine'){if(tot(f.items[key])){toast('Najpierw zabierz towar z tej kratki.');return}
+    if(!(S.store[tool.m]>0)){if(!pay(MP[tool.m].p))return;S.store[tool.m]=(S.store[tool.m]||0)+1}
+    S.store[tool.m]--;f.cells[key]={t:'machine',m:tool.m,dir:rot,job:null,st:'wait'};if(!S.store[tool.m]){tool=null}sel=key}
+  else if(tool.k==='move'){const src=tool.from,c=f.cells[src];if(!c){tool=null;return}if(c.t==='machine'&&tot(f.items[key])){toast('Najpierw zabierz towar z tej kratki.');return}
+    delete f.cells[src];c.dir=rot;f.cells[key]=c;tool=null;sel=key}
+  else {const cost={belt:20,hatch:300,chest:150}[tool.k];if(!pay(cost))return;f.cells[key]={t:tool.k,dir:rot};if(tool.k==='hatch')sel=key}
+  save()}
+const ACT={
+  mech:d=>{S.mech[d.m]=S.mech[d.m]?0:1;save()},
+  exec:d=>{S.exec=d.v;save()},
+  reset:()=>{if(!confirm('Wyczyścić piaskownicę?'))return;S=fresh();sel=null;tool=null;save()},
+  addp:()=>{const id=$('addsel').value;S.pantry[id]=(S.pantry[id]||0)+50;save()},
+  tool:d=>{tool=tool&&tool.k===d.k&&tool.m===d.m?null:{k:d.k,m:d.m}},
+  notool:()=>{tool=null},rot:()=>{rot=(rot+1)%4},
+  fact:d=>{S.cur=+d.i;sel=null;save()},
+  grow:d=>{const f=F(),c=d.d==='w'?f.h*60:f.w*60;if(!pay(c))return;f[d.d]++;save()},
+  newfact:()=>{if(!pay(4000))return;S.facts.push(newFact('Przetwórnia '+(S.facts.length+1),6,5));S.cur=S.facts.length-1;sel=null;save()},
+  rotsel:()=>{const c=F().cells[sel];if(c){c.dir=(c.dir+1)%4;save()}},
+  movesel:()=>{const c=F().cells[sel];if(c){tool={k:'move',from:sel};rot=c.dir}},
+  stash:()=>{const f=F(),c=f.cells[sel];if(!c)return;if(c.t==='machine'){S.store[c.m]=(S.store[c.m]||0)+1;if(c.job){const r=RECIPES[c.job.r];Object.entries(r.in).forEach(([i,q])=>S.pantry[i]=(S.pantry[i]||0)+q)}}delete f.cells[sel];save()},
+  give:d=>{const f=F(),[x,y]=pk(d.c);if(!inb(f,x,y))return;const n=fromPantry(f,x,y,d.i,+d.q);if(!n)toast('Nie mieści się albo brak w spiżarni.');save()},
+  back:d=>{toPantry(F(),d.c,d.i);save()},
+  collect:d=>{const f=F(),it=f.items[d.c];if(it)Object.keys(it).forEach(i=>toPantry(f,d.c,i));save()},
+  pin:d=>{const c=F().cells[sel];if(c){c.pin=c.pin===+d.r?null:+d.r;save()}},
+  hire:()=>{if(!pay(1000))return;const [x,y]=DOOR(F());S.wk.push({f:S.cur,x,y,st:'idle',load:null,task:null});save()},
+  fire:()=>{const i=S.wk.map(w=>w.f).lastIndexOf(S.cur);if(i>=0){const w=S.wk[i];if(w.load)S.pantry[w.load.id]=(S.pantry[w.load.id]||0)+w.load.q;S.wk.splice(i,1)}save()},
+};
+document.addEventListener('click',e=>{hideCtx(e);const b=e.target.closest('[data-act]');if(b&&!b.disabled){ACT[b.dataset.act](b.dataset);$('ctx').hidden=true;render()}});
+document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0)return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
+  if(tool){place(key);render();return}if(e.target.closest('[data-drag]'))return;sel=sel===key?null:key;render()});
+addEventListener('pointerup',()=>{ptrDown=false});addEventListener('pointercancel',()=>{ptrDown=false});addEventListener('blur',()=>{ptrDown=false});
+['left','info'].forEach(id=>{$(id).addEventListener('mouseenter',()=>hov.add(id));$(id).addEventListener('mouseleave',()=>hov.delete(id))});
+document.addEventListener('change',e=>{const f=F();
+  if(e.target.id==='speed'){S.speed=+e.target.value}
+  if(e.target.id==='free'){S.free=e.target.checked}
+  if(e.target.id==='hfilter'){const c=f.cells[sel];if(c)c.filter=e.target.value||null}
+  if(e.target.id==='ordsel'||e.target.id==='ordkeep'){const id=$('ordsel').value,keep=Math.max(1,Math.min(99,+$('ordkeep').value||10));if(id)f.orders[sel]={id,keep};else delete f.orders[sel]}
+  if(e.target.id==='sendchk'){if(e.target.checked)f.send[sel]=1;else delete f.send[sel]}
+  save();render()});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if(e.key==='r'||e.key==='R'){if(tool)rot=(rot+1)%4;else if(sel&&F().cells[sel]){F().cells[sel].dir=(F().cells[sel].dir+1)%4;save()}render()}
+  if(e.key==='Escape'){tool=null;hideCtx();render()}
+  if(e.key==='Delete'&&sel&&F().cells[sel]){ACT.stash();render()}});
+// prawy przycisk: opcje kratki albo maszyny
+function hideCtx(e){const m=$('ctx');if(!m)return;if(e&&m.contains(e.target))return;m.hidden=true}
+document.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-cell]');if(!cell)return;e.preventDefault();sel=cell.dataset.cell;tool=null;render();
+  const f=F(),c=f.cells[sel],items=[];
+  if(c){if(c.t!=='chest')items.push(['rotsel','↻ Obróć']);items.push(['movesel','✥ Przenieś']);items.push(['stash',c.t==='machine'?'⤓ Do magazynu':'✕ Rozbierz'])}
+  const it=f.items[sel];if(it&&tot(it))items.push(['collect','⤴ Wszystko z kratki do spiżarni',sel]);
+  if(c&&c.t==='machine'){const [ox,oy]=outOf(f,...pk(sel)),ok=k(ox,oy);if(tot(f.items[ok]))items.push(['collect','⤴ Odbierz wyjście',ok])}
+  const m=$('ctx');m.innerHTML=`<div class="h">${c?(c.t==='machine'?MP[c.m].n:{belt:'Taśmociąg',hatch:'Wrota spiżarni',chest:'Skrzynia'}[c.t]):'Kratka'}</div>`+items.map(([a,t,cc])=>`<button data-act="${a}" ${cc?`data-c="${cc}"`:''}>${t}</button>`).join('')+'<div class="h">Reszta opcji jest w panelu po prawej.</div>';
+  m.hidden=false;m.style.left=Math.min(e.clientX,innerWidth-230)+'px';m.style.top=Math.min(e.clientY,innerHeight-m.offsetHeight-10)+'px'});
+// przeciąganie (mechanika B)
+let drag=null;
+document.addEventListener('dragstart',e=>{const s=e.target.closest('[data-drag]');if(!s||!S.mech.B)return;drag=s.dataset.drag;dragging=true;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',drag)}catch(_){}});
+document.addEventListener('dragover',e=>{if(!drag)return;const c=e.target.closest('[data-cell]')||e.target.closest('#left');if(c){e.preventDefault();document.querySelectorAll('.drop').forEach(x=>x!==c&&x.classList.remove('drop'));if(c.dataset.cell)c.classList.add('drop')}});
+document.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const f=F(),q=e.shiftKey?999:e.altKey?1:10,parts=drag.split(':');
+  const cell=e.target.closest('[data-cell]');
+  if(cell){const [tx,ty]=target(f,...pk(cell.dataset.cell));
+    if(parts[0]==='p'){if(!fromPantry(f,tx,ty,parts[1],q))toast('Tu się nie zmieści.')}
+    else {const n=take(f,parts[1],parts[2],q);if(n){if(canPut(f,tx,ty,parts[2],n))put(f,tx,ty,parts[2],n);else{put(f,...pk(parts[1]),parts[2],n);toast('Tu się nie zmieści.')}}}}
+  else if(e.target.closest('#left')&&parts[0]==='c'){const n=take(f,parts[1],parts[2],q);if(n)S.pantry[parts[2]]=(S.pantry[parts[2]]||0)+n}
+  drag=null;dragging=false;save();render()});
+document.addEventListener('dragend',()=>{drag=null;dragging=false;document.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop'));render()});
+// pętla
+let last=performance.now(),lastR=0,lastSave=0;
+function loop(now){const dt=Math.min(.25,(now-last)/1000);last=now;tick(dt);
+  if(now-lastR>250&&!dragging){lastR=now;const a=document.activeElement,typing=a&&/SELECT|INPUT/.test(a.tagName);if(!ptrDown||now-ptrDown>1200)renderBoard();if(!typing&&!hov.has('info'))renderInfo();if(!typing&&!hov.has('left'))renderLeft();$('money').textContent=S.free?'zakupy za darmo':Math.round(S.money).toLocaleString('pl-PL')+' zł'}
+  else placeWorkers();
+  if(now-lastSave>3000){lastSave=now;save()}}
+render();setInterval(()=>loop(performance.now()),50);
+</script>
+</body>
+</html>
