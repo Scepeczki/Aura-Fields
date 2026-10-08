@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 body{margin:0;user-select:none;-webkit-user-select:none;background:radial-gradient(circle at 50% 0,#2a1d12,#0d0906 70%) fixed;color:var(--tx);font:14px/1.4 "Segoe UI",system-ui,sans-serif;min-height:100vh}
 button{font:inherit;color:inherit;cursor:pointer}
-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--bd);background:rgba(15,11,8,.85);position:sticky;top:0;z-index:20}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 44px;border-bottom:1px solid var(--bd);background:rgba(15,11,8,.85);position:sticky;top:0;z-index:20}
 header h1{font:700 1.25rem Georgia,serif;margin:0;color:var(--gold)}
 .money{font:700 1rem ui-monospace,Consolas,monospace;color:var(--gold);padding:4px 12px;border:1px solid var(--bd2);border-radius:999px}
 .sp{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -17,13 +17,16 @@ header h1{font:700 1.25rem Georgia,serif;margin:0;color:var(--gold)}
 .btn:hover{border-color:var(--bd2)}.btn.on{background:var(--gold);color:#2a1d0c;border-color:var(--gold);font-weight:700}
 .btn.sm{padding:3px 8px;font-size:.85rem}.btn:disabled{opacity:.4;cursor:default}
 select,input[type=number]{background:var(--panel2);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:4px 6px;font:inherit}
-.mechs{display:flex;gap:8px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--bd);background:rgba(20,15,10,.7);align-items:flex-start}
+.mechs{display:flex;gap:8px;flex-wrap:wrap;padding:10px 44px;border-bottom:1px solid var(--bd);background:rgba(20,15,10,.7);align-items:flex-start}
 .mech{max-width:260px;text-align:left;background:var(--panel2);border:1px solid var(--bd);border-radius:12px;padding:8px 11px;opacity:.6}
 .mech.on{opacity:1;border-color:var(--gold);box-shadow:0 0 14px -6px var(--gold)}
 .mech b{display:block;color:var(--gold)}.mech small{color:var(--mut);display:block;margin-top:2px}
 .exec{display:flex;gap:6px;align-items:center;color:var(--mut);font-size:.85rem;padding-top:6px}
-main{display:grid;grid-template-columns:260px minmax(0,1fr) 300px;gap:14px;padding:14px 18px;align-items:start}
-aside,.info{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px;max-height:calc(100vh - 170px);overflow:auto;position:sticky;top:150px}
+main{padding:14px 46px 150px;display:flex;flex-direction:column;align-items:center}
+main section{width:100%;display:flex;flex-direction:column;align-items:center}
+.info{background:var(--panel);border:1px solid var(--bd2);border-radius:14px;padding:12px;max-height:calc(100vh - 240px);overflow:auto;position:fixed;right:40px;top:120px;width:310px;z-index:30;box-shadow:0 14px 34px rgba(0,0,0,.6)}
+.info[hidden]{display:none}
+.info .x{position:absolute;right:8px;top:6px;background:none;border:0;color:var(--mut);font-size:1.1rem}
 h2{font:700 1rem Georgia,serif;color:var(--gold);margin:6px 0 8px}
 h2 small{font:400 .8rem system-ui;color:var(--mut)}
 .row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px}
@@ -38,8 +41,8 @@ h2 small{font:400 .8rem system-ui;color:var(--mut)}
 .tool img{width:44px;height:44px;object-fit:contain}
 .tool.on{border-color:var(--gold);background:rgba(236,188,76,.15)}
 .tool .c{font:700 .75rem ui-monospace,monospace;color:var(--gold)}
-.ftabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
-.board-wrap{overflow:auto;padding:6px 6px 14px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid var(--bd)}
+.ftabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;justify-content:center}
+.board-wrap{max-width:100%;overflow:auto;padding:6px 6px 14px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid var(--bd)}
 .board{position:relative;display:grid;gap:3px;width:max-content}
 .cell{position:relative;width:var(--cell);height:var(--cell);border-radius:8px;background:repeating-linear-gradient(45deg,#2a2017 0 6px,#261c14 6px 12px);border:1px solid rgba(255,236,200,.06)}
 .cell:hover{border-color:var(--bd2)}
@@ -130,10 +133,27 @@ input,select{user-select:auto}
 #mbar button:hover{background:var(--gold);color:#2a1d0c}#mbar button:disabled{opacity:.3;cursor:default;background:#2a1d12;color:var(--gold)}
 #mbar small{color:var(--mut);font-size:.75rem;margin-right:2px}
 .items.two{gap:2px}.items.two .stk{width:36px;height:36px}
-#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1d12;border:1px solid var(--bd2);border-radius:10px;padding:8px 14px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
+/* magazyn maszyn pod halą */
+.mag{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:35;display:flex;align-items:stretch;gap:8px;justify-content:center;padding:8px 12px;border-radius:14px;border:1px solid var(--bd2);background:rgba(20,15,10,.96);box-shadow:0 10px 30px rgba(0,0,0,.6);max-width:calc(100vw - 80px);overflow-x:auto}
+.mag .lbl{display:flex;flex-direction:column;justify-content:center;padding-right:10px;margin-right:4px;border-right:1px solid var(--bd);font:700 .95rem Georgia,serif;color:var(--gold)}
+.mag .lbl small{font:400 .75rem system-ui;color:var(--mut);max-width:150px}
+.mtile{position:relative;width:84px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:10px;border:1px solid var(--bd);background:var(--panel2);font-size:.72rem;text-align:center;cursor:grab}
+.mtile img{width:52px;height:52px;object-fit:contain}
+.mtile b{position:absolute;right:4px;top:4px;font:700 .75rem ui-monospace,monospace;color:#2a1d0c;background:var(--gold);border-radius:999px;padding:0 6px}
+.mtile.on{border-color:var(--gold);background:rgba(236,188,76,.15)}
+.mag .empty{align-self:center;color:var(--mut);font-size:.85rem}
+/* sklep maszyn: szuflada z lewej */
+#shopdr{position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;pointer-events:none}
+#shopdr .handle{pointer-events:auto;align-self:stretch;width:26px;background:linear-gradient(180deg,#5a4024,#3a2a18);border:1px solid var(--bd2);border-left:0;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font:700 .85rem Georgia,serif;color:var(--gold);letter-spacing:.08em;box-shadow:4px 0 14px rgba(0,0,0,.5)}
+#shopdr .pan{pointer-events:auto;width:0;overflow:hidden;transition:width .22s ease;background:#18110b;border-right:1px solid var(--bd2);box-shadow:10px 0 30px rgba(0,0,0,.6)}
+#shopdr.open .pan{width:330px}
+#shopdr .in{width:330px;height:100%;overflow:auto;padding:14px}
+.items .stk{width:calc(var(--cell)*.56);height:calc(var(--cell)*.56)}
+.items.two .stk{width:calc(var(--cell)*.42);height:calc(var(--cell)*.42)}
+#toast{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);background:#2a1d12;border:1px solid var(--bd2);border-radius:10px;padding:8px 14px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
 kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4px;font-size:.8rem}
-@media (max-width:1100px){main{grid-template-columns:1fr}aside,.info{position:static;max-height:none}}
+
 </style>
 </head>
 <body>
@@ -148,14 +168,15 @@ kbd{background:#2c2219;border:1px solid var(--bd);border-radius:4px;padding:0 4p
 </header>
 <div class="mechs" id="mechs"></div>
 <main>
-  <aside id="left"></aside>
   <section>
     <div class="ftabs" id="ftabs"></div>
-    <div class="board-wrap"><div class="board" id="board"></div></div>
-    <p class="hint">Maszyna bierze wkład z kratki <span style="color:var(--green)">przed sobą (zielona)</span> i wyrzuca produkt (i uboczny obok niego) na kratkę <span style="color:var(--amber)">za sobą (pomarańczowa)</span>. Najedź na maszynę, żeby włożyć 1, 5 albo max partii. Wyjście jednej maszyny może być wejściem następnej. <kbd>R</kbd> obraca, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
+    <div class="board-wrap" id="bw"><div class="board" id="board"></div></div>
+    <div class="mag" id="mag"></div>
+    <p class="hint">Maszyna bierze wkład z kratki <span style="color:var(--green)">przed sobą (zielona)</span> i wyrzuca produkt (i uboczny obok niego) na kratkę <span style="color:var(--amber)">za sobą (pomarańczowa)</span>. Najedź na maszynę, żeby włożyć 1, 5 albo max partii. Wyjście jednej maszyny może być wejściem następnej. Maszyny kupujesz w sklepie z lewej, a z magazynu na dole ekranu przeciągasz je na kratki. Podwójne kliknięcie albo prawy przycisk → Szczegóły pokazuje wszystko o maszynie. Towar bierzesz ze spiżarni z prawej. <kbd>R</kbd> obraca, <kbd>Esc</kbd> odkłada narzędzie, prawy przycisk to opcje.</p>
   </section>
-  <div class="info" id="info"></div>
 </main>
+<div class="info" id="info" hidden></div>
+<div id="shopdr"><div class="pan"><div class="in" id="left"></div></div><div class="handle">Sklep maszyn</div></div>
 <div id="ctx" hidden></div>
 <div id="toast"></div>
 <div id="drawer"><div class="handle">Spiżarnia</div><div class="pan"><div class="in" id="shelves"></div></div></div>
@@ -176,7 +197,7 @@ const MECH=[
 ];
 const CAP_FLOOR=99, CAP_BELT=3, CARRY=10, WK_SPEED=2.2;
 // ---------- stan ----------
-const KEY='aura-proto-produkcja-3';
+const KEY='aura-proto-produkcja-4';
 function fresh(){return {money:20000,speed:3,free:false,qty:5,mech:{C:0,D:0},exec:'now',
   pantry:{k_psz:100,k_zyt:60,k_jec:40,n_gry:40,ziem:30,kolby:20,wapno:20},
   store:{mlo:1,zar:1},workers:0,cur:0,
@@ -187,7 +208,7 @@ S.wk=(S.wk||[]).map(w=>({...w,load:null,task:null,path:null,st:'idle'}));
 const F=()=>S.facts[S.cur];
 const k=(x,y)=>x+','+y, pk=s=>s.split(',').map(Number);
 const inb=(f,x,y)=>x>=0&&y>=0&&x<f.w&&y<f.h;
-let tool=null, rot=0, sel=null, dragging=false, ptrDown=false;
+let infoOpen=false, tool=null, rot=0, sel=null, dragging=false, ptrDown=false;
 const hov=new Set();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
@@ -285,7 +306,7 @@ function render(){
   $('speed').value=S.speed;$('free').checked=S.free;
   $('mechs').innerHTML=MECH.map(([id,n,d])=>`<button class="mech ${S.mech[id]?'on':''}" data-act="mech" data-m="${id}"><b>${id}. ${n}</b><small>${d}</small></button>`).join('')+
     (S.mech.D?`<div class="exec">Zamówienia wykonują: <button class="btn sm ${S.exec==='now'?'on':''}" data-act="exec" data-v="now">od razu, same</button><button class="btn sm ${S.exec==='wk'?'on':''}" data-act="exec" data-v="wk">młynarze (chodzą)</button></div>`:'');
-  renderLeft();renderShelves();renderBoard();renderInfo()}
+  renderLeft();renderShelves();renderMag();renderBoard();renderInfo()}
 const SH_N=4, SH_W=8;
 // każdy rodzaj towaru ma swoje miejsce na półce; nowe trafiają na pierwsze wolne
 function syncSlots(){S.slots=S.slots||Array(SH_N*SH_W).fill(null);const on=new Set();S.slots=S.slots.map(id=>id&&(S.pantry[id]||0)>0?(on.add(id),id):null);
@@ -297,17 +318,24 @@ function renderShelves(){if(dragging||ptrDown||hov.has('drawer-act'))return;sync
   for(let s=0;s<SH_N;s++)h+=`<div class="shelf"><div class="sl">Półka ${s+1}</div><div class="slots">${Array.from({length:SH_W},(_,j)=>sl(s*SH_W+j)).join('')}</div></div>`;
   h+=`<div class="row"><select id="addsel">${Object.values(ITEMS).filter(i=>i.kind==='raw'||i.kind==='supply').map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select><button class="btn sm" data-act="addp">+50 (test)</button></div>`;
   $('shelves').innerHTML=h}
+function renderMag(){if(dragging)return;const ids=MACH.map(m=>m[0]).filter(id=>(S.store[id]||0)>0);
+  $('mag').innerHTML=`<div class="lbl">Magazyn<small>przeciągnij maszynę na halę</small></div>`+
+    (ids.map(id=>`<div class="mtile ${tool&&tool.k==='machine'&&tool.m===id?'on':''}" draggable="true" data-drag="m:${id}" data-act="tool" data-k="machine" data-m="${id}" title="${MP[id].d}"><img src="../web/machines/${id}.webp" alt="" draggable="false"><span>${MP[id].n}</span><b>${S.store[id]}</b></div>`).join('')||'<span class="empty">Pusto. Maszyny kupisz w sklepie (lewa krawędź ekranu).</span>')}
 function renderLeft(){if(dragging)return;
-  let h=`<h2>Maszyny <small>kliknij, potem kratkę</small></h2><div class="tools">`;
-  MACH.forEach(([id])=>{const n=S.store[id]||0;h+=`<button class="tool ${tool&&tool.k==='machine'&&tool.m===id?'on':''}" data-act="tool" data-k="machine" data-m="${id}" title="${MP[id].d}"><img src="../web/machines/${id}.webp" alt=""><span>${MP[id].n}</span><span class="c">${n?`w magazynie: ${n}`:`kup: ${S.free?0:MP[id].p} zł`}</span></button>`});
+  let h=`<h2>Sklep maszyn</h2><p class="hint">Kupiona maszyna trafia do magazynu pod halą. Stamtąd przeciągasz ją na kratkę.</p><div class="tools">`;
+  MACH.forEach(([id])=>{const n=S.store[id]||0,placed=S.facts.reduce((a,f)=>a+Object.values(f.cells).filter(c=>c.m===id).length,0);h+=`<button class="tool" data-act="buy" data-m="${id}" title="${MP[id].d}"><img src="../web/machines/${id}.webp" alt=""><span>${MP[id].n}</span><span class="c">kup · ${S.free?0:MP[id].p} zł</span><small style="color:var(--mut)">${placed?`w halach: ${placed}`:''}${n?` · w magazynie: ${n}`:''}</small></button>`});
   h+='</div>';
-  if(S.mech.C)h+=`<h2>Budowle</h2><div class="tools">
+  if(S.mech.C)h+=`<h2>Budowle <small>kliknij, potem kratkę</small></h2><div class="tools">
     <button class="tool ${tool&&tool.k==='belt'?'on':''}" data-act="tool" data-k="belt"><div style="width:44px;height:44px;position:relative"><div class="belt" style="inset:8px"></div></div><span>Taśmociąg</span><span class="c">20 zł</span></button>
     <button class="tool ${tool&&tool.k==='hatch'?'on':''}" data-act="tool" data-k="hatch"><div style="width:44px;height:44px;position:relative"><div class="hatch"></div></div><span>Wrota spiżarni</span><span class="c">300 zł</span></button>
     <button class="tool ${tool&&tool.k==='chest'?'on':''}" data-act="tool" data-k="chest"><div style="width:44px;height:44px;position:relative"><div class="chest">⬇</div></div><span>Skrzynia do spiżarni</span><span class="c">150 zł</span></button></div>`;
   if(S.mech.D&&S.exec==='wk'){const here=S.wk.filter(w=>w.f===S.cur).length;h+=`<h2>Młynarze <small>w tej hali: ${here}</small></h2><p class="hint">Chodzą od drzwi spiżarni (po lewej) z towarem do kratek z zamówieniami i odnoszą to, co ma wracać. Niosą do ${CARRY} sztuk.</p><button class="btn" data-act="hire">Zatrudnij młynarza · ${S.free?0:1000} zł</button>${here?` <button class="btn" data-act="fire">Zwolnij</button>`:''}`}
   $('left').innerHTML=h}
-function renderBoard(){const f=F();
+function fitCells(){const f=F(),bw=$('bw');if(!bw)return;const top=bw.getBoundingClientRect().top+scrollY;
+  const byW=Math.floor((Math.min(innerWidth-110,1700)-47)/f.w)-3,c=Math.max(64,Math.min(128,byW));
+  document.documentElement.style.setProperty('--cell',c+'px')}
+addEventListener('resize',()=>{fitCells();renderBoard()});
+function renderBoard(){const f=F();fitCells();
   $('ftabs').innerHTML=S.facts.map((x,i)=>`<button class="btn ${i===S.cur?'on':''}" data-act="fact" data-i="${i}">${x.name} <small>${x.w}×${x.h}</small></button>`).join('')+
    `<button class="btn sm" data-act="grow" data-d="w" ${f.w>=18?'disabled':''}>+ kolumna · ${S.free?0:f.h*60} zł</button><button class="btn sm" data-act="grow" data-d="h" ${f.h>=12?'disabled':''}>+ rząd · ${S.free?0:f.w*60} zł</button><button class="btn sm" data-act="newfact">Nowa hala · ${S.free?0:4000} zł</button>`;
   // które kratki są wejściami i wyjściami maszyn
@@ -356,7 +384,7 @@ function drawGhost(){const g=document.getElementById('ghost');if(!g)return;g.inn
 function fits(f,x,y,skip){const occ=occMap(f);return mCells(x,y).every(([a,b])=>inb(f,a,b)&&(!occ[k(a,b)]||occ[k(a,b)]===skip)&&!tot(f.items[k(a,b)]))}
 document.addEventListener('pointermove',e=>{if(e.target.closest&&e.target.closest('#mbar'))return;const c=e.target.closest&&e.target.closest('[data-cell]');const nk=c?c.dataset.cell:null;
   if(nk!==hoverKey){hoverKey=nk;drawGhost()}const m=nk&&F().cells[nk]&&F().cells[nk].t==='machine'?nk:null;if(m!==mbHover){mbHover=m;drawMbar()}});
-function renderInfo(){const f=F();let h='';
+function renderInfo(){const f=F();let h='';const box=$('info');box.hidden=!(infoOpen&&sel);if(box.hidden)return;
   if(tool){h+=`<h2>Stawianie</h2><p class="hint">Kliknij wolną kratkę. <kbd>R</kbd> obraca (teraz: ${['wyjście w prawo','wyjście w dół','wyjście w lewo','wyjście w górę'][rot]}). <kbd>Esc</kbd> kończy.</p><button class="btn sm" data-act="rot">Obróć ↻</button> <button class="btn sm" data-act="notool">Gotowe</button>`}
   if(!sel){$('info').innerHTML=h+`<h2>Wybierz kratkę</h2><p class="hint">Kliknij maszynę albo kratkę, żeby zobaczyć, co na niej jest i co można z nią zrobić.</p>
     <div class="sec"><h2>Co testujemy</h2><p class="hint">Na górze włączasz sposoby zasilania maszyn. Każdy możesz testować osobno albo razem z innymi. Postęp zapisuje się w tej przeglądarce.</p>
@@ -382,13 +410,13 @@ function renderInfo(){const f=F();let h='';
       <div class="row">Zasilaj ze spiżarni: <select id="ordsel"><option value="">nie</option>${Object.keys(ITEMS).filter(i=>(S.pantry[i]||0)>0||(o&&o.id===i)).map(i=>`<option value="${i}" ${o&&o.id===i?'selected':''}>${nm(i)}</option>`).join('')}</select></div>
       <div class="row">utrzymuj <input type="number" id="ordkeep" min="1" max="99" value="${o?o.keep:10}" style="width:64px"> szt.</div>
       <label class="row"><input type="checkbox" id="sendchk" ${f.send[sel]?'checked':''}> Odsyłaj wszystko z tej kratki do spiżarni</label></div>`}
-  $('info').innerHTML=h}
+  $('info').innerHTML='<button class="x" data-act="desel" title="Zamknij">✕</button>'+h}
 function stackList(it,key){const ids=Object.keys(it);if(!ids.length)return '<p class="hint">pusto</p>';
   return ids.map(i=>`<div class="row">${ic(i)}<span class="n">${nm(i)}</span><span class="q">${it[i]}</span><button class="btn sm" data-act="back" data-c="${key}" data-i="${i}" title="Do spiżarni">⤴</button></div>`).join('')}
 // ---------- akcje ----------
 function place(key){const f=F(),[x,y]=pk(key);
   if(tool.k==='machine'){if(!fits(f,x,y)){toast('Maszyna potrzebuje wolnej kratki (bez towaru).');return}
-    if(!(S.store[tool.m]>0)){if(!pay(MP[tool.m].p))return;S.store[tool.m]=(S.store[tool.m]||0)+1}
+    if(!(S.store[tool.m]>0)){toast('Nie masz tej maszyny w magazynie. Kup ją w sklepie.');tool=null;return}
     S.store[tool.m]--;f.cells[key]={t:'machine',m:tool.m,dir:rot,job:null,st:'wait'};if(!S.store[tool.m]){tool=null}sel=key}
   else if(tool.k==='move'){const src=tool.from,c=f.cells[src];if(!c){tool=null;return}
     if(c.t==='machine'?!fits(f,x,y,src):(occMap(f)[key]&&key!==src)){toast('Tu się nie zmieści.');return}
@@ -402,6 +430,9 @@ const ACT={
   unq:()=>{const c=F().cells[sel];if(c){unqueue(c);save()}},
   dropat:d=>{const f=F(),[x,y]=pk(d.c),q=S.qty==='max'?999:S.qty;if(!fromPantry(f,x,y,d.i,q))toast('Tu się nie zmieści.');save()},
   droppick:d=>{tool={k:'drop',id:d.i};openDrawer(false);toast('Kliknij kratkę albo maszynę w hali.')},
+  buy:d=>{if(!pay(MP[d.m].p))return;S.store[d.m]=(S.store[d.m]||0)+1;toast(`${MP[d.m].n} w magazynie`);save()},
+  desel:()=>{infoOpen=false},
+  details:()=>{infoOpen=true},
   qty:d=>{S.qty=d.q==='max'?'max':+d.q;save()},
   exec:d=>{S.exec=d.v;save()},
   reset:()=>{if(!confirm('Wyczyścić piaskownicę?'))return;S=fresh();sel=null;tool=null;save()},
@@ -426,7 +457,8 @@ document.addEventListener('click',e=>{hideCtx(e);const b=e.target.closest('[data
 document.addEventListener('pointerdown',e=>{ptrDown=performance.now();if(e.button!==0||e.target.closest('.feed')||e.target.closest('#mbar'))return;const cell=e.target.closest('[data-cell]');if(!cell)return;hideCtx();const key=cell.dataset.cell;
   if(tool&&tool.k==='drop'){const f=F(),[tx,ty]=target(f,...pk(key),tool.id);if(!fromPantry(f,tx,ty,tool.id,S.qty==='max'?999:S.qty))toast('Tu się nie zmieści.');tool=null;save();render();return}
   if(tool){place(tool.k==='machine'||tool.k==='move'?(hoverKey||key):key);render();return}if(e.target.closest('[data-drag]'))return;sel=sel===key?null:key;render()});
-addEventListener('pointerup',()=>{ptrDown=false});addEventListener('pointercancel',()=>{ptrDown=false});addEventListener('blur',()=>{ptrDown=false});
+addEventListener('pointerup',()=>{ptrDown=false});
+document.addEventListener('dblclick',e=>{const c=e.target.closest('[data-cell]');if(!c||tool)return;sel=c.dataset.cell;infoOpen=true;render()});addEventListener('pointercancel',()=>{ptrDown=false});addEventListener('blur',()=>{ptrDown=false});
 ['left','info'].forEach(id=>{$(id).addEventListener('mouseenter',()=>hov.add(id));$(id).addEventListener('mouseleave',()=>hov.delete(id))});
 document.addEventListener('change',e=>{const f=F();
   if(e.target.id==='speed'){S.speed=+e.target.value}
@@ -451,17 +483,19 @@ document.addEventListener('contextmenu',e=>{const slot=e.target.closest('.slot.f
   if(c){if(c.t!=='chest')items.push(['rotsel','↻ Obróć']);items.push(['movesel','✥ Przenieś']);items.push(['stash',c.t==='machine'?'⤓ Do magazynu':'✕ Rozbierz'])}
   const it=f.items[sel];if(it&&tot(it)){Object.keys(it).forEach(i=>items.push(['backq',`⤴ ${nm(i)} do spiżarni (${S.qty==='max'?'wszystko':S.qty})`,sel,i]));items.push(['collect','⤴ Wszystko z kratki do spiżarni',sel])}
   if(c&&c.t==='machine')outCells(f,...pk(sel)).forEach((p,i)=>{const ok=k(...p);if(tot(f.items[ok]))items.push(['collect',i?'⤴ Odbierz produkty uboczne':'⤴ Odbierz produkt',ok])});
-  const m=$('ctx');m.innerHTML=`<div class="h">${c?(c.t==='machine'?MP[c.m].n:{belt:'Taśmociąg',hatch:'Wrota spiżarni',chest:'Skrzynia'}[c.t]):'Kratka'}</div>`+items.map(([a,t,cc,ii])=>`<button data-act="${a}" ${cc?`data-c="${cc}"`:''} ${ii?`data-i="${ii}"`:''}>${t}</button>`).join('')+'<div class="h">Reszta opcji jest w panelu po prawej.</div>';
+  items.push(['details','ⓘ Szczegóły']);const m=$('ctx');m.innerHTML=`<div class="h">${c?(c.t==='machine'?MP[c.m].n:{belt:'Taśmociąg',hatch:'Wrota spiżarni',chest:'Skrzynia'}[c.t]):'Kratka'}</div>`+items.map(([a,t,cc,ii])=>`<button data-act="${a}" ${cc?`data-c="${cc}"`:''} ${ii?`data-i="${ii}"`:''}>${t}</button>`).join('')+'';
   m.hidden=false;m.style.left=Math.min(e.clientX,innerWidth-230)+'px';m.style.top=Math.min(e.clientY,innerHeight-m.offsetHeight-10)+'px'});
 // przeciąganie (mechanika B)
 let drag=null;
 const dragQ=e=>e.shiftKey?999:e.altKey?1:S.qty==='max'?999:S.qty;
 document.addEventListener('dragstart',e=>{const s=e.target.closest('[data-drag]');if(!s)return;drag=s.dataset.drag;dragging=true;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',drag)}catch(_){}
+  if(drag.startsWith('m:')){const d=$('dimg'),m=drag.slice(2);d.querySelector('img').src='../web/machines/'+m+'.webp';d.querySelector('b').textContent='';try{e.dataTransfer.setDragImage(d,26,26)}catch(_){}return}
   const p=drag.split(':'),f=F(),id=p[0]==='p'?p[1]:p[2],have=p[0]==='p'?(S.pantry[id]||0):((f.items[p[1]]||{})[id]||0),d=$('dimg');
   d.querySelector('img').src='../web/items/'+id+'.webp';d.querySelector('b').textContent=Math.min(have,dragQ(e));try{e.dataTransfer.setDragImage(d,26,26)}catch(_){}});
 document.addEventListener('dragover',e=>{if(!drag)return;const c=e.target.closest('[data-cell]')||e.target.closest('[data-slot]')||e.target.closest('#drawer');if(c){e.preventDefault();document.querySelectorAll('.drop').forEach(x=>x!==c&&x.classList.remove('drop'));if(c.dataset.cell||c.dataset.slot)c.classList.add('drop')}});
 document.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const f=F(),q=dragQ(e),parts=drag.split(':');
   const cell=e.target.closest('[data-cell]');
+  if(parts[0]==='m'){if(cell){const prev=tool;tool={k:'machine',m:parts[1]};place(cell.dataset.cell);tool=prev&&prev.k==='machine'?null:prev}drag=null;dragging=false;save();render();return}
   if(cell){const [tx,ty]=target(f,...pk(cell.dataset.cell),parts[0]==='p'?parts[1]:parts[2]);
     if(parts[0]==='p'){if(!fromPantry(f,tx,ty,parts[1],q))toast('Tu się nie zmieści.')}
     else {const n=take(f,parts[1],parts[2],q);if(n){if(canPut(f,tx,ty,parts[2],n))put(f,tx,ty,parts[2],n);else{put(f,...pk(parts[1]),parts[2],n);toast('Tu się nie zmieści.')}}}}
@@ -471,6 +505,8 @@ document.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const f=
     if(slot){syncSlots();const to=+slot.dataset.slot,from=S.slots.indexOf(id);if(from>=0&&from!==to){S.slots[from]=S.slots[to];S.slots[to]=id}}}
   drag=null;dragging=false;save();render()});
 document.addEventListener('dragend',()=>{drag=null;dragging=false;document.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop'));render()});
+const shopdr=$('shopdr');let shopT=0;
+shopdr.addEventListener('mouseenter',()=>{clearTimeout(shopT);shopdr.classList.add('open')});shopdr.addEventListener('mouseleave',()=>{shopT=setTimeout(()=>shopdr.classList.remove('open'),250)});
 const drawer=$('drawer');let drawerT=0;
 const openDrawer=v=>{clearTimeout(drawerT);if(v)drawer.classList.add('open');else drawerT=setTimeout(()=>drawer.classList.remove('open'),250)};
 drawer.addEventListener('mouseenter',()=>openDrawer(true));drawer.addEventListener('mouseleave',()=>openDrawer(false));
@@ -479,7 +515,7 @@ drawer.addEventListener('mouseover',e=>{if(e.target.closest('select,button'))hov
 // pętla
 let last=performance.now(),lastR=0,lastSave=0;
 function loop(now){const dt=Math.min(.25,(now-last)/1000);last=now;tick(dt);
-  if(now-lastR>250&&!dragging){lastR=now;const a=document.activeElement,typing=a&&/SELECT|INPUT/.test(a.tagName);if(!ptrDown||now-ptrDown>1200)renderBoard();if(!typing&&!hov.has('info'))renderInfo();if(!typing&&!hov.has('left'))renderLeft();if(!typing)renderShelves();$('money').textContent=S.free?'zakupy za darmo':Math.round(S.money).toLocaleString('pl-PL')+' zł'}
+  if(now-lastR>250&&!dragging){lastR=now;const a=document.activeElement,typing=a&&/SELECT|INPUT/.test(a.tagName);if(!ptrDown||now-ptrDown>1200)renderBoard();if(!typing&&!hov.has('info'))renderInfo();if(!typing&&!hov.has('left'))renderLeft();if(!ptrDown)renderMag();if(!typing)renderShelves();$('money').textContent=S.free?'zakupy za darmo':Math.round(S.money).toLocaleString('pl-PL')+' zł'}
   else placeWorkers();
   if(now-lastSave>3000){lastSave=now;save()}}
 render();setInterval(()=>loop(performance.now()),50);
