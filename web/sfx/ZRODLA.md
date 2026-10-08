@@ -25,6 +25,8 @@ Nagrania z freesound.org na licencji Creative Commons 0 (domena publiczna), przy
 - sfx/w-szelest.ogg — freesound.org/s/199931 — Bag Crumple (CC0)
 - sfx/w-ziarno.ogg — freesound.org/s/444462, /s/585795 — DroppingRiceEdit, shaking can with oatmeal (CC0)
 - sfx/w-sloik.ogg — freesound.org/s/133893, /s/235498 — jar and ceramic set down, glass jar set on table (CC0)
+- sfx/w-zbior.ogg — freesound.org/s/81721, /s/488378, /s/251660 — Sickle Wheat, Harvest Sounds, mowing with a scythe (CC0)
+- sfx/w-siew.ogg — freesound.org/s/696531, /s/137243 — Digging Into Soft Soil with Small Trowell, Sunflower seed pour (CC0)
 
 Pliki w-*.ogg to paczki wariantów: wariant i zaczyna się w i × 1,2 s.
 Pętla jazz.ogg jest wycięta z nagrania tak, żeby koniec przechodził w początek (pełne takty).

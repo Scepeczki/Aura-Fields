@@ -90,11 +90,13 @@ const SHOT={};
 function shotLoad(name){if(SHOT[name])return SHOT[name];const x=SHOT[name]={buf:null,file:fileMode};
   if(!fileMode)fetch('sfx/'+name+'.ogg').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).then(b=>ac.decodeAudioData(b)).then(b=>{x.buf=b}).catch(()=>{x.file=true});
   return x}
-function shot(name,v,p=0){const x=shotLoad(name),c=catOf(name);
-  if(x.buf){const sr=ac.createBufferSource();sr.buffer=x.buf;chain(sr,gain(v),pan(p),BUS[c]);sr.start();return}
-  if(x.file&&st){const el=new Audio('sfx/'+name+'.ogg');el.volume=Math.min(1,v*catGain(c));el.play().catch(()=>{})}}
+let FIELD=[];
+function shot(name,v,p=0,field){const x=shotLoad(name),c=catOf(name);
+  if(x.buf){const sr=ac.createBufferSource(),g=gain(v);sr.buffer=x.buf;chain(sr,g,pan(p),BUS[c]);sr.start();if(field){FIELD.push({sr,g});sr.onended=()=>{FIELD=FIELD.filter(f=>f.sr!==sr)}}return}
+  if(x.file&&st){const el=new Audio('sfx/'+name+'.ogg');el.volume=Math.min(1,v*catGain(c));el.play().catch(()=>{});if(field){FIELD.push({el});el.onended=()=>{FIELD=FIELD.filter(f=>f.el!==el)}}}}
+function stopField(){FIELD.forEach(f=>{if(f.el)f.el.pause();else{glide(f.g.gain,0,.04);try{f.sr.stop(T()+.25)}catch(e){}}});FIELD=[]}
 // paczka zdarzeń: plik z kilkoma wariantami co SLOT sekund, gramy losowy (z lekką zmianą wysokości)
-const SLOT=1.2, SPR={'w-worek':5,'w-szelest':5,'w-ziarno':6,'w-sloik':6,'w-orzech':6};
+const SLOT=1.2, SPR={'w-zbior':6,'w-siew':6,'w-worek':5,'w-szelest':5,'w-ziarno':6,'w-sloik':6,'w-orzech':6};
 function spr(name,v,p=0){const x=shotLoad(name),c=catOf(name),i=Math.floor(Math.random()*SPR[name]);
   if(x.buf){const sr=ac.createBufferSource();sr.buffer=x.buf;sr.playbackRate.value=R(.92,1.08);chain(sr,gain(v),pan(p),BUS[c]);sr.start(T(),i*SLOT,SLOT-.05);return}
   if(x.file&&st){const el=new Audio('sfx/'+name+'.ogg');el.volume=Math.min(1,v*catGain(c));el.currentTime=i*SLOT;el.play().then(()=>setTimeout(()=>el.pause(),(SLOT-.05)*1000)).catch(()=>{})}}
@@ -128,9 +130,9 @@ function note(m,at,v,dur=2.4){const f=mtof(m),bus=B.musicIn,p=R(-.35,.35);
   tone(bus,{f,dur,v,at,p,attack:.008});tone(bus,{f:f*2,dur:dur*.45,v:v*.22,at,p,attack:.005});tone(bus,{f:f*3.01,dur:dur*.2,v:v*.07,at,p,attack:.004})}
 
 const FX={
-  pop(){rustle(fxBus,.22,.08,1800);tone(fxBus,{f:330,f2:240,dur:.14,v:.07})},
-  plant(){for(let i=0;i<5;i++)burst(fxBus,{f:R(450,900),q:.8,dur:R(.05,.1),v:.1,noise:brown,at:i*.045});tone(fxBus,{f:95,f2:70,dur:.16,v:.09})},
-  sow(){for(let i=0;i<7;i++)burst(fxBus,{f:R(2500,4500),q:2,dur:.03,v:.04,at:i*R(.02,.04),p:R(-.3,.3)});for(let i=0;i<3;i++)burst(fxBus,{f:R(400,800),q:.8,dur:.08,v:.07,noise:brown,at:.12+i*.05})},
+  pop(){spr('w-zbior',.5,R(-.3,.3))},
+  plant(){spr('w-siew',.5,R(-.3,.3))},
+  sow(){spr('w-siew',.5,R(-.3,.3))},
   coin(){clink(fxBus,0);clink(fxBus,.09,.04)},
   sale(){clink(fxBus,0,.035)},
   buy(){burst(fxBus,{f:180,q:.7,dur:.12,v:.1,noise:brown});const n=Math.floor(R(4,7));for(let i=0;i<n;i++)clink(fxBus,.05+i*R(.04,.08),.045*R(.6,1))},
@@ -170,9 +172,9 @@ function schedule(s){const tab=s.tab,out=tab==='pola',wet=s.wx==='deszcz',night=
   if(wet){const n=out?3:1;for(let i=0;i<n;i++)if(Math.random()<.7)burst(BUS.amb,{f:out?R(2000,5600):R(700,1400),q:2.5,dur:R(.008,.02),v:out?R(.01,.03):R(.006,.014),at:R(0,.1),p:R(-.8,.8)})}
   if(out&&!wet&&!night&&s.season<3&&!ready('ptaki')) every('bird',2.5,8,()=>chirp(ambBus));
   // rzadko: pies szczeka gdzieś daleko, raz na kilka minut przelatuje samolot
-  if(out){shotLoad('pies');shotLoad('samolot');
-    every('dog',100,320,()=>shot('pies',R(.3,.5),R(-.9,.9)));
-    every('plane',200,480,()=>shot('samolot',wet?.25:.4,R(-.4,.4)))}
+  if(out){shotLoad('pies');shotLoad('samolot');shotLoad('w-zbior');shotLoad('w-siew');
+    every('dog',100,320,()=>shot('pies',R(.3,.5),R(-.9,.9),true));
+    every('plane',200,480,()=>shot('samolot',wet?.25:.4,R(-.4,.4),true))}
   if(tab==='prz'){every('creak',4,11,()=>creak(EB,R(.03,.06)));
     const r=s.run||{};
     if(r.mlo) every('flail',.55,.75,()=>{tone(EB,{f:80,f2:55,dur:.16,v:.12});burst(EB,{f:1000,q:.8,dur:.1,v:.05,at:.01,p:R(-.3,.3)})});
@@ -229,9 +231,10 @@ function apply(s,tc){const L=levels(s);for(const k in SYN_BY)if(ready(SYN_BY[k])
 function ensure(){if(ac)return true;const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
   try{ac=new C();out=filt('lowpass',16000);const comp=ac.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=3;out.connect(comp);comp.connect(ac.destination);
     for(const c of ['fx','amb','mach','crowd','music']){BUS[c]=gain(0);BUS[c].connect(out)}ambBus=BUS.amb;fxBus=BUS.fx;
-    pink=noiseBuf('pink');brown=noiseBuf('brown');buildBeds();shotLoad('drzwi');
+    pink=noiseBuf('pink');brown=noiseBuf('brown');buildBeds();shotLoad('drzwi');shotLoad('w-zbior');shotLoad('w-siew');
     document.addEventListener('visibilitychange',()=>{if(!ac)return;if(document.hidden){ac.suspend();sfxMuteAll()}else if(st&&st.on)ac.resume()});
     return true}catch(e){ac=null;return false}}
+const fxLast={};
 window.AuraSound={
   // s = {on, vols:{all,fx,amb,mach,crowd,music}, tab, wx, season, hour, run:{maszyna:liczba partii}}
   update(s){st=s;if(!s.on&&!ac)return;if(!ensure())return;
@@ -239,8 +242,9 @@ window.AuraSound={
     if(ac.state==='suspended'&&!document.hidden)ac.resume();
     for(const c in BUS)glide(BUS[c].gain,catGain(c),.08);
     const now=performance.now(),sw=s.tab!==lastTab;if(!sw&&now-lastTick<90)return;lastTick=now;lastTab=s.tab;
+    if(sw&&s.tab!=='pola')stopField();
     if(sw&&s.tab==='ulep')shot('drzwi',.6,.35);
     apply(s,sw?.04:1.2);schedule(s)},
-  fx(type){if(!st||!st.on||!ensure()||document.hidden)return;if(ac.state==='suspended')ac.resume();try{(FX[type]||FX.click)()}catch(e){}}
+  fx(type){if(!st||!st.on||!ensure()||document.hidden)return;const now=performance.now();if(now-(fxLast[type]||0)<70)return;fxLast[type]=now;if(ac.state==='suspended')ac.resume();try{(FX[type]||FX.click)()}catch(e){}}
 };
 })();

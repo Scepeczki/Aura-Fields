@@ -669,7 +669,7 @@ function canMake(f,pend){const v={...S.inv};
   return Math.floor(v[f]||0)}
 const POTICO='<svg class="bico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h11M11 7l5 5-5 5"/><path d="M19 5v14"/></svg>';
 const potChipF=f=>{const n=canMake(f,true);return `<i class="fp ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: łącznie ${n}, czyli worki w spiżarni (${inv(f)}) i wszystko, co z zapasów i maszyn da się jeszcze na nią przerobić">${itemSvg(f)}<b class="num">${n}</b></i>`};
-const potChip=f=>{const n=Math.max(0,canMake(f)-inv(f));return `<span class="pot ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: z zapasów w spiżarni zrobisz jeszcze ${n} (gotowe worki: ${inv(f)})">${POTICO}<b class="num">${n}</b></span>`};
+const potChip=f=>{const n=Math.max(0,canMake(f,true)-inv(f));return `<span class="pot ${n?'':'zero'}" title="${esc(ITEMS[f].n)}: z zapasów w spiżarni i tego, co jest w maszynach, zrobisz jeszcze ${n} (gotowe worki: ${inv(f)})">${POTICO}<b class="num">${n}</b></span>`};
 // uprawy w kolejności Księgi mąk: dział i kolejność pierwszej mąki, do której prowadzą
 const BOOK_CROPS=(()=>{const out=[],seen=new Set();FLOURS.forEach(f=>{const c=chainOf(f).find(s=>s.crop);if(c&&!seen.has(c.crop.id)){seen.add(c.crop.id);out.push(c.crop)}});
   CROPS.forEach(c=>{if(!seen.has(c.id))out.push(c)});return out})();
@@ -718,9 +718,9 @@ function vPrz(){syncLines();
 // arkusz: dodaj linię dowolnej mąki
 function openLineAdd(){sheetMode='lineadd';sheetPlot=-1;drawLineAdd();$('#sheet').hidden=false;$('#panel').scrollTop=0}
 function drawLineAdd(){syncLines();
-  let h=`<div class="ph"><div><h2>Dodaj linię</h2><p>Linia trafi na koniec listy. Złota ramka: mąka już robiona. Liczba ze strzałką: tyle tej mąki zrobisz z tego, co masz w spiżarni. Szare wymagają maszyny albo uprawy, której jeszcze nie masz.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
+  let h=`<div class="ph"><div><h2>Dodaj linię</h2><p>Linia trafi na koniec listy. Liczba ze strzałką: tyle tej mąki zrobisz z tego, co masz w spiżarni. Szare wymagają maszyny albo uprawy, której jeszcze nie masz.</p></div><button class="btn sm" data-act="close">Zamknij</button></div>`;
   CATS.slice(1).forEach((c,ci)=>{const fl=FLOURS.filter(f=>ITEMS[f].cat===ci+1&&!S.lines.includes(f));if(!fl.length)return;
-    h+=`<div class="grp">${esc(c)}</div><div class="lgrid">${fl.map(f=>{const pr=chainProblem(f),md=!!S.made[f];return `<button class="lpick ${pr?'dim':''} ${md?'made':'new'}" data-act="ladd" data-f="${f}" title="${esc(pr||ITEMS[f].src)}">${slot(f,{count:inv(f)})}<span><b>${esc(ITEMS[f].n)}</b><small>${pr?esc(pr):md?`${STAR}w Księdze`:'jeszcze nie robiona'}${S.lineHide.includes(f)?' · usunięta':''}</small></span>${potChip(f)}</button>`}).join('')}</div>`});
+    h+=`<div class="grp">${esc(c)}</div><div class="lgrid">${fl.map(f=>{const pr=chainProblem(f),md=!!S.made[f];return `<button class="lpick ${pr?'dim':''} ${md?'made':'new'}" data-act="ladd" data-f="${f}" title="${esc(pr||ITEMS[f].src)}">${slot(f,{count:inv(f)})}<span><b>${esc(ITEMS[f].n)}</b><small>${pr?esc(pr):md?'robiona':'jeszcze nie robiona'}${S.lineHide.includes(f)?' · usunięta':''}</small></span>${potChip(f)}</button>`}).join('')}</div>`});
   $('#panel').innerHTML=h;}
 const ioPlain=obj=>Object.entries(obj).map(([k,q])=>`${q}× ${ITEMS[k].n}`).join(' + ');
 
