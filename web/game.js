@@ -239,32 +239,41 @@ function putH(h,key,id,q){const it=h.items[key]||(h.items[key]={});it[id]=(it[id
 function takeH(h,key,id,q){const it=h.items[key];if(!it||!it[id])return 0;const n=Math.min(q,it[id]);it[id]-=n;if(!it[id])delete it[id];if(!Object.keys(it).length)delete h.items[key];dirty=true;return n}
 // receptura z tego, co leży na wejściu (przypięta, jeśli gracz ją wybrał)
 const pickR=(c,it)=>(RBY[c.m]||[]).filter(r=>c.pin==null||r.id===c.pin).find(r=>Object.entries(r.in).every(([i,q])=>(it[i]||0)>=q));
+// niepełna partia: receptura z jednym wejściem, a na kratce leży go mniej, niż potrzeba na całą partię
+const inQ=r=>Object.values(r.in)[0];
+// czas zadania: niepełna partia trwa proporcjonalnie krócej (najmniej ćwierć)
+const jobT=j=>{const r=RECIPES[j.r];return j.p?r.t*Math.max(.25,j.p/inQ(r)):r.t};
+const pickPart=(c,it)=>(RBY[c.m]||[]).filter(r=>c.pin==null||r.id===c.pin).find(r=>{const e=Object.entries(r.in);return e.length===1&&e[0][1]>1&&(it[e[0][0]]||0)>0});
 function feedable(h,key){const c=h.cells[key],[x,y]=hxy(key),[ix,iy]=inXY(c,x,y);if(!hin(h,ix,iy)||h.cells[hk(ix,iy)])return {r:null,n:0};
-  const it=h.items[hk(ix,iy)]||{},r=pickR(c,it);return r?{r,n:Math.min(...Object.entries(r.in).map(([i,q])=>Math.floor((it[i]||0)/q)))}:{r:null,n:0}}
+  const it=h.items[hk(ix,iy)]||{},r=pickR(c,it);if(r)return {r,n:Math.min(...Object.entries(r.in).map(([i,q])=>Math.floor((it[i]||0)/q)))};
+  const p=pickPart(c,it);return p?{r:null,n:0,part:{r:p,have:it[Object.keys(p.in)[0]],need:inQ(p)}}:{r:null,n:0}}
 // włożenie do maszyny partii z kratki wejścia (najwyżej tyle, ile zmieści jej kolejka)
-function feedM(h,key,want,quiet){const c=h.cells[key],{r,n}=feedable(h,key),room=qMax()-mLoadC(c);
+function feedM(h,key,want,quiet){const c=h.cells[key],{r,n,part}=feedable(h,key),room=qMax()-mLoadC(c);
+  // ręcznie (nie w trybie ciągłym) resztka idzie jako niepełna partia: mniej produktu, krótszy czas
+  if((!r||!n)&&part&&!quiet&&room>0){const pr=part.r,i=Object.keys(pr.in)[0],[x,y]=hxy(key);takeH(h,hk(...inXY(c,x,y)),i,part.have);
+    c.q.push({r:pr.id,n:1,p:part.have});c.last=pr.id;dirty=true;toast(`Niepełna partia: ${part.have} z ${part.need} szt.`);return 1}
   if(!r||!n){if(!quiet)toast('Przed maszyną nie leży nic, co ona przerabia (albo za mało na jedną partię).');return 0}
   if(room<=0){if(!quiet)toast('Maszyna ma pełną kolejkę. Większe zasobniki kupisz w Sklepie.');return 0}
   const k=Math.min(n,room,want==='max'?n:+want),[x,y]=hxy(key),ik=hk(...inXY(c,x,y));
   Object.entries(r.in).forEach(([i,q])=>takeH(h,ik,i,q*k));
-  const last=c.q[c.q.length-1];if(last&&last.r===r.id)last.n+=k;else c.q.push({r:r.id,n:k});c.last=r.id;dirty=true;return k}
+  const last=c.q[c.q.length-1];if(last&&last.r===r.id&&!last.p)last.n+=k;else c.q.push({r:r.id,n:k});c.last=r.id;dirty=true;return k}
 // gotowa partia: produkt i uboczny na kratkę wyjścia; nie da się, gdy wyjście jest poza halą albo stoi tam maszyna
-function jobOut(h,c,x,y,r){const [ox,oy]=outXY(c,x,y),ok=hk(ox,oy);if(!hin(h,ox,oy)||h.cells[ok])return false;
-  Object.entries(r.out).forEach(([o,q])=>{putH(h,ok,o,q);
+function jobOut(h,c,x,y,r,p){const [ox,oy]=outXY(c,x,y),ok=hk(ox,oy);if(!hin(h,ox,oy)||h.cells[ok])return false;const f=p?p/inQ(r):1;
+  Object.entries(r.out).forEach(([o,q])=>{if(p){q=ITEMS[o].kind==='by'?(Math.random()<f?q:0):Math.max(1,Math.round(q*f));if(!q)return}putH(h,ok,o,q);
     if(ITEMS[o].kind==='prod'){S.mp[o]=(S.mp[o]||0)+q}
     if(ITEMS[o].kind==='flour'){const first=!S.made[o];S.made[o]=(S.made[o]||0)+q;gainXP(first?25:3*q);if(first){toast(`Nowa mąka w księdze: ${ITEMS[o].n}`,'gold');snd('level')}}});
   S.st.crafted++;return true}
 function hallStep(d){S.halls.forEach(h=>{for(const key in h.cells){const c=h.cells[key],[x,y]=hxy(key),sp=mSpeed(c.lvl),sl=mSlots(c.lvl);
   if((c.auto&&c.lvl>=MLV_AUTO)||millerOf(h,key)) feedM(h,key,'max',true);
-  while(c.run.length<sl&&c.q.length){const q=c.q[0];c.run.push({r:q.r,prog:0});if(!--q.n)c.q.shift();dirty=true}
+  while(c.run.length<sl&&c.q.length){const q=c.q[0];c.run.push({r:q.r,prog:0,p:q.p});if(!--q.n)c.q.shift();dirty=true}
   c.block=false;
   for(let i=0;i<c.run.length;i++){let left=d*sp,guard=0;
-    while(left>0&&guard++<500){const j=c.run[i],r=RECIPES[j.r],rem=r.t-j.prog;
+    while(left>0&&guard++<500){const j=c.run[i],r=RECIPES[j.r],T=j.p?r.t*Math.max(.25,j.p/inQ(r)):r.t,rem=T-j.prog;
       if(left<rem){j.prog+=left;break}
-      j.prog=r.t;left-=rem;
-      if(!jobOut(h,c,x,y,r)){c.block=true;break}
+      j.prog=T;left-=rem;
+      if(!jobOut(h,c,x,y,r,j.p)){c.block=true;break}
       dirty=true;
-      if(c.q.length){const q=c.q[0];c.run[i]={r:q.r,prog:0};if(!--q.n)c.q.shift()}
+      if(c.q.length){const q=c.q[0];c.run[i]={r:q.r,prog:0,p:q.p};if(!--q.n)c.q.shift()}
       else {c.run.splice(i,1);i--;break}}}}})}
 // młynarz przydzielony do maszyny: dokłada jej towar ze spiżarni i odnosi do spiżarni to, co z niej wyszło
 // (chyba że za maszyną stoi następna, wtedy wyjście jest jej wejściem); maszyna z młynarzem dobiera partie sama
@@ -287,10 +296,10 @@ function moveM(h,from,to){if(from===to)return false;const c=h.cells[from];if(!c)
   delete h.cells[from];h.cells[to]=c;S.millers.forEach(ml=>{if(ml.at&&S.halls[ml.at.h]===h&&ml.at.key===from)ml.at.key=to});dirty=true;return true}
 // zwrot wkładu z maszyny: na kratkę wejścia, a gdy jej nie ma, do spiżarni
 function refundM(h,key,c,list){const [x,y]=hxy(key),[ix,iy]=inXY(c,x,y),ik=hk(ix,iy),back=hin(h,ix,iy)&&!h.cells[ik];
-  list.forEach(([r,n])=>Object.entries(RECIPES[r].in).forEach(([i,q])=>{if(back)putH(h,ik,i,q*n);else add(i,q*n)}))}
-function stashM(h,key){const c=h.cells[key];if(!c)return;refundM(h,key,c,[...c.q.map(q=>[q.r,q.n]),...c.run.map(j=>[j.r,1])]);delete h.cells[key];S.mag.push({m:c.m,lvl:c.lvl||1});
+  list.forEach(([r,n,p])=>Object.entries(RECIPES[r].in).forEach(([i,q])=>{const k=p||q*n;if(back)putH(h,ik,i,k);else add(i,k)}))}
+function stashM(h,key){const c=h.cells[key];if(!c)return;refundM(h,key,c,[...c.q.map(q=>[q.r,q.n,q.p]),...c.run.map(j=>[j.r,1,j.p])]);delete h.cells[key];S.mag.push({m:c.m,lvl:c.lvl||1});
   S.millers.forEach(ml=>{if(ml.at&&S.halls[ml.at.h]===h&&ml.at.key===key)ml.at=null});dirty=true}
-function unqueueM(h,key){const c=h.cells[key];if(!c||!c.q.length)return;refundM(h,key,c,c.q.map(q=>[q.r,q.n]));c.q=[];dirty=true}
+function unqueueM(h,key){const c=h.cells[key];if(!c||!c.q.length)return;refundM(h,key,c,c.q.map(q=>[q.r,q.n,q.p]));c.q=[];dirty=true}
 function collectH(h,key){const it=h.items[key];if(!it)return 0;let n=0;Object.keys(it).forEach(i=>{const q=takeH(h,key,i,it[i]);if(q){add(i,q);n+=q}});return n}
 // zaznaczona maszyna albo kratka: cały połączony łańcuch maszyn z ich wejściami i wyjściami
 function chainSet(h,key){const set=new Set();if(!key)return set;const mach=Object.keys(h.cells);
@@ -703,8 +712,8 @@ function progress(){
   document.querySelectorAll('[data-pp]').forEach(el=>{const p=S.plots[+el.dataset.pp];if(p&&p.crop)el.style.width=Math.min(100,p.prog/p.need*100)+'%'});
   document.querySelectorAll('[data-pl]').forEach(el=>{const p=S.plots[+el.dataset.pl];if(!p||!p.crop)return;const r=plotRate(p);el.textContent=r>0?fmtT((p.need-p.prog)/r):'stoi (zima)'});
   const hjob=el=>{const [hi,key]=el.split(':'),c=S.halls[+hi]&&S.halls[+hi].cells[key];return c&&c.run[0]?[c,c.run[0]]:null};
-  document.querySelectorAll('[data-hj]').forEach(el=>{const x=hjob(el.dataset.hj);if(x)el.style.width=Math.min(100,x[1].prog/RECIPES[x[1].r].t*100)+'%'});
-  document.querySelectorAll('[data-ht]').forEach(el=>{const x=hjob(el.dataset.ht);if(x)el.textContent=fmtT((RECIPES[x[1].r].t-x[1].prog)/mSpeed(x[0].lvl))});
+  document.querySelectorAll('[data-hj]').forEach(el=>{const x=hjob(el.dataset.hj);if(x)el.style.width=Math.min(100,x[1].prog/jobT(x[1])*100)+'%'});
+  document.querySelectorAll('[data-ht]').forEach(el=>{const x=hjob(el.dataset.ht);if(x)el.textContent=fmtT((jobT(x[1])-x[1].prog)/mSpeed(x[0].lvl))});
   document.querySelectorAll('[data-meta]').forEach(el=>{el.textContent=fmtT(mEta(el.dataset.meta))});
   document.querySelectorAll('[data-ot]').forEach(el=>{const o=S.orders[+el.dataset.ot];if(o)el.textContent=fmtT(o.exp-S.t)});
   document.querySelectorAll('[data-no]').forEach(el=>{el.textContent=S.nextOrd!=null?fmtT(S.nextOrd-S.t):'chwilę'});
@@ -785,16 +794,16 @@ function pile(id,q){const n=ITEMS[id].kind==='raw'?(q<10?1:q<100?3:q<1000?5:7):1
   return `<span class="pile p${n}">${Array.from({length:n},()=>`<img src="${iSrc(id)}" alt="" draggable="false">`).join('')}</span>`}
 const stackHtml=(key,id,q,half)=>`<span class="hs ${half?'half':''}" draggable="true" data-hdrag="c:${key}:${id}" data-k="${key}" data-id="${id}" title="${esc(ITEMS[id].n)}: ${q}. Przeciągnij albo kliknij, żeby przenieść">${pile(id,q)}<b class="hq">${fmtQ(q)}</b></span>`;
 function machHtml(h,key,c){const fd=feedable(h,key),q=c.q.reduce((a,b)=>a+b.n,0),sl=mSlots(c.lvl),work=c.run.length>0,ml=millerOf(h,key),auto=(c.auto&&c.lvl>=MLV_AUTO)||!!ml;
-  const [x,y]=hxy(key),ik=hk(...inXY(c,x,y)),st=c.block?'block':work?'work':fd.n?'ready':sumQ(h.items[ik])?'nope':'idle';
-  const j=c.run[0],t=j?RECIPES[j.r].t:1;
+  const [x,y]=hxy(key),ik=hk(...inXY(c,x,y)),st=c.block?'block':work?'work':fd.n?'ready':fd.part?'part':sumQ(h.items[ik])?'nope':'idle';
+  const j=c.run[0],t=j?(j.p?RECIPES[j.r].t*Math.max(.25,j.p/inQ(RECIPES[j.r])):RECIPES[j.r].t):1;
   return {st,html:`<div class="hm" draggable="true" data-hdrag="m:${key}" title="${esc(mTier(c.m,c.lvl))}${j?': '+esc(RECIPES[j.r].verb):''}">
     <span class="thr" style="--d:${c.dir*90}deg"><span class="tis">${Array.from({length:sl},(_,i)=>`<i class="${c.run[i]?'on':''}"></i>`).join('')}</span><i class="to"></i></span>
     <span class="mplate"><img src="${mSrc(c.m,work&&!c.block)}" alt="" draggable="false"></span>
     ${q?`<em class="bl q" title="Partie czekające w maszynie">${q}</em>`:auto?`<em class="bl a" title="${ml?'Młynarz dokłada towar i maszyna dobiera partie sama':'Tryb ciągły: maszyna sama dobiera partie z wejścia'}">∞</em>`:''}
-    ${c.block?'<em class="br r" title="Wyjście jest poza halą albo stoi na nim maszyna">!</em>':st==='nope'?'<em class="br y" title="Przed maszyną leży coś, czego ona nie przerobi (albo za mało na partię)">?</em>':''}
+    ${c.block?'<em class="br r" title="Wyjście jest poza halą albo stoi na nim maszyna">!</em>':st==='nope'?'<em class="br y" title="Przed maszyną leży coś, czego ona nie przerobi">?</em>':st==='part'?`<em class="br y" title="Za mało na pełną partię (${fd.part.have} z ${fd.part.need}). +1 przerobi to jako niepełną partię">${fd.part.have}</em>`:''}
     <b class="mn">${esc(M[c.m].n)}${c.lvl>1?` <small>${c.lvl}</small>`:''}</b>
-    ${work&&!c.block?`<span class="mpr"><span class="mbar"><i data-hj="${S.hall}:${key}" style="width:${Math.min(100,j.prog/t*100)}%"></i></span><b class="num" data-ht="${S.hall}:${key}">${fmtT((t-j.prog)/mSpeed(c.lvl))}</b></span>`:`<span class="ms">${c.block?'wyjście zajęte':st==='nope'?'nie przerobi':st==='ready'?'gotowa':ml?'młynarz':'czeka'}</span>`}
-    ${auto?'':`<span class="hbtn"><button data-act="hfeed" data-k="${key}" data-q="1" ${fd.n?'':'disabled'}>+1</button><button data-act="hfeed" data-k="${key}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button data-act="hfeed" data-k="${key}" data-q="max" ${fd.n?'':'disabled'} title="Włóż wszystko, co leży przed maszyną (${fd.n} ${plural(fd.n,'partia','partie','partii')})">max</button></span>`}
+    ${work&&!c.block?`<span class="mpr"><span class="mbar"><i data-hj="${S.hall}:${key}" style="width:${Math.min(100,j.prog/t*100)}%"></i></span><b class="num" data-ht="${S.hall}:${key}">${fmtT((t-j.prog)/mSpeed(c.lvl))}</b></span>`:`<span class="ms">${c.block?'wyjście zajęte':st==='nope'?'nie przerobi':st==='part'?`za mało: ${fd.part.have}/${fd.part.need}`:st==='ready'?'gotowa':ml?'młynarz':'czeka'}</span>`}
+    ${auto?'':`<span class="hbtn"><button data-act="hfeed" data-k="${key}" data-q="1" ${fd.n||fd.part?'':'disabled'} ${!fd.n&&fd.part?`title="Niepełna partia: ${fd.part.have} z ${fd.part.need} szt."`:''}>+1</button><button data-act="hfeed" data-k="${key}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button data-act="hfeed" data-k="${key}" data-q="max" ${fd.n?'':'disabled'} title="Włóż wszystko, co leży przed maszyną (${fd.n} ${plural(fd.n,'partia','partie','partii')})">max</button></span>`}
   </div>`}}
 function vPrz(){const h=HL();if(hSel&&!h.cells[hSel]&&!h.items[hSel])hSel=null;const chain=chainSet(h,hSel);
   // role kratek: wejścia i wyjścia maszyn (kierunek do szewronów)
@@ -926,10 +935,10 @@ function drawMach(){const h=HL(),c=h.cells[machKey];if(!c){closeSheet();return}c
   const inIt=h.items[ik]||{},alts=(RBY[c.m]||[]).filter(r=>Object.keys(r.in).every(i=>inIt[i]));
   const j=c.run[0],tn=mTier(c.m,c.lvl);
   panel.innerHTML=`<div class="ph"><div class="mph">${mart(c.m,'',c.run.length&&!c.block)}<div><h2>${esc(tn)}</h2><p>${tn!==M[c.m].n?esc(M[c.m].n)+' · ':''}poziom ${c.lvl} z ${MLVMAX} · ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(c.lvl).toFixed(2)}</p></div></div><span class="phb"><button class="btn sm" data-act="bmach" data-m="${c.m}">${ci('book')} Księga</button><button class="btn sm" data-act="close">Zamknij</button></span></div>
-   <div class="mnow"><div class="mst ${c.block?'bad':c.run.length?'on':''}">${c.block?'Wyjście zajęte: produkt nie ma gdzie wyjść.':j?`Pracuje: <b>${esc(RECIPES[j.r].verb)}</b> · ${c.run.length} z ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowiska','stanowisk','stanowisk')}${q?` · w kolejce ${q}`:''}`:fd.n?`Gotowa: przed nią leży towar na ${fd.n} ${plural(fd.n,'partię','partie','partii')}.`:'Czeka na towar.'}${ml?` · pracuje tu Młynarz ${S.millers.indexOf(ml)+1}`:''}</div>
+   <div class="mnow"><div class="mst ${c.block?'bad':c.run.length?'on':''}">${c.block?'Wyjście zajęte: produkt nie ma gdzie wyjść.':j?`Pracuje: <b>${esc(RECIPES[j.r].verb)}</b> · ${c.run.length} z ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowiska','stanowisk','stanowisk')}${q?` · w kolejce ${q}`:''}`:fd.n?`Gotowa: przed nią leży towar na ${fd.n} ${plural(fd.n,'partię','partie','partii')}.`:fd.part?`Za mało na pełną partię: leży ${fd.part.have} z ${fd.part.need} szt. „+1” przerobi to jako niepełną partię (mniej produktu, krótszy czas).`:'Czeka na towar.'}${ml?` · pracuje tu Młynarz ${S.millers.indexOf(ml)+1}`:''}</div>
    <div class="mgrid2"><div><h3>Wejście</h3>${hin(h,...inXY(c,x,y))?list(ik):'<p class="more">poza halą</p>'}</div><div><h3>Wyjście</h3>${hin(h,...outXY(c,x,y))?list(ok):'<p class="more">poza halą</p>'}</div></div>
    ${alts.length>1||c.pin!=null?`<h3>Co robić z tym, co leży na wejściu</h3><div class="malts"><button class="mrec ${c.pin==null?'on':''}" data-act="hpin" data-k="${machKey}" data-v="${c.pin==null?-1:c.pin}">Sama wybiera</button>${alts.map(r=>`<button class="mrec ${c.pin===r.id?'on':''}" data-act="hpin" data-k="${machKey}" data-v="${r.id}">${esc(r.verb)}: ${Object.keys(r.out).filter(o=>ITEMS[o].kind!=='by').map(o=>esc(ITEMS[o].n)).join(', ')}</button>`).join('')}</div>`:''}
-   <div class="mbtns"><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="1" ${fd.n?'':'disabled'}>+1</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' ('+fd.n+')':''}</button>${q?`<button class="btn" data-act="hunq" data-k="${machKey}">Wyjmij kolejkę na wejście</button>`:''}</div>
+   <div class="mbtns"><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="1" ${fd.n||fd.part?'':'disabled'}>${!fd.n&&fd.part?`+1 niepełna (${fd.part.have}/${fd.part.need})`:'+1'}</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' ('+fd.n+')':''}</button>${q?`<button class="btn" data-act="hunq" data-k="${machKey}">Wyjmij kolejkę na wejście</button>`:''}</div>
    <div class="mbtns"><button class="btn" data-act="hrot" data-k="${machKey}">${ci('rotate')} Obróć</button><button class="btn" data-act="hcollect" data-k="${machKey}" ${sumQ(h.items[ok])?'':'disabled'}>${ci('collect')} Odbierz produkt</button>
      <label class="mtog ${c.lvl<MLV_AUTO?'off':''}"><input type="checkbox" data-act="hauto" data-k="${machKey}" ${c.auto&&c.lvl>=MLV_AUTO?'checked':''} ${c.lvl<MLV_AUTO?'disabled':''}> Tryb ciągły <small>${c.lvl<MLV_AUTO?`od poziomu ${MLV_AUTO}`:'sama dobiera partie'}</small></label>
      <button class="btn warn" data-act="hstash" data-k="${machKey}">${ci('stash')} Do magazynu</button></div></div>
