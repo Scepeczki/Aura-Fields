@@ -1330,6 +1330,74 @@ html.nosb,html.nosb body{scrollbar-width:none}html.nosb::-webkit-scrollbar,html.
 @media (max-width:760px){.tdock{display:none}.hallsec{grid-template-columns:minmax(0,1fr)}}
 .hc.split{border:2px dashed #ecbc4c;background-color:rgba(236,188,76,.22)}
 .tdock .pd-bin{margin:4px 0 0;justify-content:center;flex:none;padding:8px 4px}
+/* ---- Księga: karty upraw i drzewo pokrewieństwa ---- */
+.bsec{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.bsh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bsh h3{font-size:1.05rem}
+.bsh .seg-switch{margin-left:auto}
+.cbook{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:8px}
+.cc{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto;gap:4px 9px;align-items:center;text-align:left;padding:8px 9px;border-radius:12px;border:1px solid var(--furrow);background:var(--card);color:inherit;box-shadow:var(--hi);cursor:pointer;transition:border-color .15s,transform .15s}
+.cc:hover{border-color:var(--grain);transform:translateY(-1px)}
+.cc.made{border-color:rgba(236,188,76,.45)}
+.cc.lk{opacity:.55}
+.cc .cv{grid-row:1/3;width:40px;height:40px;display:block}
+.cc .cv img{width:100%;height:100%;object-fit:contain}
+.cc .ct{display:flex;flex-direction:column;min-width:0;padding-right:44px}
+.cc .ct b{font-size:.86rem;line-height:1.15}
+.cc .ct i{font-size:.72rem;color:var(--husk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gen{font:700 .68rem/1 var(--f-mono);letter-spacing:.02em}
+.gen sup{font-size:.6em}
+.cc .gen{position:absolute;top:7px;right:8px;padding:2px 5px;border-radius:6px;background:rgba(0,0,0,.35)}
+.cc .cp{display:flex;gap:3px;flex-wrap:wrap}
+.cc .cp i{width:20px;height:20px;display:block;filter:grayscale(1) brightness(.55);opacity:.7}
+.cc .cp i.on{filter:none;opacity:1}
+.cc .cp svg{width:100%;height:100%}
+.cc .clk{position:absolute;right:8px;bottom:7px;font-size:.68rem;color:var(--plum)}
+.tree{overflow-x:auto;border-radius:14px;border:1px solid var(--furrow);background:rgba(16,12,8,.72);scrollbar-width:thin}
+.tree svg{display:block;width:100%;min-width:860px;height:auto;font-family:var(--f-body)}
+.tband{fill:rgba(255,255,255,.025)}.tband.b1{fill:rgba(255,255,255,.045)}
+.tbl{font:700 11px var(--f-body);letter-spacing:.05em;fill:var(--husk);text-anchor:middle}
+.tlbl{font:italic 700 13px var(--f-body);fill:var(--chaff);text-anchor:middle}
+.te{fill:none;stroke:#8f846f;stroke-width:1.6}
+.te.dash{stroke-dasharray:6 5}
+.te.far{stroke-opacity:.45;stroke-dasharray:2 5}
+.tx{fill:var(--loam2,#2a2016);stroke:var(--chaff);stroke-width:1.8}
+.tn text{text-anchor:middle;fill:var(--chaff)}
+.tn .t1{font-size:12.5px;font-weight:700}
+.tn .t2{font-size:10.5px;fill:var(--husk)}
+.tn.wild rect,.tn.root rect{fill:rgba(255,255,255,.05);stroke:#8f846f;stroke-width:1.2}
+.tn.wild .t1,.tn.out .t1,.tn.ext .t1{font-style:italic}
+.tn.out rect{fill:rgba(255,255,255,.03);stroke:#6a6050;stroke-dasharray:4 3}
+.tn.out text{opacity:.7}
+.tn.ext rect{fill:none;stroke:#6a6050;stroke-dasharray:1.5 3}
+.tn.ext text{opacity:.6}
+.tn.crop rect{fill:#2b2117;stroke:var(--grain);stroke-width:1.6}
+.tn.crop{cursor:pointer}
+.tn.crop:hover rect{fill:#3a2c1a;stroke:var(--grain2);stroke-width:2.2}
+.tn.crop.made rect{fill:#3a2c14}
+.tn.crop.lk rect{stroke:#8a7444;fill:#1f1912}
+.tn.crop.lk text{opacity:.6}
+.gb rect{fill:#120d08;stroke:rgba(255,255,255,.18)}
+.gb text{font:700 10px var(--f-mono);text-anchor:end}
+.tleg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.76rem;color:var(--husk);margin-top:8px;align-items:center}
+.tleg span{display:inline-flex;align-items:center;gap:6px}
+.lg{display:inline-block;width:22px;height:13px;border-radius:4px;border:1.5px solid #8f846f;background:rgba(255,255,255,.05)}
+.lg.crop{border-color:var(--grain);background:#2b2117}.lg.out{border-style:dashed;border-color:#6a6050}.lg.ext{border-style:dotted;border-color:#6a6050;background:none}
+.lg.x{width:12px;height:12px;border-radius:50%;border-color:var(--chaff)}
+.lg.ln{height:0;border:0;border-top:2px solid #8f846f;border-radius:0;background:none}.lg.ln.dash{border-top-style:dashed}
+.tleg .gens b{font:700 .8rem var(--f-mono)}
+.cdet{display:grid;grid-template-columns:84px minmax(0,1fr);gap:14px;align-items:start}
+.cdet .cv img{width:84px;height:84px;object-fit:contain}
+.cdesc{margin:0 0 10px;font-size:.9rem;line-height:1.45}
+.cfacts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0 0 12px;font-size:.84rem}
+.cfacts dt{color:var(--husk)}.cfacts dd{margin:0}
+.cph{margin:18px 0 4px;font-size:1rem}
+.ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+.ptile{display:flex;gap:9px;align-items:center;padding:7px 9px;border-radius:10px;border:1px solid var(--furrow);background:rgba(0,0,0,.18)}
+.ptile svg{width:34px;height:34px;flex:none;filter:grayscale(1) brightness(.55)}
+.ptile.on svg{filter:none}
+.ptile span{display:flex;flex-direction:column;min-width:0}
+.ptile b{font-size:.84rem}.ptile small{font-size:.72rem;color:var(--husk)}
 </style>
 </head>
 <body>

@@ -26,10 +26,10 @@ const KIND={zboze:'zboże',kwiat:'roślina zielna',straczek:'strączkowa',bulwa:
 
 // poziom gospodarza, od którego można kupić nasiona
 const LVL={pszenica:1,zyto:1,jeczmien:1,owies:1,ziemniak:1,groch:1,burak:1,gryka:1,
- pszenzyto:2,kukurydza:2,proso:2,len:2,slonecznik:2,fasola:2,bob:2,kalafior:2,dynia:2,
+ pszenzyto:2,zbita:3,kukurydza:2,proso:2,len:2,slonecznik:2,fasola:2,bob:2,kalafior:2,dynia:2,
  orkisz:3,soczewica:3,lubin:3,jablon:3,roza:3,aronia:3,
- durum:4,soja:4,owies_cert:4,ciecierzyca:4,rokitnik:4,leszczyna:4,konopie:4,czarnuszka:4,
- plaskurka:5,samopsza:5,khorasan:5,ryz:5,amarantus:5,quinoa:5,winorosl:5,wiesiolek:5,
+ durum:4,polska:4,soja:4,owies_cert:4,ciecierzyca:4,rokitnik:4,leszczyna:4,konopie:4,czarnuszka:4,
+ plaskurka:5,samopsza:5,khorasan:5,perska:5,indyjska:5,tritordeum:6,ryz:5,amarantus:5,quinoa:5,winorosl:5,wiesiolek:5,
  dab:6,orzech_wl:6,kasztan:6,sorgo:6,ryz_kl:6,taro:6,
  teff:7,ragi:7,bajra:7,mung:7,urad:7,arachid:7,sezam:7,batat:7,
  fonio:8,dziki_ryz:8,maniok:8,maranta:8,jam:8,banan:8,
@@ -39,17 +39,23 @@ const LVL={pszenica:1,zyto:1,jeczmien:1,owies:1,ziemniak:1,groch:1,burak:1,gryka
 // [id, nazwa, łacina, rodzaj, środowisko, czas wzrostu s, odrastanie s (0 = jednoroczna), plon, cena nasion, produkt, nazwa produktu, kolor]
 const CROPS_RAW=[
 'G:Zboża glutenowe',
-['pszenica','Pszenica zwyczajna','Triticum aestivum','zboze','pole',30,0,4,10,'k_psz','Kłosy pszenicy','#d8b04f'],
-['durum','Pszenica twarda','Triticum durum','zboze','pole',34,0,4,12,'k_dur','Kłosy pszenicy twardej','#e0b53a'],
-['orkisz','Orkisz','Triticum spelta','zboze','pole',36,0,4,14,'k_ork','Kłosy orkiszu','#c99a4a'],
-['plaskurka','Płaskurka','Triticum dicoccum','zboze','pole',38,0,3,16,'k_pla','Kłosy płaskurki','#b98a45'],
+// w kolejności drzewa pokrewieństwa: pszenice od samopszy po heksaploidy, potem żyto, jęczmień i ich mieszańce z pszenicą
 ['samopsza','Samopsza','Triticum monococcum','zboze','pole',40,0,3,18,'k_sam','Kłosy samopszy','#c7a25e'],
-['khorasan','Pszenica Khorasan','Triticum turgidum','zboze','pole',40,0,4,20,'k_kho','Kłosy Khorasan','#d9a845'],
+['plaskurka','Płaskurka','Triticum dicoccum','zboze','pole',38,0,3,16,'k_pla','Kłosy płaskurki','#b98a45'],
+['durum','Pszenica twarda','Triticum durum','zboze','pole',34,0,4,12,'k_dur','Kłosy pszenicy twardej','#e0b53a'],
+['polska','Pszenica polska','Triticum polonicum','zboze','pole',38,0,4,16,'k_pol','Kłosy pszenicy polskiej','#d4b25c'],
+['khorasan','Pszenica Khorasan (Kamut)','Triticum turanicum','zboze','pole',40,0,4,20,'k_kho','Kłosy Khorasan','#d9a845'],
+['perska','Pszenica perska','Triticum carthlicum','zboze','pole',38,0,4,18,'k_per','Kłosy pszenicy perskiej','#b8904a'],
+['pszenica','Pszenica zwyczajna','Triticum aestivum','zboze','pole',30,0,4,10,'k_psz','Kłosy pszenicy','#d8b04f'],
+['orkisz','Orkisz','Triticum spelta','zboze','pole',36,0,4,14,'k_ork','Kłosy orkiszu','#c99a4a'],
+['zbita','Pszenica zbita','Triticum compactum','zboze','pole',32,0,4,12,'k_zbi','Kłosy pszenicy zbitej','#dcbc68'],
+['indyjska','Pszenica indyjska','Triticum sphaerococcum','zboze','pole',36,0,4,18,'k_ind','Kłosy pszenicy indyjskiej','#d2ac58'],
 ['zyto','Żyto zwyczajne','Secale cereale','zboze','pole',30,0,4,10,'k_zyt','Kłosy żyta','#a88a5c'],
 ['pszenzyto','Pszenżyto','×Triticosecale','zboze','pole',32,0,4,12,'k_pzy','Kłosy pszenżyta','#bf9c55'],
 ['jeczmien','Jęczmień zwyczajny','Hordeum vulgare','zboze','pole',28,0,4,10,'k_jec','Kłosy jęczmienia','#d4bb6c'],
-['owies','Owies zwyczajny','Avena sativa','zboze','pole',28,0,4,10,'k_owi','Wiechy owsa','#cfc08a'],
+['tritordeum','Tritordeum','×Tritordeum martinii','zboze','pole',36,0,4,18,'k_trd','Kłosy tritordeum','#cfb070'],
 'G:Zboża i pseudozboża bezglutenowe',
+['owies','Owies zwyczajny','Avena sativa','zboze','pole',28,0,4,10,'k_owi','Wiechy owsa','#cfc08a'],
 ['owies_cert','Owies certyfikowany','Avena sativa, uprawa bezglutenowa','zboze','pole',32,0,3,18,'k_owc','Wiechy owsa certyfikowanego','#dccf98'],
 ['ryz','Ryż siewny','Oryza sativa','zboze','mokre',45,0,4,16,'k_ryz','Wiechy ryżu','#d6c27a'],
 ['ryz_kl','Ryż kleisty','Oryza sativa var. glutinosa','zboze','mokre',48,0,3,22,'k_rkl','Wiechy ryżu kleistego','#e3d6a0'],
@@ -126,18 +132,40 @@ item('wapno','Wapno spożywcze','#e8e8e0','supply');
 item('otreby','Otręby','#b08a58','by'); item('olej','Olej tłoczony','#d8c040','by');
 item('sok','Sok owocowy','#c84a3a','by'); item('nas_kar','Nasiona karobu','#4a2a18','by');
 
+// do Księgi: genom (litery jak na drzewie pokrewieństwa), białko glutenowe i krótka notka
+const CINFO={
+ samopsza:{g:'AA',pro:'gliadyna',d:'Najstarsza uprawna pszenica, udomowiona ok. 10,5 tys. lat temu na terenie dzisiejszej Turcji. Drobne kłosy, ziarno w plewach.'},
+ plaskurka:{g:'AABB',pro:'gliadyna',d:'Prapszenica z Żyznego Półksiężyca, udomowiona ok. 10 tys. lat temu. Ziarno mocno trzyma się plew.'},
+ durum:{g:'AABB',pro:'gliadyna',d:'Twarde, szkliste ziarno. Z grubo mielonej semoliny powstają makarony i kuskus.'},
+ polska:{g:'AABB',pro:'gliadyna',d:'Rzadki gatunek o bardzo długich plewach i wydłużonym ziarnie (mutacja VRT-A2). Mimo nazwy nie pochodzi z Polski.'},
+ khorasan:{g:'AABB',pro:'gliadyna',d:'Starożytna pszenica o dużych ziarnach, sprzedawana pod marką Kamut. Prawdopodobnie krzyżówka pszenicy twardej z polską.'},
+ perska:{g:'AABB',pro:'gliadyna',d:'Pszenica szorstkoziarnista z Gruzji i Zakaukazia. Nie ma genomu D, choć część cech mogła przejąć od pszenicy zwyczajnej.'},
+ pszenica:{g:'AABBDD',pro:'gliadyna',d:'Najważniejsza pszenica świata. Powstała ok. 8–10 tys. lat temu nad Morzem Kaspijskim, gdy dołączył genom D kozieńca Tauscha. Chleb, bułki, ciasta, makarony.'},
+ orkisz:{g:'AABBDD',pro:'gliadyna',d:'Starożytna pszenica w plewach. Europejski orkisz to krzyżówka pszenicy zwyczajnej z płaskurką.'},
+ zbita:{g:'AABBDD',pro:'gliadyna',d:'Krótkie, gęste kłosy (mutacja C). Miękka mąka na ciastka i krakersy.'},
+ indyjska:{g:'AABBDD',pro:'gliadyna',d:'Pszenica okrągłoziarnista z północnych Indii i Pakistanu (mutacja S1). Drobne, kuliste ziarna.'},
+ zyto:{g:'RR',pro:'sekalina',d:'Odporne na chłód i słabe gleby. Zamiast gliadyny ma sekalinę, która przy celiakii szkodzi tak samo.'},
+ pszenzyto:{g:'AABBRR',pro:'gliadyna i sekalina',d:'Mieszaniec pszenicy i żyta: plenność pszenicy, wytrzymałość żyta.'},
+ jeczmien:{g:'HH',pro:'hordeina',d:'Jedno z pierwszych udomowionych zbóż. Jego prolamina to hordeina.'},
+ tritordeum:{g:'AABBHchHch',pro:'gliadyna',d:'Nowe zboże z Hiszpanii: pszenica twarda skrzyżowana z dzikim jęczmieniem chilijskim (Hordeum chilense).'},
+ owies:{d:'Owies sam w sobie nie ma glutenu. Jego białko, awenina, zwykle nie szkodzi przy celiakii.'},
+};
 const CATS=['','Zboża glutenowe','Zboża i pseudozboża bezglutenowe','Rośliny strączkowe','Orzechy i nasiona oleiste','Skrobie, bulwy, korzenie i owoce','Owocowe, warzywne i specjalistyczne'];
 const FL=[
-[1,'m_psz','Mąka pszenna zwyczajna','#f3ead2','z ziarna pszenicy zwyczajnej (Triticum aestivum)'],
-[1,'m_dur','Mąka pszenna twarda (Semolina)','#ecd27a','z ziarna pszenicy twardej (Triticum durum)'],
-[1,'m_ork','Mąka orkiszowa','#e6d3a8','ze starożytnego gatunku pszenicy orkisz (Triticum spelta)'],
-[1,'m_pla','Mąka z płaskurki','#dcc396','ze starożytnej pszenicy płaskurki (Triticum dicoccum)'],
 [1,'m_sam','Mąka z samopszy','#e8cf8a','z najstarszej znanej pszenicy samopszy (Triticum monococcum)'],
-[1,'m_kho','Mąka Kamut (Khorasan)','#e9cd86','z pszenicy starożytnej odmiany Khorasan (Triticum turgidum)'],
+[1,'m_pla','Mąka z płaskurki','#dcc396','ze starożytnej pszenicy płaskurki (Triticum dicoccum)'],
+[1,'m_dur','Mąka pszenna twarda (Semolina)','#ecd27a','z ziarna pszenicy twardej (Triticum durum)'],
+[1,'m_pol','Mąka z pszenicy polskiej','#e4c98a','z wydłużonego ziarna pszenicy polskiej (Triticum polonicum)'],
+[1,'m_kho','Mąka Kamut (Khorasan)','#e9cd86','z pszenicy Khorasan (Triticum turanicum), znanej pod marką Kamut'],
+[1,'m_per','Mąka z pszenicy perskiej','#d8bc8a','z ziarna pszenicy szorstkoziarnistej, perskiej (Triticum carthlicum)'],
+[1,'m_psz','Mąka pszenna zwyczajna','#f3ead2','z ziarna pszenicy zwyczajnej (Triticum aestivum)'],
+[1,'m_ork','Mąka orkiszowa','#e6d3a8','ze starożytnego gatunku pszenicy orkisz (Triticum spelta)'],
+[1,'m_zbi','Mąka z pszenicy zbitej','#f2e8d0','z miękkiego ziarna pszenicy zbitej (Triticum compactum), na ciastka i krakersy'],
+[1,'m_ind','Mąka z pszenicy indyjskiej','#eadaae','z okrągłego ziarna pszenicy indyjskiej (Triticum sphaerococcum)'],
 [1,'m_zyt','Mąka żytnia','#c9b597','z ziarna żyta zwyczajnego (Secale cereale)'],
 [1,'m_pzy','Mąka pszenżytnia','#ddcdaa','z pszenżyta (Triticosecale), krzyżówki pszenicy i żyta'],
 [1,'m_jec','Mąka jęczmienna','#e2d5b2','z ziarna jęczmienia zwyczajnego (Hordeum vulgare)'],
-[1,'m_owi','Mąka owsiana (tradycyjna)','#e6dcc0','z owsa zwyczajnego (Avena sativa) przetwarzanego na liniach z obecnością glutenu'],
+[1,'m_trd','Mąka z tritordeum','#e6cf94','z tritordeum, krzyżówki pszenicy twardej z dzikim jęczmieniem chilijskim (Hordeum chilense)'],
 [2,'m_ryzb','Mąka ryżowa biała','#f7f4ec','z oczyszczonego ziarna ryżu siewnego (Oryza sativa)'],
 [2,'m_ryzbr','Mąka ryżowa brązowa (pełnoziarnista)','#cbb08a','z nieoczyszczonego ziarna ryżu siewnego (Oryza sativa)','Łuska zawsze trafia do łuszczarki. Pełnoziarnista mąka zachowuje otręby i zarodek, bo ryż nie jest polerowany.'],
 [2,'m_mochi','Mąka z ryżu kleistego (Mochiko / Shiratamako)','#fbf8f0','ze specjalnej odmiany ryżu kleistego (Oryza sativa var. glutinosa)'],
@@ -145,6 +173,7 @@ const FL=[
 [2,'m_masa','Mąka Masa Harina','#e9d08a','z kukurydzy (Zea mays) po nikstamalizacji, czyli gotowaniu w wodzie wapiennej'],
 [2,'m_gry','Mąka gryczana','#a89078','z nasion gryki zwyczajnej (Fagopyrum esculentum), z kaszy palonej lub niepalonej'],
 [2,'m_jag','Mąka jaglana','#f0d88a','z nasion prosa zwyczajnego (Panicum miliaceum)'],
+[2,'m_owi','Mąka owsiana','#e6dcc0','z owsa zwyczajnego (Avena sativa)'],
 [2,'m_owc','Mąka owsiana bezglutenowa','#ece2c8','z certyfikowanego, czystego biologicznie owsa zwyczajnego (Avena sativa)'],
 [2,'m_ama','Mąka z amarantusa (szarłatu)','#e3cfa4','z nasion szarłatu (Amaranthus cruentus / caudatus)'],
 [2,'m_qui','Mąka z komosy ryżowej (Quinoa)','#e8d7b0','z nasion komosy ryżowej (Chenopodium quinoa)'],
@@ -219,9 +248,14 @@ L('k_sam',[['mlo','Młócenie','p_sam','Samopsza w plewach',1,2],['lus','Odplewi
 L('k_kho',[['mlo','Młócenie','z_kho','Ziarno Khorasan',1,2],['zar','Mielenie','m_kho',null,2,1]]);
 L('k_zyt',[['mlo','Młócenie','z_zyt','Ziarno żyta',1,2]]); R('zar','Mielenie',{z_zyt:2},{m_zyt:1,otreby:1});
 L('k_pzy',[['mlo','Młócenie','z_pzy','Ziarno pszenżyta',1,2],['zar','Mielenie','m_pzy',null,2,1]]);
+L('k_pol',[['mlo','Młócenie','z_pol','Ziarno pszenicy polskiej',1,2],['zar','Mielenie','m_pol',null,2,1]]);
+L('k_per',[['mlo','Młócenie','z_per','Ziarno pszenicy perskiej',1,2],['zar','Mielenie','m_per',null,2,1]]);
+L('k_zbi',[['mlo','Młócenie','z_zbi','Ziarno pszenicy zbitej',1,2],['zar','Mielenie','m_zbi',null,2,1]]);
+L('k_ind',[['mlo','Młócenie','z_ind','Ziarno pszenicy indyjskiej',1,2],['zar','Mielenie','m_ind',null,2,1]]);
+L('k_trd',[['mlo','Młócenie','z_trd','Ziarno tritordeum',1,2],['zar','Mielenie','m_trd',null,2,1]]);
 L('k_jec',[['mlo','Młócenie','p_jec','Jęczmień w plewach',1,2],['lus','Obłuskiwanie','z_jec','Jęczmień obłuskany'],['zar','Mielenie','m_jec',null,2,1]]);
 L('k_owi',[['mlo','Młócenie','p_owi','Owies w plewach',1,2],['lus','Odplewianie','z_owi','Ziarno owsa'],['pra','Stabilizacja termiczna','z_owis','Owies stabilizowany'],['zar','Mielenie','m_owi',null,2,1]]);
-// 2. bezglutenowe
+// 2. bezglutenowe (owies sam nie ma glutenu)
 L('k_owc',[['mlo','Młócenie','p_owc','Owies certyfikowany w plewach',1,2],['lus','Odplewianie','z_owc','Ziarno owsa certyfikowanego'],['pra','Stabilizacja termiczna','z_owcs','Owies certyfikowany stabilizowany'],['mbg','Mielenie na czystej linii','m_owc',null,2,1]]);
 L('k_ryz',[['mlo','Młócenie','ryz_nl','Ryż niełuskany',1,2],['lus','Łuskanie','ryz_br','Ryż brązowy']]);
 it('ryz_bi','Ryż biały','ryz_br'); ITEMS.ryz_bi.col='#f4efe0'; R('lus','Polerowanie',{ryz_br:1},{ryz_bi:1,otreby:1});

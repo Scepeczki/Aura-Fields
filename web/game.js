@@ -146,12 +146,15 @@ const soilCost=p=>Math.round(150*Math.pow(2.1,p.soil));
 const plotCost=()=>Math.round(150*Math.pow(1.38,S.plots.length-6));
 const isReady=p=>p.crop&&p.prog>=p.need;
 const ENVIMG={pole:'pole',mokre:'mokre',szklarnia:'szklarnia'};
+// zastępcze grafiki dla nowych upraw: uprawa -> pokrewna uprawa, przedmiot -> pokrewny przedmiot
+const CART={polska:'durum',perska:'khorasan',zbita:'pszenica',indyjska:'pszenica',tritordeum:'durum'}, IART={};
+[['pol','dur'],['per','kho'],['zbi','psz'],['ind','psz'],['trd','dur']].forEach(([a,b])=>['k_','z_','m_'].forEach(p=>IART[p+a]=p+b));
 function plotImgSrc(p){
   if(!p.crop) return 'plots/'+ENVIMG[p.env]+(seasonN()===3?'-zima':'')+'.webp';
   const c=CR[p.crop],st=isReady(p)?3:(c.r&&p.h>0)?4:p.prog/p.need<0.3?1:2;
-  return 'plots/'+c.id+'-'+st+(seasonN()===3&&p.env!=='szklarnia'?'-zima':'')+'.webp';}
+  return 'plots/'+(CART[c.id]||c.id)+'-'+st+(seasonN()===3&&p.env!=='szklarnia'?'-zima':'')+'.webp';}
 const plotImg=p=>`<img class="pimg" src="${plotImgSrc(p)}" alt="" decoding="async" draggable="false">`;
-const cropThumb=id=>`<img class="pimg sasz" src="items/sasz_${id}.webp" alt="" loading="lazy" decoding="async" draggable="false">`;
+const cropThumb=id=>`<img class="pimg sasz" src="items/sasz_${CART[id]||id}.webp" alt="" loading="lazy" decoding="async" draggable="false">`;
 function stage(p){if(isReady(p))return 3;if(p.h>0)return 2;const f=p.prog/p.need;return f<.15?0:f<.5?1:2}
 
 function plant(i,cid,quiet){const p=S.plots[i],c=CR[cid]; if(!p||!c||p.crop||!compatible(c,p.env)||!unlocked(c)||frozen(p)) return false;
@@ -401,7 +404,7 @@ const ACH=[
  ['f10','Dziesięć worków','Zbierz 10 różnych mąk w Księdze.',()=>nMade()>=10,80],
  ['f25','Ćwierć księgi','Zbierz 25 różnych mąk.',()=>nMade()>=25,300],
  ['f50','Młynarz z dyplomem','Zbierz 50 różnych mąk.',()=>nMade()>=50,1000],
- ['f70','Wszystkie mąki świata','Zapełnij całą Księgę: 70 mąk.',()=>nMade()>=70,5000],
+ ['f70','Wszystkie mąki świata',`Zapełnij całą Księgę: ${FLOURS.length} mąk.`,()=>nMade()>=FLOURS.length,5000],
  ...CATS.slice(1).map((c,i)=>['cat'+(i+1),'Komplet: '+c.toLowerCase(),'Wszystkie mąki z działu „'+c+'”.',()=>catDone(i+1),150+i*100]),
  ['c1k','Pierwszy tysiąc','Zarób łącznie 1 000 zł.',()=>S.earned>=1000,30],
  ['c10k','Bogaty gospodarz','Zarób łącznie 10 000 zł.',()=>S.earned>=10000,200],
@@ -448,7 +451,7 @@ const GOALS=[
  ['Zatrudnij młynarza i przydziel go do maszyny (prawy przycisk na maszynie).',()=>S.millers.some(m=>m.at),250],
  ['Wyprodukuj 25 różnych mąk.',()=>nMade()>=25,500],
  ['Wyprodukuj 50 różnych mąk.',()=>nMade()>=50,1500],
- ['Zapełnij całą Księgę mąk.',()=>nMade()>=70,5000],
+ ['Zapełnij całą Księgę mąk.',()=>nMade()>=FLOURS.length,5000],
 ];
 function checkProgress(){
   ACH.forEach(([id,n,,f,rw])=>{if(!S.ach[id]&&f()){S.ach[id]=Math.round(S.t);earn(rw,'Osiągnięcie: '+n,'gold');snd('level')}});
@@ -528,7 +531,7 @@ function sack(col){return svgw(`<ellipse cx="16" cy="29.5" rx="10" ry="1.8" fill
 const SHAPE_WET=/Mleczko|Masa ryżowa|amoczon|Nixtamal$|Nixtamal wypłukany|odgoryczona/;
 const SHAPE_SLICE=/Plastry|Wiórki|Różyczki|Susz |Miąższ/;
 const imgSvg=src=>`<svg viewBox="0 0 32 32" aria-hidden="true"><image href="${src}" width="32" height="32"/></svg>`;
-const itemSvg=id=>imgSvg('items/'+id+'.webp');
+const itemSvg=id=>imgSvg('items/'+(IART[id]||id)+'.webp');
 function itemSvgOld(id){const it=ITEMS[id],c=it.col;
   if(it.kind==='flour') return sack(c);
   if(it.kind==='raw') return art(CR[it.crop].kind,3,c);
@@ -658,7 +661,7 @@ function render(){
   if(Math.abs(window.scrollY-sy)>2) window.scrollTo(0,sy);
   // przewijane okienka (szuflada spiżarni, Do rozłożenia) zostają tam, gdzie gracz je przewinął
   keep.forEach(([k,t])=>{const el=document.querySelector(`[data-keep="${k}"]`);if(el)el.scrollTop=t});
-  if(sheetMode==='plot') drawSheet(); else if(sheetMode==='seeds') drawSeeds(); else if(sheetMode==='list') drawList(); else if(sheetMode==='mach') drawMach();
+  if(sheetMode==='plot') drawSheet(); else if(sheetMode==='seeds') drawSeeds(); else if(sheetMode==='list') drawList(); else if(sheetMode==='mach') drawMach(); else if(sheetMode==='crop') drawCrop();
   progress();
 }
 function progress(){
@@ -1074,25 +1077,95 @@ function vUlep(){
   return h;
 }
 
+// ---------- KSIĘGA: karty upraw, drzewo pokrewieństwa zbóż glutenowych ----------
+// Księga pokazuje uprawy, a nie procesy. Kliknięcie uprawy otwiera jej kartę ze wszystkim, co z niej powstaje,
+// pogrupowanym według rodzaju (dziś mąki i produkty uboczne, później kolejne rodzaje), więc lista może rosnąć.
+const GCOL={A:'#e8a848',B:'#e5735c',D:'#6f9fe6',G:'#7cbc62',R:'#c48ed6',H:'#4cbcac',Hch:'#4cbcac'};
+const genTok=s=>s.match(/Hch|[A-Z]/g)||[];
+const genHtml=s=>genTok(s).map(t=>`<b style="color:${GCOL[t]}">${t==='Hch'?'H<sup>ch</sup>':t}</b>`).join('');
+const PKIND=[['flour','Mąki'],['by','Produkty uboczne']];
+function cropProducts(c){const seen=new Set(),out=[];(function w(id){if(seen.has(id))return;seen.add(id);const k=ITEMS[id].kind;if(id!==c.out&&(k==='flour'||k==='by'))out.push(id);(FWD[id]||[]).forEach(w)})(c.out);return out}
+const cropCard=c=>{const lk=!unlocked(c),fl=c.flours,mn=fl.filter(f=>S.made[f]).length,gi=CINFO[c.id]||{};
+  return `<button class="cc ${lk?'lk':''} ${mn?'made':''}" data-act="bcrop" data-c="${c.id}" data-click="1" title="${esc(c.n)}: kliknij, żeby zobaczyć, co z niej powstaje"><span class="cv">${cropThumb(c.id)}</span><span class="ct"><b>${esc(c.n)}</b><i>${esc(c.lat)}</i></span>${gi.g?`<span class="gen">${genHtml(gi.g)}</span>`:''}<span class="cp">${fl.map(f=>`<i class="${S.made[f]?'on':''}" title="${esc(ITEMS[f].n)}${S.made[f]?'':' (jeszcze nie)'}">${itemSvg(f)}</i>`).join('')}</span>${lk?`<span class="clk">od poz. ${c.lvl}</span>`:''}</button>`};
+// drzewo: [x, y, rodzaj, tytuł, podpis, genom]; rodzaj crop bierze nazwę i genom z uprawy o tym samym kluczu
+const TREE_N={
+ root:[560,30,'root','Wspólny przodek pszenicowatych','plemię Triticeae'],
+ lT:[170,86,'lbl','Triticum'],lA:[530,86,'lbl','Aegilops (kozieniec)'],lS:[860,86,'lbl','Secale'],lH:[1118,86,'lbl','Hordeum'],
+ boe:[80,140,'wild','T. boeoticum','samopsza dzika','AA'],ura:[235,140,'wild','T. urartu','dawca genomu A','AA'],
+ spe:[420,140,'wild','Ae. speltoides','krewny dawcy B','BB'],tau:[640,140,'wild','Ae. tauschii','dawca genomu D','DD'],
+ zyto:[860,140,'crop'],jeczmien:[1040,140,'crop'],chi:[1195,140,'wild','H. chilense','jęczmień chilijski','HchHch'],
+ samopsza:[80,222,'crop'],
+ x1:[330,292,'x'],dco:[330,336,'wild','T. dicoccoides','płaskurka dzika','AABB'],
+ x2:[560,292,'x'],ara:[560,336,'wild','T. araraticum','dzika, Timofiejewa','AAGG'],
+ plaskurka:[330,412,'crop'],tim:[560,412,'out','T. timopheevii','pszenica Timofiejewa','AAGG'],
+ par:[330,488,'ext','T. parvicoccum †','pierwsza nagoziarnista','AABB'],
+ durum:[200,560,'crop'],
+ tur:[70,640,'out','T. turgidum','pszenica angielska','AABB'],aet:[205,640,'out','T. aethiopicum','pszenica etiopska','AABB'],
+ polska:[340,640,'crop'],khorasan:[475,640,'crop'],perska:[640,640,'crop'],
+ x3:[780,712,'x'],pszenica:[780,755,'crop'],x5:[1060,755,'x'],x6:[1195,755,'x'],
+ x4:[557,800,'x'],orkisz:[557,845,'crop'],zbita:[780,845,'crop'],indyjska:[940,845,'crop'],pszenzyto:[1060,845,'crop'],tritordeum:[1195,845,'crop']};
+// krawędzie: [od, do, styl]; e:Y łamana przez wysokość Y, h pozioma z boku, u w górę, d przerywana (prawdopodobne), f daleka i jaśniejsza
+const TREE_E=[['root','lT'],['root','lA'],['root','lS'],['root','lH'],['lT','boe'],['lT','ura'],['lA','spe'],['lA','tau'],['lS','zyto'],['lH','jeczmien'],['lH','chi'],
+ ['boe','samopsza'],['ura','x1'],['spe','x1'],['x1','dco'],['ura','x2'],['spe','x2'],['x2','ara'],['ara','tim'],
+ ['dco','plaskurka'],['plaskurka','par'],['par','durum'],['durum','tur'],['durum','aet'],['durum','polska'],['durum','khorasan'],
+ ['par','perska','e:524'],['par','x3','e:524'],['tau','x3'],['x3','pszenica'],['pszenica','perska','ud'],
+ ['pszenica','x4'],['plaskurka','x4','e:450'],['x4','orkisz'],['pszenica','zbita'],['pszenica','indyjska'],
+ ['pszenica','x5','h'],['zyto','x5'],['x5','pszenzyto'],['chi','x6'],['durum','x6','e:600f'],['x6','tritordeum']];
+const TNW=128,TNH=46,TSHORT={khorasan:'Khorasan (Kamut)',jeczmien:'Jęczmień',zyto:'Żyto',durum:'Pszenica twarda'};
+const tName=k=>{const n=TREE_N[k];return n[2]==='crop'?(TSHORT[k]||CR[k].n):n[3]};
+const tOff=k=>{const t=TREE_N[k][2];return t==='x'?6:t==='lbl'?8:t==='root'?20:TNH/2};
+// rodzice uprawy na drzewie (przez węzeł krzyżówki): do opisu pochodzenia w karcie uprawy
+function treeParents(k){const p=TREE_E.filter(e=>e[1]===k&&!/u/.test(e[2]||'')).map(e=>e[0]);
+  return p.flatMap(x=>TREE_N[x][2]==='x'?TREE_E.filter(e=>e[1]===x).map(e=>e[0]):[x]).filter(x=>!['lbl','root'].includes(TREE_N[x][2]))}
+function treeHtml(){
+  const P=k=>TREE_N[k];let s='';
+  [[110,160,'2n = 14 · diploidy'],[270,420,'4n = 28 · tetraploidy'],[690,195,'6n = 42 · heksaploidy']].forEach(([y,h,t],i)=>{s+=`<rect class="tband b${i}" x="-34" y="${y}" width="1304" height="${h}"/><text class="tbl" transform="translate(-14,${y+h/2}) rotate(-90)">${t}</text>`});
+  TREE_E.forEach(([a,b,st=''])=>{const A=P(a),B=P(b);let dd;
+    if(st.startsWith('e:')){const y=parseInt(st.slice(2));dd=`M${A[0]} ${A[1]+tOff(a)} V${y} H${B[0]} V${B[1]-tOff(b)}`}
+    else if(st==='h')dd=`M${A[0]+TNW/2} ${A[1]} H${B[0]-tOff(b)}`;
+    else if(st.includes('u')){const y1=A[1]-tOff(a),y2=B[1]+tOff(b),m=(y1+y2)/2;dd=`M${A[0]} ${y1} C${A[0]} ${m} ${B[0]} ${m} ${B[0]} ${y2}`}
+    else{const y1=A[1]+tOff(a),y2=B[1]-tOff(b),m=(y1+y2)/2;dd=`M${A[0]} ${y1} C${A[0]} ${m} ${B[0]} ${m} ${B[0]} ${y2}`}
+    s+=`<path class="te ${st.includes('d')?'dash':''} ${st.endsWith('f')?'far':''}" d="${dd}"/>`});
+  for(const k in TREE_N){const [x,y,t,ti,sub,gn]=TREE_N[k];
+    if(t==='x'){s+=`<circle class="tx" cx="${x}" cy="${y}" r="6"/>`;continue}
+    if(t==='lbl'){s+=`<text class="tlbl" x="${x}" y="${y+4}">${ti}</text>`;continue}
+    if(t==='root'){s+=`<g class="tn root" transform="translate(${x},${y})"><rect x="-120" y="-20" width="240" height="40" rx="20"/><text class="t1" y="-2">${ti}</text><text class="t2" y="13">${sub}</text></g>`;continue}
+    const c=t==='crop'?CR[k]:null,lk=c&&!unlocked(c),mn=c?c.flours.filter(f=>S.made[f]).length:0,G=c?(CINFO[k]||{}).g:gn;
+    const st=c?c.lat.replace(/^Triticum /,'T. ').replace(/^Hordeum /,'H. ').replace(/^Secale /,'S. '):sub,gt=genTok(G||''),gw=gt.reduce((a,b)=>a+(b==='Hch'?14:7),10);
+    s+=`<g class="tn ${t} ${lk?'lk':''} ${mn?'made':''}" transform="translate(${x},${y})" ${c?`data-act="bcrop" data-c="${k}" data-click="1"`:''}><title>${esc(c?c.n+(lk?` (od poziomu ${c.lvl})`:'')+': kliknij, żeby zobaczyć szczegóły':ti+', '+sub+(t==='out'?' · uprawiana, ale nie ma jej w grze':t==='ext'?' · wymarła':' · forma dzika'))}</title><rect x="${-TNW/2}" y="${-TNH/2}" width="${TNW}" height="${TNH}" rx="9"/><text class="t1" y="-3">${esc(tName(k))}</text><text class="t2" y="13">${esc(st)}</text>`;
+    if(G)s+=`<g class="gb" transform="translate(${TNW/2-4},${-TNH/2})"><rect x="${-gw}" y="-8" width="${gw}" height="15" rx="7.5"/><text x="-4" y="3.5">${gt.map(z=>z==='Hch'?`<tspan fill="${GCOL[z]}">H</tspan><tspan fill="${GCOL[z]}" font-size="7" dy="-3">ch</tspan><tspan dy="3"></tspan>`:`<tspan fill="${GCOL[z]}">${z}</tspan>`).join('')}</text></g>`;
+    s+='</g>'}
+  return `<div class="tree"><svg viewBox="-34 0 1304 892" role="img" aria-label="Drzewo pokrewieństwa zbóż glutenowych">${s}</svg></div>
+  <div class="tleg"><span><i class="lg wild"></i>forma dzika</span><span><i class="lg crop"></i>uprawa w grze (kliknij)</span><span><i class="lg out"></i>uprawiana, nie ma jej w grze</span><span><i class="lg ext"></i>wymarła</span><span><i class="lg x"></i>krzyżówka, połączenie genomów</span><span><i class="lg ln"></i>pochodzenie</span><span><i class="lg ln dash"></i>prawdopodobne</span><span class="gens">${['A','B','D','G','R','Hch'].map(z=>`<b style="color:${GCOL[z]}">${z==='Hch'?'H<sup>ch</sup>':z}</b>`).join(' ')} genomy</span></div>`}
+
 function vKsiega(){
-  const made=nMade();
-  let h=`<div class="sec"><div class="prog"><span class="big">${made}<small> / ${FLOURS.length} mąk</small></span><span class="track"><i style="width:${made/FLOURS.length*100}%"></i></span></div>
-  <div class="chips">${CATS.map((c,i)=>`<button class="chip ${S.cat===i?'on':''}" data-act="cat" data-v="${i}">${i?c:'Wszystkie'} <span class="num">${i?FLOURS.filter(f=>ITEMS[f].cat===i&&S.made[f]).length+'/'+FLOURS.filter(f=>ITEMS[f].cat===i).length:''}</span></button>`).join('')}</div></div><div class="book">`;
-  FLOURS.filter(f=>!S.cat||ITEMS[f].cat===S.cat).forEach(f=>{const it=ITEMS[f],n=S.made[f]||0,steps=chainOf(f),alts=(BYM[f]||[]).slice(1);
-    h+=`<article class="fc ${n?'made':''}"><div class="fh">${icon(f)}<div><h3>${esc(it.n)}</h3><p class="src">${esc(it.src)}</p></div><span class="st">${n?`Wyprodukowano<br>${n} szt.`:'Jeszcze nie'}</span></div>
-    <ol class="chain">${steps.map(s=>{
-      if(s.crop){const lk=!unlocked(s.crop);return `<li class="${lk?'lockd':'grow'}"><span><span class="m">Uprawa${lk?` (od poz. ${s.crop.lvl})`:''}</span> ${esc(s.crop.n)} <span class="lat">${esc(s.crop.lat)}</span> · ${ENV[s.crop.env].toLowerCase()} · ${fmtT(s.crop.g)}${s.crop.r?`, potem co ${fmtT(s.crop.r)}`:''} · nasiona ${seedCost(s.crop)} zł</span></li>`}
-      const own=S.m[s.r.m].owned;
-      return `<li class="${own?'':'miss'}"><span><span class="m">${M[s.r.m].n}${own?'':' (brak)'}</span> ${esc(s.r.verb.toLowerCase())}: ${ioTxt(s.r.in)} → ${ioTxt(s.r.out)}</span></li>`}).join('')}</ol>
-    ${alts.map(r=>`<p class="note">Druga ścieżka: ${M[r.m].n}, ${esc(r.verb.toLowerCase())} z ${ioTxt(r.in)}.</p>`).join('')}
-    ${it.note?`<p class="note">${esc(it.note)}</p>`:''}
-    <div class="fcf"><span class="more">W sklepie: ${unitPrice(f)} zł${S.hot===f?' (dziś ×1,4)':''} · masz ${inv(f)}</span></div></article>`;});
-  return h+`</div>`;
+  const made=nMade(),N=FLOURS.length,bv=S.bookView||'grid';
+  let h=`<div class="sec"><div class="prog"><span class="big">${made}<small> / ${N} mąk</small></span><span class="track"><i style="width:${made/N*100}%"></i></span></div>
+  <div class="chips">${CATS.map((c,i)=>`<button class="chip ${S.cat===i?'on':''}" data-act="cat" data-v="${i}">${i?c:'Wszystkie'} <span class="num">${i?FLOURS.filter(f=>ITEMS[f].cat===i&&S.made[f]).length+'/'+FLOURS.filter(f=>ITEMS[f].cat===i).length:''}</span></button>`).join('')}</div></div>`;
+  BOOK_GROUPS.forEach(([gname,list])=>{const cat=CATS.indexOf(gname);if(S.cat&&S.cat!==cat)return;
+    h+=`<section class="bsec"><div class="bsh"><h3>${esc(gname)}</h3><span class="more num">${list.length} ${plural(list.length,'uprawa','uprawy','upraw')}</span>${cat===1?`<div class="seg-switch">${[['grid','Karty'],['tree','Drzewo pokrewieństwa']].map(([v,n])=>`<button data-act="bview" data-v="${v}" class="${bv===v?'on':''}">${n}</button>`).join('')}</div>`:''}</div>
+    ${cat===1&&bv==='tree'?treeHtml():`<div class="cbook">${list.map(cropCard).join('')}</div>`}</section>`});
+  return h;
 }
+// karta uprawy: opis, uprawa, pochodzenie i wszystko, co z niej powstaje
+let bookCrop=null;
+function openCrop(id){bookCrop=id;sheetMode='crop';sheetPlot=-1;drawCrop();$('#sheet').hidden=false;$('#panel').scrollTop=0}
+function drawCrop(){const c=CR[bookCrop];if(!c){closeSheet();return}const panel=$('#panel'),sc=panel.scrollTop,gi=CINFO[c.id]||{},lk=!unlocked(c),pr=cropProducts(c);
+  const par=TREE_N[c.id]?treeParents(c.id):[],pn=k=>TREE_N[k][2]==='crop'?CR[k].n:TREE_N[k][3]+' ('+TREE_N[k][4]+')';
+  const facts=[['Dział',CATS[c.cat]||c.grp],['Gdzie rośnie',ENV[c.env]],['Wzrost',fmtT(c.g)+(c.r?`, potem co ${fmtT(c.r)}`:'')],['Plon',`${c.y}× ${ITEMS[c.out].n}`],['Nasiona',`${seedCost(c)} zł`],['Dostępna',lk?`od poziomu ${c.lvl}`:'już teraz']];
+  if(gi.g)facts.push(['Genom',`<span class="gen">${genHtml(gi.g)}</span>`]);if(gi.pro)facts.push(['Białko glutenowe',gi.pro]);
+  if(par.length)facts.push(['Pochodzenie',par.map(pn).join(' × ')]);
+  let h=`<div class="ph"><div><h2>${esc(c.n)}</h2><p><i>${esc(c.lat)}</i></p></div><button class="btn sm" data-act="close">Zamknij</button></div>
+  <div class="cdet"><span class="cv">${cropThumb(c.id)}</span><div>${gi.d?`<p class="cdesc">${esc(gi.d)}</p>`:''}<dl class="cfacts">${facts.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+  ${lk?'':`<button class="btn pri sm" data-act="sowsel" data-c="${c.id}">Siej: ${seedCost(c)} zł</button>`}</div></div>
+  <h3 class="cph">Co z tej uprawy otrzymasz <span class="more num">${pr.length}</span></h3>`;
+  PKIND.forEach(([k,n])=>{const l=pr.filter(i=>ITEMS[i].kind===k);if(!l.length)return;
+    h+=`<div class="grp">${n}</div><div class="ptiles">${l.map(i=>{const m=S.made[i]||0,fl=k==='flour';return `<div class="ptile ${!fl||m?'on':''}" title="${esc(ITEMS[i].src||ITEMS[i].n)}">${itemSvg(i)}<span><b>${esc(ITEMS[i].n)}</b><small>${fl?(m?`wyprodukowano ${m}`:'jeszcze nie'):`masz ${inv(i)}`} · ${unitPrice(i)} zł</small></span></div>`}).join('')}</div>`});
+  panel.innerHTML=h;panel.scrollTop=sc}
 
 function vKron(){
   const nA=Object.keys(S.ach).length;
-  const st=[['Czas gospodarowania',fmtT(S.t)],['Rok i pora',`${yearN()} · ${SEASONS[seasonN()].n}`],['Zarobione łącznie',fmtZ(S.earned)],['Zebrane plony',S.st.harv+' szt.'],['Partie z maszyn',S.st.crafted],['Renoma',`${S.pop.l} · ${POP_NAMES[S.pop.l-1]}`],['Klienci w sklepie',S.st.cust],['Sprzedane towary',S.st.sold+' szt.'],['Zamówienia',S.st.orders],['Mąki w księdze',`${nMade()} / 70`]];
+  const st=[['Czas gospodarowania',fmtT(S.t)],['Rok i pora',`${yearN()} · ${SEASONS[seasonN()].n}`],['Zarobione łącznie',fmtZ(S.earned)],['Zebrane plony',S.st.harv+' szt.'],['Partie z maszyn',S.st.crafted],['Renoma',`${S.pop.l} · ${POP_NAMES[S.pop.l-1]}`],['Klienci w sklepie',S.st.cust],['Sprzedane towary',S.st.sold+' szt.'],['Zamówienia',S.st.orders],['Mąki w księdze',`${nMade()} / ${FLOURS.length}`]];
   let h=`<div class="sec"><div class="sechead"><h2>Kronika gospodarstwa</h2></div><div class="kpis">${st.map(([a,b])=>`<div class="kpi"><span>${a}</span><b>${b}</b></div>`).join('')}</div></div>
   <div class="sec"><div class="sechead"><h2>Osiągnięcia <span class="more num">${nA}/${ACH.length}</span></h2><p>Każde osiągnięcie wypłaca nagrodę od razu.</p></div><div class="achs">`;
   ACH.forEach(([id,n,d,,rw])=>{const on=!!S.ach[id];h+=`<div class="ach ${on?'':'off'}">${MEDAL(on)}<div class="at"><b>${esc(n)}</b>${esc(d)} · <span class="num">${rw} zł</span></div></div>`});
@@ -1251,6 +1324,8 @@ const ACT={
    setTimeout(()=>{const i=$('#ctxIn');if(i){i.focus();i.select()}},40)},
  wapno:()=>{if(!pay(15,'Wapno spożywcze'))return;add('wapno',5);gainFeed('wapno',5,'Zakup na targu');render()},
  cat:d=>{S.cat=+d.v;render()},
+ bview:d=>{S.bookView=d.v;snd('page');render()},
+ bcrop:d=>{snd('page');openCrop(d.c)},
  hire:d=>{const w=WORK.find(x=>x[0]===d.w);if(S.work[d.w]||S.lvl<w[4]||!pay(w[3],w[1]))return;S.work[d.w]=true;S.auto[d.w]=true;toast(`${w[1]} zaczyna pracę`,'gold');snd('level');render()},
  hireMiller:()=>{const k=S.millers.length;if(k>=MILLER_MAX||S.lvl<millerReq(k)||!pay(millerCost(k),`Młynarz ${k+1}`))return;S.millers.push({at:null,off:false});toast(`Młynarz ${k+1} zaczyna pracę. Daj mu zlecenie w Przetwórni.`,'gold');snd('level');render()},
  toggleW:d=>{S.auto[d.w]=S.auto[d.w]===false;render()},
