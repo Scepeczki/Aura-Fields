@@ -696,7 +696,7 @@ function render(){
   if(Math.abs(window.scrollY-sy)>2) window.scrollTo(0,sy);
   // przewijane okienka (szuflada spiżarni, Do rozłożenia) zostają tam, gdzie gracz je przewinął
   keep.forEach(([k,t])=>{const el=document.querySelector(`[data-keep="${k}"]`);if(el)el.scrollTop=t});
-  if(sheetMode==='plot') drawSheet(); else if(sheetMode==='seeds') drawSeeds(); else if(sheetMode==='list') drawList(); else if(sheetMode==='mach') drawMach(); else if(sheetMode==='crop') drawCrop();
+  if(sheetMode==='plot') drawSheet(); else if(sheetMode==='seeds') drawSeeds(); else if(sheetMode==='list') drawList(); else if(sheetMode==='mach') drawMach(); else if(BOOKM.includes(sheetMode)) bookDraw();
   progress();
 }
 function progress(){
@@ -867,44 +867,74 @@ function hallSpot(h,id){const io=new Set();for(const k in h.cells){const c=h.cel
 function toHall(id,n){const h=HL(),k=hallSpot(h,id);if(!k){toast('W hali nie ma wolnego miejsca. Dokup rząd.');return 0}n=Math.min(n,inv(id));if(!n)return 0;
   add(id,-n);putH(h,k,id,n);snd('drop_'+itemSnd(id));toast(`${ITEMS[id].n} ×${n} w hali ${S.hall+1}`);return n}
 function hallBack(src,e){const h=HL();if(src.k!=='c')return;const n=dropQ(e,(h.items[src.key]||{})[src.id]||0);if(!n)return;takeH(h,src.key,src.id,n);add(src.id,n);snd('drop_'+itemSnd(src.id))}
-// menu pod prawym przyciskiem na kratce hali
-function showHallCtx(key,x,y){const m=$('#ctx'),h=HL(),c=h.cells[key],it=h.items[key],items=[];if(!m)return;
-  if(c){const [cx,cy]=hxy(key),ok=hk(...outXY(c,cx,cy)),has=sumQ(h.items[ok])>0,ml=millerOf(h,key);
-    items.push(c.lvl<MLVMAX?['hup','⬆',`Ulepsz do poz. ${c.lvl+1}`,`${upDesc(c.lvl+1)}${tierUp(c.m,c.lvl+1)} · ${fmtZ(mUpCost(c))}`,S.coins<mUpCost(c)]:['','✓',`Poziom ${MLVMAX}`,'maksymalny',true]);
-    const qn=hqty();Object.keys(S.inv).filter(i=>inv(i)>0&&(RBY[c.m]||[]).some(r=>r.in[i])).sort((a,b)=>inv(b)-inv(a)).slice(0,6).forEach(i=>items.push(['hput',icon(i),`Połóż przed: ${ITEMS[i].n}`,`ze spiżarni ${qn==='max'?'wszystko':'×'+qn} · masz ${inv(i)}`,false,i]));
-    items.push(['hrot','↻','Obróć','R']);items.push(['hcollect','⤴','Odbierz produkt',has?`${sumQ(h.items[ok])} szt. do spiżarni`:'na wyjściu nic nie leży',!has]);
-    items.push(c.lvl>=MLV_AUTO?['hauto','∞',c.auto?'Wyłącz tryb ciągły':'Tryb ciągły','sama dobiera partie z wejścia']:['','∞','Tryb ciągły',`od poziomu ${MLV_AUTO} maszyny`,true]);
-    if(ml)items.push(['hmill','✕',`Zabierz młynarza ${S.millers.indexOf(ml)+1}`,'']);
-    else S.millers.forEach((mm,k)=>{if(!mm.off)items.push(['hmill',MILLER_ART,`Przydziel młynarza ${k+1}`,mm.at?'przejdzie od innej maszyny':'dokłada towar i odnosi mąkę',false,k])});
-    items.push(['hstash','⤓','Odeślij do magazynu','']);items.push(['hinfo','ⓘ','Szczegóły','2× klik'])}
-  else {if(it&&sumQ(it)){Object.keys(it).forEach(i=>items.push(['hback1',icon(i),`${ITEMS[i].n} do spiżarni`,`${it[i]} szt.`,false,i]));if(Object.keys(it).length>1)items.push(['hbackall','⤴','Wszystko do spiżarni',''])}
-}
-  if(!items.length)return;
-  m.innerHTML=`<div class="ctxh">${c?`${esc(mTier(c.m,c.lvl))} · poziom ${c.lvl}`:'Kratka'}</div>${items.map(([a,ic,t,s,dis,v])=>`<button class="ctxi" data-act="${a}" data-k="${key}" ${v!=null?`data-v="${v}"`:''} ${dis?'disabled':''}><span class="ci">${/^</.test(ic)?ic:`<span class="x">${ic}</span>`}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
-  m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px'}
-// menu pod prawym na towarze w szufladzie spiżarni: połóż przed maszyną, która go przerabia, albo wskaż kratkę
-function showPantryCtx(id,x,y){const m=$('#ctx'),h=HL(),qn=hqty(),items=[];if(!m)return;
-  for(const key in h.cells){const c=h.cells[key];if(!(RBY[c.m]||[]).some(r=>r.in[id]))continue;const [a,b]=hxy(key);items.push(['hput',mart(c.m),`Połóż przed: ${M[c.m].n}`,`kratka ${a+1}, ${b+1}`,false,id,key])}
-  items.push(['tohallp','⇥','Przenieś do hali',`${qn==='max'?'wszystko':qn+' szt.'} na wolne miejsce`,false,id]);
-  items.push(['ppick','✥','Wskaż kratkę w hali…','kliknij potem kratkę albo maszynę',false,id]);
-  m.innerHTML=`<div class="ctxh">${esc(ITEMS[id].n)} · przenieś ${qn==='max'?'wszystko':qn}</div>`+items.map(([a,ic,t,s,dis,v,k])=>`<button class="ctxi" data-act="${a}" data-id="${v}" data-v="${v}" ${k?`data-k="${k}"`:''}><span class="ci">${/^</.test(ic)?ic:`<span class="x">${ic}</span>`}</span><span><b>${t}</b><small>${s}</small></span></button>`).join('');
-  m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;m.style.left=Math.max(8,Math.min(x-w,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px'}
-// okno szczegółów maszyny
+// ---------- MENU POD PRAWYM PRZYCISKIEM ----------
+// Wspólny wygląd: nagłówek z obrazkiem tego, co kliknięto, potem grupy czynności; każda czynność ma ikonę.
+const CI={up:'<path d="M12 19V6M6 11l6-6 6 6"/>',check:'<path d="M5 12.5l4.5 4.5L19 7"/>',rotate:'<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>',
+ collect:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',auto:'<path d="M7 9a3 3 0 1 0 0 6c2.5 0 7.5-6 10-6a3 3 0 1 1 0 6c-2.5 0-7.5-6-10-6z"/>',
+ miller:'<path d="M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 20c1-4 4-6 7-6s6 2 7 6"/>',close:'<path d="M6 6l12 12M18 6L6 18"/>',
+ stash:'<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>',
+ book:'<path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v14"/>',put:'<path d="M4 12h11M11 7l5 5-5 5"/><path d="M20 5v14"/>',
+ hall:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',pick:'<circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>',
+ trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',pin:'<path d="M12 16v5M8 3h8l-1 6 3 3H6l3-3z"/>',block:'<circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/>',
+ tray:'<path d="M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5l1 2h4l1-2h5"/>',shelf:'<path d="M3 10h18M3 19h18M5 10V6h4v4M11 19v-5h3v5M15 10V5h4v5"/>',
+ pencil:'<path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/>',soil:'<path d="M12 20v-8M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 12c0-4 3-7 7-7 0 4-3 7-7 7"/>',
+ water:'<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>',house:'<path d="M4 11l8-7 8 7M6 10v10h12V10"/>',
+ back:'<path d="M10 6l-6 6 6 6M4 12h16"/>',cog:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'};
+const ci=n=>`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${CI[n]||''}</svg>`;
+// head: {img|ic, t, s}; groups: tablice czynności {a, v, at, ic|img, t, s, dis, tone}; chips: rząd „Księga” z ikonami towarów
+function ctxShow(head,groups,x,y,common,right){const m=$('#ctx');if(!m)return;
+  const btn=o=>o.chips?`<div class="ctxchips"><span class="cl">${ci('book')}${o.t||'Księga'}</span>${o.chips.map(i=>`<button class="cchip" data-act="bitem" data-id="${i}" title="Księga: ${esc(ITEMS[i].n)}">${itemSvg(i)}</button>`).join('')}</div>`
+    :`<button class="ctxi ${o.tone||''}" ${o.a?`data-act="${o.a}"`:''} ${common||''} ${o.v!=null?`data-v="${o.v}" data-id="${o.v}"`:''} ${o.at||''} ${o.dis?'disabled':''}><span class="ci ${o.img?'im':''}">${o.img||ci(o.ic)}</span><span class="ct"><b>${o.t}</b>${o.s?`<small>${o.s}</small>`:''}</span></button>`;
+  m.innerHTML=`<div class="ctxh2"><span class="hi">${head.img||ci(head.ic)}</span><span class="ct"><b>${esc(head.t)}</b>${head.s?`<small>${head.s}</small>`:''}</span></div>`+groups.filter(g=>g&&g.length).map(g=>`<div class="ctxg">${g.map(btn).join('')}</div>`).join('');
+  m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;
+  m.style.left=Math.max(8,Math.min(right?x-w:x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px'}
+const bookItem=i=>ITEMS[i].kind==='raw'?{a:'bcrop',at:`data-c="${ITEMS[i].crop}"`,ic:'book',t:'Księga',s:CR[ITEMS[i].crop].n,tone:'book'}:{a:'bitem',at:`data-id="${i}"`,ic:'book',t:'Księga',s:ITEMS[i].n,tone:'book'};
+// menu na kratce hali: maszyna albo leżący towar
+function showHallCtx(key,x,y){const h=HL(),c=h.cells[key],it=h.items[key];
+  if(c){const [cx,cy]=hxy(key),ok=hk(...outXY(c,cx,cy)),has=sumQ(h.items[ok])>0,ml=millerOf(h,key),qn=hqty(),up=mUpCost(c),work=[],put=[],more=[];
+    work.push(c.lvl<MLVMAX?{a:'hup',ic:'up',t:`Ulepsz do poziomu ${c.lvl+1}`,s:`${upDesc(c.lvl+1)}${tierUp(c.m,c.lvl+1)} · ${fmtZ(up)}`,dis:S.coins<up,tone:'gold'}:{ic:'check',t:`Poziom ${MLVMAX}`,s:'maksymalny',dis:true});
+    work.push({a:'hcollect',ic:'collect',t:'Odbierz produkt',s:has?`${sumQ(h.items[ok])} szt. do spiżarni`:'na wyjściu nic nie leży',dis:!has});
+    work.push(c.lvl>=MLV_AUTO?{a:'hauto',ic:'auto',t:c.auto?'Wyłącz tryb ciągły':'Włącz tryb ciągły',s:'sama dobiera partie z wejścia'}:{ic:'auto',t:'Tryb ciągły',s:`od poziomu ${MLV_AUTO} maszyny`,dis:true});
+    if(ml)work.push({a:'hmill',ic:'close',t:`Zabierz młynarza ${S.millers.indexOf(ml)+1}`});
+    else S.millers.forEach((mm,k)=>{if(!mm.off)work.push({a:'hmill',v:k,ic:'miller',t:`Przydziel młynarza ${k+1}`,s:mm.at?'przejdzie od innej maszyny':'dokłada towar i odnosi produkt'})});
+    Object.keys(S.inv).filter(i=>inv(i)>0&&(RBY[c.m]||[]).some(r=>r.in[i])).sort((a,b)=>inv(b)-inv(a)).slice(0,4).forEach(i=>put.push({a:'hput',v:i,img:itemSvg(i),t:`Połóż przed: ${esc(ITEMS[i].n)}`,s:`ze spiżarni ${qn==='max'?'wszystko':'×'+qn} · masz ${inv(i)}`}));
+    more.push({a:'hrot',ic:'rotate',t:'Obróć',s:'klawisz R'},{a:'hinfo',ic:'cog',t:'Szczegóły i ulepszenia',s:'podwójne kliknięcie'},{a:'bmach',at:`data-m="${c.m}"`,ic:'book',t:'Księga',s:esc(M[c.m].n),tone:'book'});
+    ctxShow({img:mart(c.m),t:mTier(c.m,c.lvl),s:`${mTier(c.m,c.lvl)!==M[c.m].n?esc(M[c.m].n)+' · ':''}poziom ${c.lvl} z ${MLVMAX}`},[work,put,more,[{a:'hstash',ic:'stash',t:'Odeślij do magazynu',s:'zwolni kratkę',tone:'danger'}]],x,y,`data-k="${key}"`)}
+  else if(it&&sumQ(it)){const ids=Object.keys(it),more=[];
+    if(ids.length>1)more.push({a:'hbackall',ic:'collect',t:'Wszystko do spiżarni',s:`${sumQ(it)} szt.`});
+    more.push({chips:ids});
+    ctxShow({ic:'hall',t:'Kratka hali',s:`${ids.length} ${plural(ids.length,'rodzaj','rodzaje','rodzajów')} towaru · ${sumQ(it)} szt.`},[ids.map(i=>({a:'hback1',v:i,img:itemSvg(i),t:esc(ITEMS[i].n),s:`${it[i]} szt. · odłóż do spiżarni`})),more],x,y,`data-k="${key}"`)}}
+// menu na towarze w szufladzie spiżarni: połóż przed maszyną, która go przerabia, albo wskaż kratkę
+function showPantryCtx(id,x,y){const h=HL(),qn=hqty(),put=[];
+  for(const key in h.cells){const c=h.cells[key];if(!(RBY[c.m]||[]).some(r=>r.in[id]))continue;const [a,b]=hxy(key);put.push({a:'hput',v:id,at:`data-k="${key}"`,img:mart(c.m),t:`Połóż przed: ${esc(M[c.m].n)}`,s:`kratka ${a+1}, ${b+1}`})}
+  ctxShow({img:itemSvg(id),t:ITEMS[id].n,s:`w spiżarni ${inv(id)} · przenosisz ${qn==='max'?'wszystko':qn}`},
+    [put,[{a:'tohallp',v:id,ic:'hall',t:'Przenieś do hali',s:`${qn==='max'?'wszystko':qn+' szt.'} na wolne miejsce`},{a:'ppick',v:id,ic:'pick',t:'Wskaż kratkę w hali…',s:'kliknij potem kratkę albo maszynę'}],[bookItem(id)]],x,y,'',true)}
+// ścieżka ulepszeń: wersje maszyny (skale urządzeń) i co daje każdy poziom; cur = obecny poziom egzemplarza
+const upCostAt=(m,l)=>Math.round(Math.max(300,M[m].p)*0.8*Math.pow(1.7,l-2)/10)*10;
+const lvDesc=l=>l===1?`${mSlots(1)} stanowisko · tempo ×${mSpeed(1).toFixed(1).replace('.',',')}`:l===MLV_AUTO?'tryb ciągły: maszyna sama dobiera partie z wejścia':`${upDesc(l)} · tempo ×${mSpeed(l).toFixed(1).replace('.',',')}`;
+function upTree(m,cur,key){const t=MTIER[m]||[[1,M[m].n]];
+  return `<div class="utree">${t.map(([a,n],j)=>{const b=j+1<t.length?t[j+1][0]-1:MLVMAX,st=cur==null?'':cur>b?'done':cur>=a?'now':'';
+    let rows='';for(let l=a;l<=b;l++){const c=l>1?upCostAt(m,l):0,nx=cur!=null&&l===cur+1;
+      rows+=`<li class="${cur!=null&&l<=cur?'u-done':''} ${l===cur?'u-cur':''} ${nx?'u-next':''} ${l===MLV_AUTO?'u-auto':''}"><i class="dot">${l}</i><span class="d">${lvDesc(l)}</span>${l>1?`<em class="num">${fmtZ(c)}</em>`:'<em>start</em>'}${nx&&key?`<button class="btn sm pri" data-act="hup" data-k="${key}" ${S.coins<c?'disabled':''}>Ulepsz</button>`:''}</li>`}
+    return `<section class="ut ${st}"><header>${mart(m,'',st==='now')}<span><b>${esc(n)}</b><small>${a===b?`poziom ${a}`:`poziomy ${a}–${b}`}${j?' · maszyna przeistacza się':''}</small></span>${st==='now'?'<span class="tag">teraz</span>':''}</header><ol>${rows}</ol></section>`}).join('<div class="ujoin">↓</div>')}</div>`}
+// okno szczegółów maszyny: co robi teraz, sterowanie i ścieżka ulepszeń (bez listy wszystkich receptur)
 let machKey=null;
 function openMach(key){machKey=key;sheetMode='mach';sheetPlot=-1;drawMach();$('#sheet').hidden=false;$('#panel').scrollTop=0}
-function drawMach(){const h=HL(),c=h.cells[machKey];if(!c){closeSheet();return}const [x,y]=hxy(machKey),ik=hk(...inXY(c,x,y)),ok=hk(...outXY(c,x,y)),fd=feedable(h,machKey),q=c.q.reduce((a,b)=>a+b.n,0),ml=millerOf(h,machKey);
-  const list=key=>{const it=h.items[key]||{},ids=Object.keys(it);return ids.length?ids.map(i=>`<div class="mrow">${icon(i)}<span>${esc(ITEMS[i].n)}</span><b class="num">${it[i]}</b></div>`).join(''):'<p class="more">pusto</p>'};
-  $('#panel').innerHTML=`<div class="ph"><div><h2>${esc(M[c.m].n)}</h2><p>${mTier(c.m,c.lvl)!==M[c.m].n?`<b>${esc(mTier(c.m,c.lvl))}</b> · `:''}Poziom ${c.lvl} z ${MLVMAX} · ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(c.lvl).toFixed(2)} · ${c.run.length?`pracuje ${c.run.length} z ${mSlots(c.lvl)}`:c.block?'wyjście zajęte':'czeka'}</p></div><button class="btn sm" data-act="close">Zamknij</button></div>
-   <div class="mgrid"><div><h3>Wejście</h3>${hin(h,...inXY(c,x,y))?list(ik):'<p class="more">poza halą</p>'}<h3>Wyjście</h3>${hin(h,...outXY(c,x,y))?list(ok):'<p class="more">poza halą</p>'}
-     <h3>W kolejce</h3><p>${q?`<b class="num">${q}</b> ${plural(q,'partia','partie','partii')} <button class="btn sm" data-act="hunq" data-k="${machKey}">Wyjmij na wejście</button>`:'<span class="more">nic</span>'}</p></div>
-   <div><h3>Receptury</h3><p class="more">Maszyna wybiera recepturę z tego, co leży na wejściu. Kliknij, żeby przypiąć jedną.</p>
-     ${(RBY[c.m]||[]).map(r=>`<button class="mrec ${c.pin===r.id?'on':''}" data-act="hpin" data-k="${machKey}" data-v="${r.id}">${c.pin===r.id?'✓ ':''}${Object.entries(r.in).map(([i,n])=>`${n}× ${esc(ITEMS[i].n)}`).join(' + ')} → ${Object.entries(r.out).map(([i,n])=>`${n}× ${esc(ITEMS[i].n)}`).join(' + ')}<small class="num">${fmtT(r.t/mSpeed(c.lvl))}</small></button>`).join('')}</div>
-   <div>${c.lvl<MLVMAX?`<button class="btn pri" data-act="hup" data-k="${machKey}" ${S.coins<mUpCost(c)?'disabled':''}>Ulepsz do poz. ${c.lvl+1} · ${fmtZ(mUpCost(c))}</button><p class="more">${upDesc(c.lvl+1)}${tierUp(c.m,c.lvl+1)}</p>`:'<p class="more">Poziom maksymalny.</p>'}
-     <label class="mtog ${c.lvl<MLV_AUTO?'off':''}"><input type="checkbox" data-act="hauto" data-k="${machKey}" ${c.auto&&c.lvl>=MLV_AUTO?'checked':''} ${c.lvl<MLV_AUTO?'disabled':''}> Tryb ciągły <small>${c.lvl<MLV_AUTO?`od poziomu ${MLV_AUTO} maszyny`:'maszyna sama dobiera partie z wejścia'}</small></label>
-     ${ml?`<p>Pracuje tu <b>Młynarz ${S.millers.indexOf(ml)+1}</b>: dokłada towar ze spiżarni i odnosi to, co wyjdzie.</p>`:''}
-     <div class="mbtns"><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="1" ${fd.n?'':'disabled'}>+1</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' ('+fd.n+')':''}</button></div>
-     <div class="mbtns"><button class="btn" data-act="hrot" data-k="${machKey}">Obróć</button><button class="btn" data-act="hcollect" data-k="${machKey}" ${sumQ(h.items[ok])?'':'disabled'}>Odbierz produkt</button></div>
-     <button class="btn warn" data-act="hstash" data-k="${machKey}">Odeślij do magazynu</button></div></div>`}
+function drawMach(){const h=HL(),c=h.cells[machKey];if(!c){closeSheet();return}const panel=$('#panel'),sc=panel.scrollTop,[x,y]=hxy(machKey),ik=hk(...inXY(c,x,y)),ok=hk(...outXY(c,x,y)),fd=feedable(h,machKey),q=c.q.reduce((a,b)=>a+b.n,0),ml=millerOf(h,machKey);
+  const list=key=>{const it=h.items[key]||{},ids=Object.keys(it);return ids.length?ids.map(i=>`<div class="mrow" data-act="bitem" data-id="${i}" data-click="1" title="Księga: ${esc(ITEMS[i].n)}">${icon(i)}<span>${esc(ITEMS[i].n)}</span><b class="num">${it[i]}</b></div>`).join(''):'<p class="more">pusto</p>'};
+  // wybór receptury tylko wtedy, gdy to, co leży na wejściu, da się przerobić na kilka sposobów
+  const inIt=h.items[ik]||{},alts=(RBY[c.m]||[]).filter(r=>Object.keys(r.in).every(i=>inIt[i]));
+  const j=c.run[0],tn=mTier(c.m,c.lvl);
+  panel.innerHTML=`<div class="ph"><div class="mph">${mart(c.m,'',c.run.length&&!c.block)}<div><h2>${esc(tn)}</h2><p>${tn!==M[c.m].n?esc(M[c.m].n)+' · ':''}poziom ${c.lvl} z ${MLVMAX} · ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(c.lvl).toFixed(2)}</p></div></div><span class="phb"><button class="btn sm" data-act="bmach" data-m="${c.m}">${ci('book')} Księga</button><button class="btn sm" data-act="close">Zamknij</button></span></div>
+   <div class="mnow"><div class="mst ${c.block?'bad':c.run.length?'on':''}">${c.block?'Wyjście zajęte: produkt nie ma gdzie wyjść.':j?`Pracuje: <b>${esc(RECIPES[j.r].verb)}</b> · ${c.run.length} z ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowiska','stanowisk','stanowisk')}${q?` · w kolejce ${q}`:''}`:fd.n?`Gotowa: przed nią leży towar na ${fd.n} ${plural(fd.n,'partię','partie','partii')}.`:'Czeka na towar.'}${ml?` · pracuje tu Młynarz ${S.millers.indexOf(ml)+1}`:''}</div>
+   <div class="mgrid2"><div><h3>Wejście</h3>${hin(h,...inXY(c,x,y))?list(ik):'<p class="more">poza halą</p>'}</div><div><h3>Wyjście</h3>${hin(h,...outXY(c,x,y))?list(ok):'<p class="more">poza halą</p>'}</div></div>
+   ${alts.length>1||c.pin!=null?`<h3>Co robić z tym, co leży na wejściu</h3><div class="malts"><button class="mrec ${c.pin==null?'on':''}" data-act="hpin" data-k="${machKey}" data-v="${c.pin==null?-1:c.pin}">Sama wybiera</button>${alts.map(r=>`<button class="mrec ${c.pin===r.id?'on':''}" data-act="hpin" data-k="${machKey}" data-v="${r.id}">${esc(r.verb)}: ${Object.keys(r.out).filter(o=>ITEMS[o].kind!=='by').map(o=>esc(ITEMS[o].n)).join(', ')}</button>`).join('')}</div>`:''}
+   <div class="mbtns"><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="1" ${fd.n?'':'disabled'}>+1</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' ('+fd.n+')':''}</button>${q?`<button class="btn" data-act="hunq" data-k="${machKey}">Wyjmij kolejkę na wejście</button>`:''}</div>
+   <div class="mbtns"><button class="btn" data-act="hrot" data-k="${machKey}">${ci('rotate')} Obróć</button><button class="btn" data-act="hcollect" data-k="${machKey}" ${sumQ(h.items[ok])?'':'disabled'}>${ci('collect')} Odbierz produkt</button>
+     <label class="mtog ${c.lvl<MLV_AUTO?'off':''}"><input type="checkbox" data-act="hauto" data-k="${machKey}" ${c.auto&&c.lvl>=MLV_AUTO?'checked':''} ${c.lvl<MLV_AUTO?'disabled':''}> Tryb ciągły <small>${c.lvl<MLV_AUTO?`od poziomu ${MLV_AUTO}`:'sama dobiera partie'}</small></label>
+     <button class="btn warn" data-act="hstash" data-k="${machKey}">${ci('stash')} Do magazynu</button></div></div>
+   <h3 class="cph">Ścieżka ulepszeń</h3><p class="more">Każdy poziom przyspiesza maszynę. Na zaznaczonych progach maszyna przeistacza się w kolejne, większe urządzenie.</p>${upTree(c.m,c.lvl,machKey)}`;
+  panel.scrollTop=sc}
 
 const ioPlain=obj=>Object.entries(obj).map(([k,q])=>`${q}× ${ITEMS[k].n}`).join(' + ');
 
@@ -1001,35 +1031,33 @@ function vSpiz(){
 // --- menu pod prawym przyciskiem
 // menu poletka pod prawym przyciskiem: gleba, nawadnianie, przebudowa
 let ctxAt=null;
-function showPlotCtx(i,x,y){const m=$('#ctx'),p=S.plots[i];if(!m||!p)return;ctxAt={plot:i,x,y};
-  const sc=soilCost(p),items=[];
-  items.push(p.soil<SOILMAX?['psoil',S.coins<sc,'⬆',`Użyźnij glebę: ${p.soil} → ${p.soil+1}`,`+20% plonu · ${fmtZ(sc)}`]:['',true,'✓','Gleba na maksimum',`${SOILMAX} / ${SOILMAX}`]);
-  items.push(p.spr?['',true,'✓','Nawadnianie działa','+20% tempa, chroni przed upałem']:['pspr',S.coins<SPRCOST,'≈','Zamontuj nawadnianie',`+20% tempa · ${fmtZ(SPRCOST)}`]);
+function showPlotCtx(i,x,y){const p=S.plots[i];if(!p)return;ctxAt={plot:i,x,y};
+  const sc=soilCost(p),at=`data-i="${i}"`,care=[],build=[];
+  care.push(p.soil<SOILMAX?{a:'psoil',at,dis:S.coins<sc,ic:'soil',t:`Użyźnij glebę: ${p.soil} → ${p.soil+1}`,s:`+20% plonu · ${fmtZ(sc)}`,tone:'gold'}:{ic:'check',t:'Gleba na maksimum',s:`${SOILMAX} / ${SOILMAX}`,dis:true});
+  care.push(p.spr?{ic:'check',t:'Nawadnianie działa',s:'+20% tempa, chroni przed upałem',dis:true}:{a:'pspr',at,dis:S.coins<SPRCOST,ic:'water',t:'Zamontuj nawadnianie',s:`+20% tempa · ${fmtZ(SPRCOST)}`});
   Object.keys(ENV).filter(e=>e!==p.env).forEach(e=>{const lk=S.lvl<ENVREQ[e];
-    items.push(['penv',!!p.crop||lk||S.coins<ENVCOST[e],'⌂',`Przebuduj na: ${ENV[e].toLowerCase()}`,p.crop?'najpierw zbierz albo usuń roślinę':lk?`od poziomu ${ENVREQ[e]}`:ENVCOST[e]?fmtZ(ENVCOST[e]):'za darmo',e])});
-  m.innerHTML=`<div class="ctxh">Poletko ${i+1} · ${ENV[p.env]} · gleba ${p.soil}/${SOILMAX}</div>${items.map(([a,dis,ic,t,s,e])=>`<button class="ctxi" ${a?`data-act="${a}" data-i="${i}"`:''} ${e?`data-e="${e}"`:''} ${dis?'disabled':''}><span class="ci"><span class="x">${ic}</span></span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
-  m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;
-  m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px';}
+    build.push({a:'penv',at:`${at} data-e="${e}"`,dis:!!p.crop||lk||S.coins<ENVCOST[e],ic:'house',t:`Przebuduj na: ${ENV[e].toLowerCase()}`,s:p.crop?'najpierw zbierz albo usuń roślinę':lk?`od poziomu ${ENVREQ[e]}`:ENVCOST[e]?fmtZ(ENVCOST[e]):'za darmo'})});
+  ctxShow({img:p.crop?cropThumb(p.crop):ci('soil'),t:`Poletko ${i+1}${p.crop?' · '+CR[p.crop].n:''}`,s:`${ENV[p.env]} · gleba ${p.soil}/${SOILMAX}`},
+    [care,build,p.crop?[{a:'bcrop',at:`data-c="${p.crop}"`,ic:'book',t:'Księga',s:esc(CR[p.crop].n),tone:'book'}]:[]],x,y)}
 const replot=()=>{render();if(ctxAt&&ctxAt.plot!=null)showPlotCtx(ctxAt.plot,ctxAt.x,ctxAt.y)};
 function hideCtx(){ctxAt=null;const m=$('#ctx');if(m)m.hidden=true;ctxOpen=false}
-function showCtx(el,x,y){const m=$('#ctx');if(!m)return;let items=[],title='';
-  if(el.dataset.i!=null){const i=+el.dataset.i,k=S.shelf[i],r=rule(i),q=k?hold(k):0;
-    title=r==='block'?'Miejsce zawsze puste':k?ITEMS[k].n:'Puste miejsce';
-    if(k&&r!=='pin') items.push(['ctxpin',`data-i="${i}"`,PIN,'Zawsze tutaj','To miejsce zostaje dla tego towaru']);
-    if(r!=='block') items.push(['ctxblock',`data-i="${i}"`,BLOCK,'Zawsze puste','Nic tu nie trafi']);
-    if(r) items.push(['ctxclear',`data-i="${i}"`,'<span class="x">✕</span>','Usuń regułę',r==='pin'?'Zdejmij przypięcie':'Zdejmij blokadę']);
-    if(k&&q) items.push(['ctxtray',`data-k="${k}"`,'<span class="x">⇣</span>','Odłóż do rozłożenia','']);
-    items.push(['ctxname',`data-s="${Math.floor(i/SHELF_W)}"`,'<span class="x">✎</span>','Zmień nazwę półki',esc((S.shelfNames||[])[Math.floor(i/SHELF_W)]||`Półka ${Math.floor(i/SHELF_W)+1}`)]);}
-  else if(el.dataset.sh!=null){const s=+el.dataset.sh;title=(S.shelfNames||[])[s]||`Półka ${s+1}`;items.push(['ctxname',`data-s="${s}"`,'<span class="x">✎</span>','Zmień nazwę półki','']);}
-  else {const k=el.dataset.dk;if(!k){hideCtx();return}title=ITEMS[k].n;
-    items.push(['ctxshelf',`data-k="${k}"`,'<span class="x">⇡</span>','Odłóż na półkę','Na pierwsze wolne miejsce']);
-    if(el.dataset.o!=null) items.push(['ctxtray',`data-k="${k}"`,'<span class="x">⇣</span>','Do rozłożenia','']);}
-  {const k=el.dataset.i!=null?S.shelf[+el.dataset.i]:el.dataset.dk;if(k&&inv(k)>0){const qn=hqty();items.unshift(['tohall',`data-k="${k}" data-q="${qn}"`,'<span class="x">⇥</span>','Przenieś do hali',`${qn==='max'?'wszystko':qn+' szt.'} na wolne miejsce w hali ${S.hall+1}`],['tohall',`data-k="${k}" data-q="max"`,'<span class="x">⇥</span>','Przenieś wszystko do hali',`${inv(k)} szt.`])}}
-  {const k=el.dataset.i!=null?S.shelf[+el.dataset.i]:el.dataset.dk;if(k&&inv(k)>0)items.push(['ptrash',`data-k="${k}"`,TRASH,'Wyrzuć do kosza',`Cały zapas: ${inv(k)}`]);}
-  if(!items.length){hideCtx();return}
-  m.innerHTML=`<div class="ctxh">${esc(title)}</div>${items.map(([a,d,ic,t,s])=>`<button class="ctxi" data-act="${a}" ${d}><span class="ci">${ic}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
-  m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;
-  m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px';}
+function showCtx(el,x,y){let head=null;const mv=[],rl=[],sh=[],bad=[];
+  const k=el.dataset.i!=null?S.shelf[+el.dataset.i]:el.dataset.dk;
+  if(el.dataset.i!=null){const i=+el.dataset.i,r=rule(i),s=Math.floor(i/SHELF_W),q=k?hold(k):0;
+    head={img:k?itemSvg(k):ci(r==='block'?'block':'shelf'),t:r==='block'?'Miejsce zawsze puste':k?ITEMS[k].n:'Puste miejsce',s:`${esc((S.shelfNames||[])[s]||`Półka ${s+1}`)}${k?` · ${inv(k)} szt.`:''}`};
+    if(k&&r!=='pin') rl.push({a:'ctxpin',at:`data-i="${i}"`,ic:'pin',t:'Zawsze tutaj',s:'To miejsce zostaje dla tego towaru'});
+    if(r!=='block') rl.push({a:'ctxblock',at:`data-i="${i}"`,ic:'block',t:'Zawsze puste',s:'Nic tu nie trafi'});
+    if(r) rl.push({a:'ctxclear',at:`data-i="${i}"`,ic:'close',t:'Usuń regułę',s:r==='pin'?'Zdejmij przypięcie':'Zdejmij blokadę'});
+    if(k&&q) mv.push({a:'ctxtray',at:`data-k="${k}"`,ic:'tray',t:'Odłóż do rozłożenia'});
+    sh.push({a:'ctxname',at:`data-s="${s}"`,ic:'pencil',t:'Zmień nazwę półki',s:esc((S.shelfNames||[])[s]||`Półka ${s+1}`)})}
+  else if(el.dataset.sh!=null){const s=+el.dataset.sh;head={ic:'shelf',t:(S.shelfNames||[])[s]||`Półka ${s+1}`,s:'półka w spiżarni'};sh.push({a:'ctxname',at:`data-s="${s}"`,ic:'pencil',t:'Zmień nazwę półki'})}
+  else {if(!k){hideCtx();return}head={img:itemSvg(k),t:ITEMS[k].n,s:`${inv(k)} szt.`};
+    mv.push({a:'ctxshelf',at:`data-k="${k}"`,ic:'shelf',t:'Odłóż na półkę',s:'na pierwsze wolne miejsce'});
+    if(el.dataset.o!=null) mv.push({a:'ctxtray',at:`data-k="${k}"`,ic:'tray',t:'Do rozłożenia'})}
+  if(k&&inv(k)>0){const qn=hqty();mv.unshift({a:'tohall',at:`data-k="${k}" data-q="${qn}"`,ic:'hall',t:'Przenieś do hali',s:`${qn==='max'?'wszystko':qn+' szt.'} na wolne miejsce w hali ${S.hall+1}`},{a:'tohall',at:`data-k="${k}" data-q="max"`,ic:'put',t:'Przenieś wszystko do hali',s:`${inv(k)} szt.`});
+    bad.push({a:'ptrash',at:`data-k="${k}"`,ic:'trash',t:'Wyrzuć do kosza',s:`cały zapas: ${inv(k)}`,tone:'danger'})}
+  if(!mv.length&&!rl.length&&!sh.length){hideCtx();return}
+  ctxShow(head,[mv,rl,sh,k?[bookItem(k)]:[],bad],x,y)}
 
 let declineArm=-1, listQ='all';
 function vTarg(){padShop();
@@ -1183,22 +1211,80 @@ function vKsiega(){
   return h;
 }
 // karta uprawy: opis, uprawa, pochodzenie i wszystko, co z niej powstaje
-let bookCrop=null;
-function openCrop(id){bookCrop=id;sheetMode='crop';sheetPlot=-1;drawCrop();$('#sheet').hidden=false;$('#panel').scrollTop=0}
+// karty Księgi: uprawa (informacje albo drzewo produkcji), przedmiot, maszyna; „Wróć” cofa do poprzedniej karty
+let bookCrop=null,bookItemId=null,bookMachId=null,cropTab='info',bookHist=[];
+const BOOKM=['crop','item','bmach'];
+const bookCur=()=>sheetMode==='crop'?['crop',bookCrop]:sheetMode==='item'?['item',bookItemId]:sheetMode==='bmach'?['bmach',bookMachId]:null;
+function bookOpen(mode,id){const cur=bookCur();if(cur&&!(cur[0]===mode&&cur[1]===id))bookHist.push(cur);else if(!cur)bookHist=[];
+  if(mode==='crop')bookCrop=id;else if(mode==='item')bookItemId=id;else bookMachId=id;
+  sheetMode=mode;sheetPlot=-1;bookDraw();$('#sheet').hidden=false;$('#panel').scrollTop=0}
+const bookDraw=()=>sheetMode==='crop'?drawCrop():sheetMode==='item'?drawItem():drawMachBook();
+const openCrop=id=>bookOpen('crop',id),openItem=id=>ITEMS[id].kind==='raw'?bookOpen('crop',ITEMS[id].crop):bookOpen('item',id),openMachBook=id=>bookOpen('bmach',id);
+function bookBack(){const p=bookHist.pop();if(!p){closeSheet();return}sheetMode=p[0];if(p[0]==='crop')bookCrop=p[1];else if(p[0]==='item')bookItemId=p[1];else bookMachId=p[1];bookDraw();$('#panel').scrollTop=0}
+const bookHead=(img,t,s)=>`<div class="ph"><div class="mph">${img}<div><h2>${t}</h2><p>${s}</p></div></div><span class="phb">${bookHist.length?`<button class="btn sm" data-act="bback">${ci('back')} Wróć</button>`:''}<button class="btn sm" data-act="close">Zamknij</button></span></div>`;
+// odpady (maszyna je oddziela) i produkty uboczne, które się do czegoś przydają
+const WASTE=new Set(['zan_gr','odsiew','plewy_pyl','pyl','metal','kamienie','fr_kr','fr_dl','lekkie','porazone','sporysz','osci']);
+const kindName=i=>{const it=ITEMS[i];return WASTE.has(i)?'Odpad':it.kind==='flour'?(/^Semolina/.test(it.n)?'Semolina':'Mąka'):({raw:'Plon',mid:'Półprodukt',prod:'Gotowy produkt',by:'Produkt uboczny',supply:'Zaopatrzenie'})[it.kind]||''};
+const RIN={};RECIPES.forEach(r=>Object.keys(r.in).forEach(i=>(RIN[i]=RIN[i]||[]).push(r)));
+// wszystko, co da się dostać z danej uprawy (do pytania „z jakich upraw pochodzi ten przedmiot”)
+const CREACH={};const reach=c=>{if(CREACH[c.id])return CREACH[c.id];const s=new Set();(function w(i){if(s.has(i))return;s.add(i);(FWD[i]||[]).forEach(w)})(c.out);if(c.grp==='Zboża glutenowe')s.add('sloma');return CREACH[c.id]=s};
+const cropsOf=i=>CROPS.filter(c=>reach(c).has(i));
+const cchips=list=>`<div class="cchips">${list.map(c=>`<button class="cpick" data-act="bcrop" data-c="${c.id}" data-click="1" title="${esc(c.n)}">${cropThumb(c.id)}<span>${esc(c.n)}</span></button>`).join('')}</div>`;
+const ichip=i=>`<button class="ipick" data-act="bitem" data-id="${i}" data-click="1" title="${esc(ITEMS[i].n)}">${itemSvg(i)}<span>${esc(ITEMS[i].n)}</span></button>`;
+// drzewo produkcji: od plonu w dół; każdy węzeł to maszyna i to, co z niej wyszło, odpady małymi ikonkami obok
+const shortN=i=>{const a=ITEMS[i].adj;return a?a[0].toUpperCase()+a.slice(1):ITEMS[i].n};
+function ptNode(id,r,seen,by){const it=ITEMS[id],end=it.kind==='flour'||it.kind==='prod',again=seen.has(id);seen.add(id);
+  const w=by||(r?Object.keys(r.out).filter(o=>ITEMS[o].kind==='by'):[]);
+  const kids=again?[]:(RIN[id]||[]).flatMap(r2=>Object.keys(r2.out).filter(o=>ITEMS[o].kind!=='by').map(o=>[o,r2]));
+  return `<li><div class="ptn ${end?'end':''} ${again?'again':''} ${r?'':'root'}" data-act="bitem" data-id="${id}" data-click="1" title="${esc(it.n)}${r?` · ${esc(M[r.m].n)}: ${esc(r.verb)}`:''}${again?' · ten sam przedmiot jest wyżej w drzewie':''}">
+    ${r?`<span class="ptm" title="${esc(M[r.m].n)}">${mart(r.m)}</span>`:''}<span class="pti">${itemSvg(id)}</span><span class="ptt"><b>${again?'↺ ':''}${esc(r?shortN(id):it.n)}</b><small>${r?esc(M[r.m].n):'zbiór z pola'}</small>${w.length?`<span class="ptw">${w.map(o=>`<i title="${kindName(o)}: ${esc(ITEMS[o].n)}">${itemSvg(o)}</i>`).join('')}</span>`:''}</span></div>
+    ${kids.length?`<ul>${kids.map(([o,r2])=>ptNode(o,r2,seen)).join('')}</ul>`:''}</li>`}
+const prodTree=c=>`<div class="ptree"><ul class="pt">${ptNode(c.out,null,new Set(),c.grp==='Zboża glutenowe'?['sloma']:[])}</ul></div>`;
+
 function drawCrop(){const c=CR[bookCrop];if(!c){closeSheet();return}const panel=$('#panel'),sc=panel.scrollTop,gi=CINFO[c.id]||{},lk=!unlocked(c),pr=cropProducts(c);
   const par=TREE_N[c.id]?treeParents(c.id):[],pn=k=>TREE_N[k][2]==='crop'?CR[k].n:TREE_N[k][3]+' ('+TREE_N[k][4]+')';
   const facts=[['Dział',CATS[c.cat]||c.grp],['Gdzie rośnie',ENV[c.env]],['Wzrost',fmtT(c.g)+(c.r?`, potem co ${fmtT(c.r)}`:'')],['Plon',`${c.y}× ${ITEMS[c.out].n}`],['Nasiona',`${seedCost(c)} zł`],['Dostępna',lk?`od poziomu ${c.lvl}`:'już teraz']];
   if(gi.g)facts.push(['Genom',`<span class="gen">${genHtml(gi.g)}</span>`]);if(gi.pro)facts.push(['Białko glutenowe',gi.pro]);
   if(par.length)facts.push(['Pochodzenie',par.map(pn).join(' × ')]);
   const ln=ITEMS[c.out].line;if(ln)facts.push(['Linia obróbki',GLINE[ln]]);
+  let h=bookHead(`<span class="cv">${cropThumb(c.id)}</span>`,esc(c.n),`<i>${esc(c.lat)}</i>`)+`<div class="seg-switch ctabs">${[['info','Informacje'],['tree','Drzewo produkcji']].map(([v,n])=>`<button data-act="ctab" data-v="${v}" class="${cropTab===v?'on':''}">${n}</button>`).join('')}</div>`;
+  if(cropTab==='tree'){
+    h+=`<p class="more">Od plonu w dół: każdy węzeł to maszyna i to, co z niej wychodzi. Rozgałęzienia to różne drogi, złote ramki to gotowe produkty i mąki, a małe ikonki pod nazwą to odpady i produkty uboczne. Kliknij węzeł, żeby otworzyć jego kartę.</p>${prodTree(c)}`;
+    panel.innerHTML=h;panel.scrollTop=sc;return}
   const fl0=c.flours[0],path=fl0?chainOf(fl0).filter(s=>s.r).map(s=>s.r.m):[];
-  let h=`<div class="ph"><div><h2>${esc(c.n)}</h2><p><i>${esc(c.lat)}</i></p></div><button class="btn sm" data-act="close">Zamknij</button></div>
-  <div class="cdet"><span class="cv">${cropThumb(c.id)}</span><div>${gi.d?`<p class="cdesc">${esc(gi.d)}</p>`:''}<dl class="cfacts">${facts.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+  h+=`<div class="cinfo"><div>${gi.d?`<p class="cdesc">${esc(gi.d)}</p>`:''}<dl class="cfacts">${facts.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
   ${lk?'':`<button class="btn pri sm" data-act="sowsel" data-c="${c.id}">Siej: ${seedCost(c)} zł</button>`}</div></div>
-  ${ln&&path.length?`<h3 class="cph">Maszyny po kolei, do: ${esc(ITEMS[fl0].n)}</h3><div class="mpath">${path.map((m,i)=>`${i?'<span class="ar">→</span>':''}<span class="mp ${mCount(m)?'':'no'}" title="${esc(M[m].n)}${mCount(m)?'':': nie masz jej jeszcze'}">${mart(m)}<small>${esc(M[m].n)}</small></span>`).join('')}</div>`:''}
+  ${ln&&path.length?`<h3 class="cph">Maszyny po kolei, do: ${esc(ITEMS[fl0].n)}</h3><div class="mpath">${path.map((m,i)=>`${i?'<span class="ar">→</span>':''}<span class="mp ${mCount(m)?'':'no'}" data-act="bmach" data-m="${m}" data-click="1" title="${esc(M[m].n)}${mCount(m)?'':': nie masz jej jeszcze'}">${mart(m)}<small>${esc(M[m].n)}</small></span>`).join('')}</div>`:''}
   <h3 class="cph">Co z tej uprawy otrzymasz <span class="more num">${pr.length}</span></h3>`;
   PKIND.forEach(([k,n])=>{const l=pr.filter(i=>ITEMS[i].kind===k);if(!l.length)return;
-    h+=`<div class="grp">${n}</div><div class="ptiles">${l.map(i=>{const m=madeN(i),fl=k!=='by';return `<div class="ptile ${!fl||m?'on':''}" title="${esc(ITEMS[i].src||ITEMS[i].n)}">${itemSvg(i)}<span><b>${esc(ITEMS[i].n)}</b><small>${fl?(m?`wyprodukowano ${m}`:'jeszcze nie'):`masz ${inv(i)}`} · ${unitPrice(i)} zł</small></span></div>`}).join('')}</div>`});
+    h+=`<div class="grp">${n}</div><div class="ptiles">${l.map(i=>{const m=madeN(i),fl=k!=='by';return `<div class="ptile ${!fl||m?'on':''} ${WASTE.has(i)?'waste':''}" data-act="bitem" data-id="${i}" data-click="1" title="${esc(ITEMS[i].src||ITEMS[i].n)}">${itemSvg(i)}<span><b>${esc(ITEMS[i].n)}</b><small>${fl?(m?`wyprodukowano ${m}`:'jeszcze nie'):`${kindName(i).toLowerCase()} · masz ${inv(i)}`} · ${unitPrice(i)} zł</small></span></div>`}).join('')}</div>`});
+  panel.innerHTML=h;panel.scrollTop=sc}
+
+// karta przedmiotu: czym jest, skąd się bierze (maszyna, czynność, uprawy) i do czego służy
+function drawItem(){const id=bookItemId,it=ITEMS[id];if(!it){closeSheet();return}const panel=$('#panel'),sc=panel.scrollTop,kn=kindName(id),waste=WASTE.has(id);
+  const facts=[['Rodzaj',kn],['Cena w sklepie',`${unitPrice(id)} zł / szt.`],['W spiżarni',`${inv(id)} szt.`]];
+  if(it.kind==='flour')facts.push(['Wyprodukowano',S.made[id]||0]);if(it.kind==='prod')facts.push(['Wyprodukowano',(S.mp||{})[id]||0]);
+  let h=bookHead(`<span class="cv">${itemSvg(id)}</span>`,esc(it.n),`<span class="kb ${waste?'w':it.kind}">${kn}</span>${it.src?' '+esc(it.src):''}`)+`<dl class="cfacts">${facts.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>`;
+  if(waste)h+=`<p class="wnote">${ci('trash')}<span>To odpad: maszyna oddziela go od ziarna podczas obróbki. Możesz go sprzedać za ${unitPrice(id)} zł albo wyrzucić do kosza.</span></p>`;
+  else if(it.kind==='by')h+=`<p class="wnote by">${ci('collect')}<span>Produkt uboczny: powstaje przy okazji obróbki i da się go sprzedać.</span></p>`;
+  // skąd: zbiór (słoma) i receptury, które go dają, pogrupowane wg maszyny
+  const from=BYM[id]||[],gm={};from.forEach(r=>{(gm[r.m]=gm[r.m]||{verbs:new Set(),ins:new Set()});gm[r.m].verbs.add(r.verb);Object.keys(r.in).forEach(i=>gm[r.m].ins.add(i))});
+  h+=`<h3 class="cph">${waste||it.kind==='by'?'Z czego wypada':'Skąd się bierze'}</h3>`;
+  if(id==='sloma')h+=`<div class="srcrow"><span class="sm">${ci('soil')}</span><div><b>Zbiór kombajnem</b><small>zostaje po zbiorze każdego zboża glutenowego</small></div></div>`;
+  Object.entries(gm).forEach(([m,g])=>{const crops=[...new Set([...g.ins].flatMap(i=>cropsOf(i)))],ins=[...g.ins];
+    h+=`<div class="srcrow"><span class="sm" data-act="bmach" data-m="${m}" data-click="1" title="Księga: ${esc(M[m].n)}">${mart(m)}</span><div><b>${esc(M[m].n)}</b><small>${[...g.verbs].map(esc).join(', ')}${ins.length>3?` · z ${ins.length} różnych półproduktów`:''}</small>
+      ${ins.length<=3?`<div class="ichips">${ins.map(ichip).join('')}</div>`:''}${crops.length?`<small class="cfrom">Z upraw (${crops.length}):</small>${cchips(crops)}`:''}</div></div>`});
+  if(!from.length&&id!=='sloma')h+=`<p class="more">${it.kind==='supply'?'Kupuje się go: młynarz dokupi go sam.':'Nie powstaje w żadnej maszynie.'}</p>`;
+  const use=RIN[id]||[];
+  if(use.length){h+=`<h3 class="cph">Do czego służy</h3>`;use.forEach(r=>{h+=`<div class="srcrow"><span class="sm" data-act="bmach" data-m="${r.m}" data-click="1">${mart(r.m)}</span><div><b>${esc(M[r.m].n)}</b><small>${esc(r.verb)}</small><div class="ichips">${Object.keys(r.out).map(ichip).join('')}</div></div></div>`})}
+  panel.innerHTML=h;panel.scrollTop=sc}
+
+// karta maszyny: opis, ścieżka ulepszeń i uprawy, przy których jest potrzebna
+function drawMachBook(){const m=bookMachId,mm=M[m];if(!mm){closeSheet();return}const panel=$('#panel'),sc=panel.scrollTop;
+  const rs=RBY[m]||[],crops=[...new Set(rs.flatMap(r=>Object.keys(r.in).flatMap(i=>cropsOf(i))))],n=mCount(m);
+  let h=bookHead(mart(m),esc(mm.n),`${n?`masz ${n} · w halach ${mPlaced(m)}, w magazynie ${mStock(m)}`:`w Sklepie od poziomu ${mm.lv} · ${fmtZ(mBuyCost(m))}`}`)+`<p class="cdesc">${esc(mm.d)}</p>
+   <h3 class="cph">Ścieżka ulepszeń</h3><p class="more">Każdy egzemplarz ulepszasz osobno (prawy przycisk na maszynie w hali). Ceny dotyczą przejścia na dany poziom.</p>${upTree(m,null,null)}`;
+  if(crops.length)h+=`<h3 class="cph">Potrzebna przy uprawach <span class="more num">${crops.length}</span></h3>${cchips(crops)}`;
   panel.innerHTML=h;panel.scrollTop=sc}
 
 function vKron(){
@@ -1333,7 +1419,7 @@ const ACT={
  hstash:d=>{hideCtx();stashM(HL(),d.k);if(hSel===d.k)hSel=null;if(sheetMode==='mach')closeSheet();toast('Maszyna wróciła do magazynu','gold');render()},
  hinfo:d=>{hideCtx();openMach(d.k)},
  hunq:d=>{unqueueM(HL(),d.k);drawMach();render()},
- hpin:d=>{const c=HL().cells[d.k];if(c)c.pin=c.pin===+d.v?null:+d.v;drawMach();render()},
+ hpin:d=>{const c=HL().cells[d.k];if(c)c.pin=(+d.v<0||c.pin===+d.v)?null:+d.v;drawMach();render()},
  hback1:d=>{hideCtx();const h=HL(),n=takeH(h,d.k,d.v,1e9);if(n)add(d.v,n);render()},
  hbackall:d=>{hideCtx();collectH(HL(),d.k);render()},
  hq:d=>{S.hq=d.v==='max'?'max':+d.v;render()},
@@ -1363,7 +1449,11 @@ const ACT={
  wapno:()=>{if(!pay(15,'Wapno spożywcze'))return;add('wapno',5);gainFeed('wapno',5,'Zakup na targu');render()},
  cat:d=>{S.cat=+d.v;render()},
  bview:d=>{S.bookView=d.v;snd('page');render()},
- bcrop:d=>{snd('page');openCrop(d.c)},
+ bcrop:d=>{hideCtx();snd('page');openCrop(d.c)},
+ bitem:d=>{hideCtx();snd('page');openItem(d.id)},
+ bmach:d=>{hideCtx();snd('page');openMachBook(d.m)},
+ bback:()=>{snd('page');bookBack()},
+ ctab:d=>{cropTab=d.v;drawCrop()},
  hire:d=>{const w=WORK.find(x=>x[0]===d.w);if(S.work[d.w]||S.lvl<w[4]||!pay(w[3],w[1]))return;S.work[d.w]=true;S.auto[d.w]=true;toast(`${w[1]} zaczyna pracę`,'gold');snd('level');render()},
  hireMiller:()=>{const k=S.millers.length;if(k>=MILLER_MAX||S.lvl<millerReq(k)||!pay(millerCost(k),`Młynarz ${k+1}`))return;S.millers.push({at:null,off:false});toast(`Młynarz ${k+1} zaczyna pracę. Daj mu zlecenie w Przetwórni.`,'gold');snd('level');render()},
  toggleW:d=>{S.auto[d.w]=S.auto[d.w]===false;render()},

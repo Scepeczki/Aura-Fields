@@ -303,8 +303,8 @@ function gs(m,verb,from,id,name,a,b,by,t,img){if(!ITEMS[id])item(id,name,ITEMS[f
 const prod=(id,n,col,img)=>item(id,n,col,'prod',{img});
 Object.entries(GL).forEach(([k,[gen,ln]])=>{
   const Z='Ziarno '+gen,K='Kłoski '+gen,zimg='z_'+(GIMG[k]||k),D=ln==='D';
-  let cur='k_'+k,form=D?K:Z,img=D?'p_'+k:zimg;ITEMS[cur].img=img;ITEMS[cur].line=ln;
-  const st=(m,verb,suf,adj,by,t,a=8,b=8)=>cur=gs(m,verb,cur,k+'_'+suf,form+' '+adj,a,b,by,t,img);
+  let cur='k_'+k,form=D?K:Z,img=D?'p_'+k:zimg;ITEMS[cur].img=img;ITEMS[cur].line=ln;ITEMS[cur].adj='z kombajnu';
+  const st=(m,verb,suf,adj,by,t,a=8,b=8)=>{cur=gs(m,verb,cur,k+'_'+suf,form+' '+adj,a,b,by,t,img);ITEMS[cur].adj=adj;return cur};
   if(ln==='E') st('osc','Odościanie','os','odoszczone',{osci:1});
   st('czw','Czyszczenie wstępne','cw','wstępnie oczyszczone',{zan_gr:1,odsiew:1,poslad:1,plewy_pyl:1});
   st('sus','Suszenie','sw','wysuszone');
@@ -315,7 +315,7 @@ Object.entries(GL).forEach(([k,[gen,ln]])=>{
     st('odk','Odkamienianie','bk','bez kamieni',{kamienie:1});
     // łuszczarka z aspiratorem: ziarno, plewy i kłoski nieobłuszczone, które wracają do łuszczarki (samopsza trzyma najmocniej)
     const zl=k+'_zl',kn=k+'_kn',hard=k==='sam';
-    item(zl,Z+' obłuszczone',ITEMS[cur].col,'mid',{img:'z_'+k});item(kn,K+' nieobłuszczone',ITEMS[cur].col,'mid',{img:'p_'+k});
+    item(zl,Z+' obłuszczone',ITEMS[cur].col,'mid',{img:'z_'+k,adj:'obłuszczone'});item(kn,K+' nieobłuszczone',ITEMS[cur].col,'mid',{img:'p_'+k,adj:'kłoski nieobłuszczone'});
     R('lus','Łuszczenie z plew',{[cur]:4},{[zl]:hard?2:3,[kn]:hard?2:1,plewy:1});
     R('lus','Ponowne łuszczenie kłosków',{[kn]:2},{[zl]:1,plewy:1});
     cur=zl;form=Z;img='z_'+k;
