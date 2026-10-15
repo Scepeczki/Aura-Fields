@@ -3,20 +3,65 @@
 
 // [id, nazwa, opis, cena, czas bazowy s, wymagany poziom gospodarza]
 const MACH=[
+ ['czw','Czyszczalnia wstępna','Sita i strumień powietrza usuwają ze świeżego ziarna plewy, kurz, słomę, kamyki i nasiona chwastów.',0,4,1],
+ ['sus','Suszarnia','Odparowuje wodę z ziarna, kłosków, plastrów, wytłoków i mokrej skrobi.',650,6,1],
+ ['sil','Silos','Przechowuje wysuszone ziarno, aż dojrzeje pożniwnie. Zboża oplewione leżą tu w kłoskach.',300,20,1],
+ ['mag','Separator magnetyczny','Wyłapuje z ziarna metal: śruby i drut, które uszkodziłyby walce.',300,2,1],
+ ['sep','Separator sitowy','Dokładne sita z aspiracją oddzielają grube i drobne zanieczyszczenia oraz pył.',300,3,1],
+ ['odk','Odkamieniacz','Oddziela po ciężarze kamyki, grudki ziemi i szkło wielkości ziarna.',300,3,1],
+ ['try','Tryjer','Cylinder z wgłębieniami oddziela nasiona krótsze i dłuższe od ziarna: kąkol, wykę, owies.',300,4,1],
+ ['stg','Stół grawitacyjny','Wibrujący blat z nadmuchem od dołu: lekkie ziarna i sklerocja sporyszu spływają w dół.',300,4,1],
+ ['sor','Sortownik optyczny','Kamery wyłapują ziarna przebarwione, porażone i sporysz, a dysze sprężonego powietrza je wydmuchują.',300,3,1],
+ ['obr','Obieraczka','Ściera z powierzchni ziarna brud, bródki i drobnoustroje. To nie łuskanie z plew.',300,4,1],
+ ['naw','Nawilżalnik','Dozuje wodę i miesza ziarno przed przemiałem.',300,2,1],
+ ['odl','Zbiornik odleżakowy','Ziarno odlega, aż woda wniknie do środka: okrywa mięknie, a bielmo kruszeje.',300,8,1],
+ ['zar','Żarna','Mielą ziarno, nasiona, makuch i susz na mąkę, a kondycjonowane ziarno pszenicy twardej na semolinę.',0,5,1],
+ ['lus','Łuszczarka','Zdejmuje plewy i łuski: łuszczy kłoski zbóż oplewionych i jęczmień, poleruje ryż, dzieli nasiona strączków.',400,4,1],
+ ['osc','Odościacz','Wał z łopatkami odbija ości od ziarna jęczmienia.',300,3,1],
+ ['kal','Kalibrator','Sita szczelinowe dzielą jęczmień na frakcje grubości przed łuszczeniem i słodowaniem.',300,3,1],
+ ['per','Perlak','Cylinder ścierny zdziera kolejne warstwy łuszczonego ziarna: z jęczmienia powstaje pęczak, z płaskurki farro.',300,6,2],
+ ['kra','Krajalnica','Tnie pęczak na kawałki kaszy.',300,3,2],
+ ['plr','Polerka szczotkowa','Wygładza kaszę łamaną na gładką, jasną kaszę perłową.',300,4,2],
+ ['plt','Płatkownica','Paruje łuszczone ziarno i zgniata je gładkimi walcami w płatki.',300,6,3],
+ ['kie','Kiełkownia','Namoczone ziarno kiełkuje kilka dni w skrzyni z przewracaniem. Powstaje słód zielony.',300,14,3],
+ ['ssl','Suszarnia słodu','Suszy słód zielony. Temperatura końcowa decyduje, czy słód będzie jasny, czy ciemny.',300,10,3],
+ ['okw','Odkiełkowywacz','Usuwa z suszonego słodu gorzkie kiełki korzeniowe.',300,3,3],
+ ['srt','Śrutownik','Rozdrabnia ziarno na śrutę paszową albo gniecie je na płasko.',300,4,2],
  ['mlo','Młocarnia','Oddziela ziarno i nasiona od kłosów, strąków, koszyczków i kolb.',0,4,1],
- ['zar','Żarna','Mielą ziarno, nasiona, makuch i susz na mąkę.',0,5,1],
- ['lus','Łuszczarka','Zdejmuje plewy i łuski, poleruje ryż, dzieli nasiona strączków.',400,4,2],
  ['plu','Płuczka skrobi','Ściera bulwy i wypłukuje z nich czystą skrobię.',700,7,3],
- ['sus','Suszarnia','Odparowuje wodę z ziarna, plastrów, wytłoków i mokrej skrobi.',650,8,3],
  ['obi','Stół krojenia','Obiera, kroi w plastry, wypestkowuje i dryluje.',550,4,3],
  ['pra','Prażalnik','Praży, stabilizuje ziarno termicznie i rozkłada szkodliwe związki.',900,6,4],
- ['kad','Kadź do moczenia','Moczy, płucze i wyługowuje gorycz zimną wodą.',800,7,5],
+ ['kad','Kadź do moczenia','Moczy, płucze i wyługowuje gorycz zimną wodą. Moczy też jęczmień na słód.',800,7,5],
  ['pre','Prasa','Tłoczy sok z owoców i olej z nasion. Zostają wytłoki albo makuch.',1600,6,5],
- ['sit','Odsiewacz','Przesiewa śrutę i oddziela pestki od wytłoków.',1100,4,6],
+ ['sit','Odsiewacz','Przesiewa śrutę i kaszę, oddziela pestki od wytłoków.',1100,4,6],
  ['lup','Łupiarka orzechów','Rozłupuje twarde łupiny orzechów, kasztanów, żołędzi i kokosów.',1800,5,7],
  ['koc','Kocioł','Blanszuje i gotuje, także w wodzie wapiennej.',1500,6,7],
  ['mbg','Młyn czystej linii','Osobny młyn bez kontaktu z glutenem. Tylko na nim powstaje certyfikowana mąka owsiana.',4000,6,9],
 ];
+// skale urządzeń z dokumentu linii: ulepszana maszyna staje się kolejnym urządzeniem [od poziomu, nazwa]
+const MTIER={
+ czw:[[1,'Wialnia'],[4,'Czyszczalnia płaska'],[8,'Czyszczalnia bębnowa'],[11,'Separator wstępny wysokiej wydajności']],
+ sus:[[1,'Suszarnia komorowa'],[4,'Suszarnia z mieszalnikiem'],[8,'Suszarnia kolumnowa'],[11,'Suszarnia kolumnowa z odzyskiem ciepła']],
+ sil:[[1,'Worki i big-bagi'],[3,'Magazyn płaski'],[6,'Silos lejowy'],[9,'Silos płaskodenny'],[11,'Elewator']],
+ mag:[[1,'Magnes płytowy'],[6,'Separator bębnowy samooczyszczający']],
+ sep:[[1,'Czyszczalnia płaska uniwersalna'],[6,'Separator młyński z aspiracją']],
+ odk:[[1,'Stół grawitacyjny uniwersalny'],[5,'Odkamieniacz wibracyjny'],[10,'Koncentrator']],
+ try:[[1,'Tryjer cylindryczny'],[7,'Tryjer tarczowy']],
+ stg:[[1,'Stół grawitacyjny'],[8,'Wialnia pneumatyczna']],
+ sor:[[1,'Sortownik kanałowy'],[7,'Sortownik wielokanałowy RGB i NIR']],
+ obr:[[1,'Szczotkarka'],[4,'Obieraczka pozioma'],[9,'Obieraczka pionowa']],
+ naw:[[1,'Mieszalnik bębnowy'],[4,'Ślimak z dyszą dozującą'],[7,'Zwilżacz automatyczny'],[10,'Zwilżacz wirnikowy z czujnikiem NIR']],
+ odl:[[1,'Skrzynie i big-bagi'],[6,'Zbiorniki odleżakowe lejowe']],
+ lus:[[1,'Mała łuszczarka'],[4,'Łuszczarka uderzeniowa'],[7,'Łuszczarka walcowa'],[10,'Łuszczarka tarczowa']],
+ kal:[[1,'Kalibrator płaski'],[7,'Kalibrator bębnowy']],
+ per:[[1,'Perlak partiowy'],[6,'Perlak ciągły']],
+ kra:[[1,'Krajalnica nożowa'],[6,'Łamacz walcowy']],
+ kie:[[1,'Skrzynia kiełkownicza'],[7,'Bęben kiełkowniczy'],[11,'Kiełkownia-suszarnia GKV']],
+ ssl:[[1,'Suszarnia słodu jednopoziomowa'],[7,'Suszarnia słodu dwupoziomowa']],
+ srt:[[1,'Śrutownik bijakowy'],[6,'Śrutownik walcowy']],
+};
+// maszyny linii zbożowych są tańsze, bo pierwszą mąkę robi się dopiero z całej linii
+const MLINE=new Set(['czw','sus','sil','mag','sep','odk','try','stg','sor','obr','naw','odl','lus','osc','kal']);
 const M={}; MACH.forEach(([id,n,d,p,t,lv])=>M[id]={id,n,d,p,t,lv});
 // mnożniki czasu: uprawy rosną TG razy dłużej, maszyny pracują TM razy dłużej niż wartości bazowe
 const TG=8, TM=6;
@@ -40,20 +85,20 @@ const LVL={pszenica:1,zyto:1,jeczmien:1,owies:1,ziemniak:1,groch:1,burak:1,gryka
 const CROPS_RAW=[
 'G:Zboża glutenowe',
 // w kolejności drzewa pokrewieństwa: pszenice od samopszy po heksaploidy, potem żyto, jęczmień i ich mieszańce z pszenicą
-['samopsza','Samopsza','Triticum monococcum','zboze','pole',40,0,3,18,'k_sam','Kłosy samopszy','#c7a25e'],
-['plaskurka','Płaskurka','Triticum dicoccum','zboze','pole',38,0,3,16,'k_pla','Kłosy płaskurki','#b98a45'],
-['durum','Pszenica twarda','Triticum durum','zboze','pole',34,0,4,12,'k_dur','Kłosy pszenicy twardej','#e0b53a'],
-['polska','Pszenica polska','Triticum polonicum','zboze','pole',38,0,4,16,'k_pol','Kłosy pszenicy polskiej','#d4b25c'],
-['khorasan','Pszenica Khorasan (Kamut)','Triticum turanicum','zboze','pole',40,0,4,20,'k_kho','Kłosy Khorasan','#d9a845'],
-['perska','Pszenica perska','Triticum carthlicum','zboze','pole',38,0,4,18,'k_per','Kłosy pszenicy perskiej','#b8904a'],
-['pszenica','Pszenica zwyczajna','Triticum aestivum','zboze','pole',30,0,4,10,'k_psz','Kłosy pszenicy','#d8b04f'],
-['orkisz','Orkisz','Triticum spelta','zboze','pole',36,0,4,14,'k_ork','Kłosy orkiszu','#c99a4a'],
-['zbita','Pszenica zbita','Triticum compactum','zboze','pole',32,0,4,12,'k_zbi','Kłosy pszenicy zbitej','#dcbc68'],
-['indyjska','Pszenica indyjska','Triticum sphaerococcum','zboze','pole',36,0,4,18,'k_ind','Kłosy pszenicy indyjskiej','#d2ac58'],
-['zyto','Żyto zwyczajne','Secale cereale','zboze','pole',30,0,4,10,'k_zyt','Kłosy żyta','#a88a5c'],
-['pszenzyto','Pszenżyto','×Triticosecale','zboze','pole',32,0,4,12,'k_pzy','Kłosy pszenżyta','#bf9c55'],
-['jeczmien','Jęczmień zwyczajny','Hordeum vulgare','zboze','pole',28,0,4,10,'k_jec','Kłosy jęczmienia','#d4bb6c'],
-['tritordeum','Tritordeum','×Tritordeum martinii','zboze','pole',36,0,4,18,'k_trd','Kłosy tritordeum','#cfb070'],
+['samopsza','Samopsza','Triticum monococcum','zboze','pole',40,0,3,18,'k_sam','Kłoski samopszy z kombajnu','#c7a25e'],
+['plaskurka','Płaskurka','Triticum dicoccum','zboze','pole',38,0,3,16,'k_pla','Kłoski płaskurki z kombajnu','#b98a45'],
+['durum','Pszenica twarda','Triticum durum','zboze','pole',34,0,4,12,'k_dur','Ziarno pszenicy twardej z kombajnu','#e0b53a'],
+['polska','Pszenica polska','Triticum polonicum','zboze','pole',38,0,4,16,'k_pol','Ziarno pszenicy polskiej z kombajnu','#d4b25c'],
+['khorasan','Pszenica Khorasan (Kamut)','Triticum turanicum','zboze','pole',40,0,4,20,'k_kho','Ziarno Khorasan z kombajnu','#d9a845'],
+['perska','Pszenica perska','Triticum carthlicum','zboze','pole',38,0,4,18,'k_per','Ziarno pszenicy perskiej z kombajnu','#b8904a'],
+['pszenica','Pszenica zwyczajna','Triticum aestivum','zboze','pole',30,0,4,10,'k_psz','Ziarno pszenicy z kombajnu','#d8b04f'],
+['orkisz','Orkisz','Triticum spelta','zboze','pole',36,0,4,14,'k_ork','Kłoski orkiszu z kombajnu','#c99a4a'],
+['zbita','Pszenica zbita','Triticum compactum','zboze','pole',32,0,4,12,'k_zbi','Ziarno pszenicy zbitej z kombajnu','#dcbc68'],
+['indyjska','Pszenica indyjska','Triticum sphaerococcum','zboze','pole',36,0,4,18,'k_ind','Ziarno pszenicy indyjskiej z kombajnu','#d2ac58'],
+['zyto','Żyto zwyczajne','Secale cereale','zboze','pole',30,0,4,10,'k_zyt','Ziarno żyta z kombajnu','#a88a5c'],
+['pszenzyto','Pszenżyto','×Triticosecale','zboze','pole',32,0,4,12,'k_pzy','Ziarno pszenżyta z kombajnu','#bf9c55'],
+['jeczmien','Jęczmień zwyczajny','Hordeum vulgare','zboze','pole',28,0,4,10,'k_jec','Ziarno jęczmienia z kombajnu','#d4bb6c'],
+['tritordeum','Tritordeum','×Tritordeum martinii','zboze','pole',36,0,4,18,'k_trd','Ziarno tritordeum z kombajnu','#cfb070'],
 'G:Zboża i pseudozboża bezglutenowe',
 ['owies','Owies zwyczajny','Avena sativa','zboze','pole',28,0,4,10,'k_owi','Wiechy owsa','#cfc08a'],
 ['owies_cert','Owies certyfikowany','Avena sativa, uprawa bezglutenowa','zboze','pole',32,0,3,18,'k_owc','Wiechy owsa certyfikowanego','#dccf98'],
@@ -117,12 +162,13 @@ const CROPS_RAW=[
 ['kalafior','Kalafior','Brassica oleracea var. botrytis','warzywo','pole',34,0,2,10,'kalaf','Kalafiory','#efe8d0'],
 ];
 const CROPS=[], CR={}, CROP_GROUPS=[];
+// zboża glutenowe: kombajn od razu młóci, więc plon liczy się w ziarnie (dwa razy więcej sztuk niż kłosów)
 (()=>{let grp='';
 CROPS_RAW.forEach(x=>{ if(typeof x==='string'){grp=x.slice(2);CROP_GROUPS.push(grp);return}
   const [id,n,lat,kind,env,g0,r,y,p,out,outN,col]=x; const lvl=(LVL[id]||1)*2-1;
   // dalsze uprawy rosną dłużej
   const g=r?g0:Math.round(g0*(1+0.025*(lvl-1)));
-  const c={id,n,lat,kind,env,g,g0,r,y,p,out,outN,col,grp,lvl}; CROPS.push(c); CR[id]=c; });
+  const c={id,n,lat,kind,env,g,g0,r,y:grp==='Zboża glutenowe'?y*2:y,p,out,outN,col,grp,lvl}; CROPS.push(c); CR[id]=c; });
 })();
 
 const ITEMS={};
@@ -154,10 +200,10 @@ const CATS=['','Zboża glutenowe','Zboża i pseudozboża bezglutenowe','Rośliny
 const FL=[
 [1,'m_sam','Mąka z samopszy','#e8cf8a','z najstarszej znanej pszenicy samopszy (Triticum monococcum)'],
 [1,'m_pla','Mąka z płaskurki','#dcc396','ze starożytnej pszenicy płaskurki (Triticum dicoccum)'],
-[1,'m_dur','Mąka pszenna twarda (Semolina)','#ecd27a','z ziarna pszenicy twardej (Triticum durum)'],
-[1,'m_pol','Mąka z pszenicy polskiej','#e4c98a','z wydłużonego ziarna pszenicy polskiej (Triticum polonicum)'],
-[1,'m_kho','Mąka Kamut (Khorasan)','#e9cd86','z pszenicy Khorasan (Triticum turanicum), znanej pod marką Kamut'],
-[1,'m_per','Mąka z pszenicy perskiej','#d8bc8a','z ziarna pszenicy szorstkoziarnistej, perskiej (Triticum carthlicum)'],
+[1,'m_dur','Semolina z pszenicy twardej','#ecd27a','z ziarna pszenicy twardej (Triticum durum)'],
+[1,'m_pol','Semolina z pszenicy polskiej','#e4c98a','z wydłużonego ziarna pszenicy polskiej (Triticum polonicum)'],
+[1,'m_kho','Semolina Kamut (Khorasan)','#e9cd86','z pszenicy Khorasan (Triticum turanicum), znanej pod marką Kamut'],
+[1,'m_per','Semolina z pszenicy perskiej','#d8bc8a','z ziarna pszenicy szorstkoziarnistej, perskiej (Triticum carthlicum)'],
 [1,'m_psz','Mąka pszenna zwyczajna','#f3ead2','z ziarna pszenicy zwyczajnej (Triticum aestivum)'],
 [1,'m_ork','Mąka orkiszowa','#e6d3a8','ze starożytnego gatunku pszenicy orkisz (Triticum spelta)'],
 [1,'m_zbi','Mąka z pszenicy zbitej','#f2e8d0','z miękkiego ziarna pszenicy zbitej (Triticum compactum), na ciastka i krakersy'],
@@ -165,7 +211,7 @@ const FL=[
 [1,'m_zyt','Mąka żytnia','#c9b597','z ziarna żyta zwyczajnego (Secale cereale)'],
 [1,'m_pzy','Mąka pszenżytnia','#ddcdaa','z pszenżyta (Triticosecale), krzyżówki pszenicy i żyta'],
 [1,'m_jec','Mąka jęczmienna','#e2d5b2','z ziarna jęczmienia zwyczajnego (Hordeum vulgare)'],
-[1,'m_trd','Mąka z tritordeum','#e6cf94','z tritordeum, krzyżówki pszenicy twardej z dzikim jęczmieniem chilijskim (Hordeum chilense)'],
+[1,'m_trd','Semolina z tritordeum','#e6cf94','z tritordeum, krzyżówki pszenicy twardej z dzikim jęczmieniem chilijskim (Hordeum chilense)'],
 [2,'m_ryzb','Mąka ryżowa biała','#f7f4ec','z oczyszczonego ziarna ryżu siewnego (Oryza sativa)'],
 [2,'m_ryzbr','Mąka ryżowa brązowa (pełnoziarnista)','#cbb08a','z nieoczyszczonego ziarna ryżu siewnego (Oryza sativa)','Łuska zawsze trafia do łuszczarki. Pełnoziarnista mąka zachowuje otręby i zarodek, bo ryż nie jest polerowany.'],
 [2,'m_mochi','Mąka z ryżu kleistego (Mochiko / Shiratamako)','#fbf8f0','ze specjalnej odmiany ryżu kleistego (Oryza sativa var. glutinosa)'],
@@ -239,21 +285,76 @@ function L(start,steps){let cur=start;steps.forEach(([m,verb,id,name,a,b,t])=>{
   R(m,verb,{[cur]:a||1},{[id]:b||1},t); cur=id;});}
 function it(id,name,from){ if(!ITEMS[id]) item(id,name,ITEMS[from].col,'mid'); }
 
-// 1. glutenowe
-L('k_psz',[['mlo','Młócenie','z_psz','Ziarno pszenicy',1,2]]); R('zar','Mielenie',{z_psz:2},{m_psz:1,otreby:1});
-L('k_dur',[['mlo','Młócenie','z_dur','Ziarno pszenicy twardej',1,2],['zar','Grube mielenie na semolinę','m_dur',null,2,1]]);
-L('k_ork',[['mlo','Młócenie','p_ork','Orkisz w plewach',1,2],['lus','Odplewianie','z_ork','Ziarno orkiszu'],['zar','Mielenie','m_ork',null,2,1]]);
-L('k_pla',[['mlo','Młócenie','p_pla','Płaskurka w plewach',1,2],['lus','Odplewianie','z_pla','Ziarno płaskurki'],['zar','Mielenie','m_pla',null,2,1]]);
-L('k_sam',[['mlo','Młócenie','p_sam','Samopsza w plewach',1,2],['lus','Odplewianie','z_sam','Ziarno samopszy'],['zar','Mielenie','m_sam',null,2,1]]);
-L('k_kho',[['mlo','Młócenie','z_kho','Ziarno Khorasan',1,2],['zar','Mielenie','m_kho',null,2,1]]);
-L('k_zyt',[['mlo','Młócenie','z_zyt','Ziarno żyta',1,2]]); R('zar','Mielenie',{z_zyt:2},{m_zyt:1,otreby:1});
-L('k_pzy',[['mlo','Młócenie','z_pzy','Ziarno pszenżyta',1,2],['zar','Mielenie','m_pzy',null,2,1]]);
-L('k_pol',[['mlo','Młócenie','z_pol','Ziarno pszenicy polskiej',1,2],['zar','Mielenie','m_pol',null,2,1]]);
-L('k_per',[['mlo','Młócenie','z_per','Ziarno pszenicy perskiej',1,2],['zar','Mielenie','m_per',null,2,1]]);
-L('k_zbi',[['mlo','Młócenie','z_zbi','Ziarno pszenicy zbitej',1,2],['zar','Mielenie','m_zbi',null,2,1]]);
-L('k_ind',[['mlo','Młócenie','z_ind','Ziarno pszenicy indyjskiej',1,2],['zar','Mielenie','m_ind',null,2,1]]);
-L('k_trd',[['mlo','Młócenie','z_trd','Ziarno tritordeum',1,2],['zar','Mielenie','m_trd',null,2,1]]);
-L('k_jec',[['mlo','Młócenie','p_jec','Jęczmień w plewach',1,2],['lus','Obłuskiwanie','z_jec','Jęczmień obłuskany'],['zar','Mielenie','m_jec',null,2,1]]);
+// 1. glutenowe: linie obróbki od kombajnu. Każdy krok to osobna maszyna; po kroku ziarno zmienia przymiotnik,
+// a to, co maszyna oddzieli, wychodzi obok jako osobny przedmiot (produkty uboczne i odpady).
+// A pszenice chlebowe na mąkę · B twarde na semolinę · C żyto i pszenżyto (sporysz) · D oplewione (łuszczarka) · E jęczmień (kasza, słód, pasza)
+[['sloma','Słoma','#d8c27a'],['poslad','Poślad','#b89a60'],['zan_gr','Zanieczyszczenia grube','#8a7650'],['odsiew','Odsiew','#9a8a6a'],['plewy_pyl','Plewy z pyłem','#c8b48a'],
+ ['pyl','Pył zbożowy','#b0a490'],['metal','Zanieczyszczenia metalowe','#7a7a80'],['kamienie','Kamienie i grudki ziemi','#7a6a5a'],['fr_kr','Frakcja krótka (kąkol, wyka)','#5a4a3a'],
+ ['fr_dl','Frakcja długa (owies, jęczmień)','#c8b070'],['lekkie','Ziarno lekkie','#c8b488'],['porazone','Ziarno porażone i przebarwione','#8a6a5a'],['sporysz','Sklerocja sporyszu','#3a2a30'],
+ ['odp_obr','Odpad z obierania','#b8946a'],['plewy','Plewy (łuska)','#d8c48a'],['osci','Ości','#d0c080'],['luska_j','Łuska jęczmienna','#c8b07a'],['maczka','Mączka paszowa','#d8c8a0'],['kielki','Kiełki słodowe','#c8a870']
+].forEach(([id,n,col])=>item(id,n,col,'by',{img:'otreby'}));
+// gatunek: [dopełniacz do nazw, linia]; GIMG: pokrewna grafika ziarna, dopóki gatunek nie ma własnej
+const GL={psz:['pszenicy','A'],zbi:['pszenicy zbitej','A'],ind:['pszenicy indyjskiej','A'],
+ dur:['pszenicy twardej','B'],kho:['Khorasan','B'],pol:['pszenicy polskiej','B'],per:['pszenicy perskiej','B'],trd:['tritordeum','B'],
+ zyt:['żyta','C'],pzy:['pszenżyta','C'],ork:['orkiszu','D'],pla:['płaskurki','D'],sam:['samopszy','D'],jec:['jęczmienia','E']};
+const GLINE={A:'A: pszenica chlebowa, przemiał na mąkę',B:'B: przemiał na semolinę, staranne sortowanie',C:'C: obowiązkowe usuwanie sporyszu',D:'D: ziarno w plewach, łuszczarka',E:'E: jęczmień na kaszę, słód albo paszę'};
+const GIMG={zbi:'psz',ind:'psz',pol:'dur',per:'kho',trd:'dur'};
+function gs(m,verb,from,id,name,a,b,by,t,img){if(!ITEMS[id])item(id,name,ITEMS[from].col,'mid',{img});R(m,verb,{[from]:a},Object.assign({[id]:b},by||{}),t);return id}
+const prod=(id,n,col,img)=>item(id,n,col,'prod',{img});
+Object.entries(GL).forEach(([k,[gen,ln]])=>{
+  const Z='Ziarno '+gen,K='Kłoski '+gen,zimg='z_'+(GIMG[k]||k),D=ln==='D';
+  let cur='k_'+k,form=D?K:Z,img=D?'p_'+k:zimg;ITEMS[cur].img=img;ITEMS[cur].line=ln;
+  const st=(m,verb,suf,adj,by,t,a=8,b=8)=>cur=gs(m,verb,cur,k+'_'+suf,form+' '+adj,a,b,by,t,img);
+  if(ln==='E') st('osc','Odościanie','os','odoszczone',{osci:1});
+  st('czw','Czyszczenie wstępne','cw','wstępnie oczyszczone',{zan_gr:1,odsiew:1,poslad:1,plewy_pyl:1});
+  st('sus','Suszenie','sw','wysuszone');
+  st('sil',ln==='E'?'Odpoczynek w magazynie':'Przechowywanie i dojrzewanie',D?'pr':'dj',D?'przechowywane':ln==='E'?'po odpoczynku':'dojrzałe pożniwnie',null,ln==='E'?28:20);
+  if(D){
+    st('sep','Odsiewanie z aspiracją','od','odsiane',{zan_gr:1,odsiew:1,pyl:1});
+    st('mag','Separacja magnetyczna','bm','bez metalu',{metal:1});
+    st('odk','Odkamienianie','bk','bez kamieni',{kamienie:1});
+    // łuszczarka z aspiratorem: ziarno, plewy i kłoski nieobłuszczone, które wracają do łuszczarki (samopsza trzyma najmocniej)
+    const zl=k+'_zl',kn=k+'_kn',hard=k==='sam';
+    item(zl,Z+' obłuszczone',ITEMS[cur].col,'mid',{img:'z_'+k});item(kn,K+' nieobłuszczone',ITEMS[cur].col,'mid',{img:'p_'+k});
+    R('lus','Łuszczenie z plew',{[cur]:4},{[zl]:hard?2:3,[kn]:hard?2:1,plewy:1});
+    R('lus','Ponowne łuszczenie kłosków',{[kn]:2},{[zl]:1,plewy:1});
+    cur=zl;form=Z;img='z_'+k;
+    if(k==='pla'){prod('farro','Farro perlato (płaskurka perłowana)','#d8c090','z_pla');R('per','Perłowanie',{[zl]:2},{farro:2,maczka:1})}
+  } else {
+    st('mag','Separacja magnetyczna','bm','bez metalu',{metal:1});
+    st('sep','Odsiewanie z aspiracją','od','odsiane',{zan_gr:1,odsiew:1,pyl:1});
+    st('odk','Odkamienianie','bk','bez kamieni',{kamienie:1});
+  }
+  st('try','Tryjerowanie','ws','wyselekcjonowane',{fr_kr:1,fr_dl:1});
+  if(ln==='E'){
+    st('kal','Kalibrowanie','kl','skalibrowane',{poslad:1});const kl=cur;
+    gs('lus','Łuszczenie ścierne',kl,'jec_ls','Jęczmień łuszczony',4,3,{luska_j:1},null,'z_jec');
+    R('zar','Mielenie',{jec_ls:2},{m_jec:1,otreby:1});
+    prod('peczak','Pęczak','#e2cf9c','z_jec');R('per','Perłowanie',{jec_ls:2},{peczak:2,maczka:1});
+    prod('kasza_jl','Kasza jęczmienna łamana','#d8c490','z_jec');R('kra','Łamanie pęczaku',{peczak:2},{kasza_jl:2});
+    prod('kasza_jp','Kasza jęczmienna perłowa','#ecdcb0','z_jec');R('plr','Polerowanie',{kasza_jl:2},{kasza_jp:2,maczka:1});
+    prod('kasza_jd','Kasza perłowa drobna','#eee0b8','z_jec');prod('kasza_js','Kasza perłowa średnia','#ecdcb0','z_jec');prod('kasza_jg','Kasza perłowa gruba','#e6d4a4','z_jec');
+    R('sit','Przesiewanie kaszy',{kasza_jp:3},{kasza_jd:1,kasza_js:1,kasza_jg:1,maczka:1});
+    prod('platki_j','Płatki jęczmienne','#e8d8a8','otreby');R('plt','Parowanie i płatkowanie',{jec_ls:2},{platki_j:2});
+    gs('kad','Moczenie w kadzi zalewnej',kl,'jec_nm','Jęczmień namoczony (namok)',4,4,null,10,'z_jec');
+    gs('kie','Kiełkowanie','jec_nm','slod_z','Słód zielony',4,4,null,null,'z_jec');
+    item('slod_js','Słód jasny suszony','#e0c070','mid',{img:'z_jec'});item('slod_cs','Słód ciemny suszony','#7a4a2a','mid',{img:'z_jec'});
+    R('ssl','Suszenie na słód jasny',{slod_z:2},{slod_js:2});R('ssl','Prażenie na słód ciemny',{slod_z:2},{slod_cs:2},14);
+    prod('slod_j','Słód jasny','#e0c070','z_jec');prod('slod_c','Słód ciemny','#7a4a2a','z_jec');
+    R('okw','Odkiełkowywanie',{slod_js:2},{slod_j:2,kielki:1});R('okw','Odkiełkowywanie',{slod_cs:2},{slod_c:2,kielki:1});
+    prod('sruta_j','Śruta jęczmienna','#cdb888','otreby');prod('gniot_j','Jęczmień gnieciony','#d8c48c','z_jec');
+    R('srt','Śrutowanie na paszę',{[kl]:2},{sruta_j:2});R('srt','Gniecenie',{[kl]:2},{gniot_j:2});
+    return;
+  }
+  if(ln==='C') st('stg','Oddzielanie sporyszu na stole','sg','po stole grawitacyjnym',{sporysz:1,lekkie:1},null,8,7);
+  st('sor','Sortowanie optyczne','oc','oczyszczone',ln==='C'?{porazone:1,sporysz:1}:{porazone:1},null,8,ln==='B'?6:7);
+  st('obr',ln==='B'?'Intensywne obieranie':'Obieranie','ob','obierane',{odp_obr:1});
+  st('naw','Nawilżanie','nw','nawilżone');
+  st('odl','Odleżenie','kd','kondycjonowane',null,ln==='B'?6:ln==='C'?5:12);
+  R('zar',ln==='B'?'Przemiał na semolinę':'Przemiał',{[cur]:2},{['m_'+k]:1,otreby:1});
+});
+// pszenżyto w dużej części idzie na paszę: po czyszczeniu wystarczy śrutownik
+prod('sruta_pzy','Śruta pszenżytnia','#c8b080','otreby');R('srt','Śrutowanie na paszę',{pzy_od:2},{sruta_pzy:2});
 L('k_owi',[['mlo','Młócenie','p_owi','Owies w plewach',1,2],['lus','Odplewianie','z_owi','Ziarno owsa'],['pra','Stabilizacja termiczna','z_owis','Owies stabilizowany'],['zar','Mielenie','m_owi',null,2,1]]);
 // 2. bezglutenowe (owies sam nie ma glutenu)
 L('k_owc',[['mlo','Młócenie','p_owc','Owies certyfikowany w plewach',1,2],['lus','Odplewianie','z_owc','Ziarno owsa certyfikowanego'],['pra','Stabilizacja termiczna','z_owcs','Owies certyfikowany stabilizowany'],['mbg','Mielenie na czystej linii','m_owc',null,2,1]]);
@@ -363,11 +464,11 @@ const BYM={}; RECIPES.forEach(r=>{Object.keys(r.out).forEach(o=>{(BYM[o]=BYM[o]|
     c.p=Math.round(8*Math.pow(1.15,nl-1)*Math.sqrt(c.y/4)*(c.r?4:1)); c.g=c.r?c.g0:Math.round(c.g0*(1+0.025*(nl-1))); c.lvl=nl; c.cat=catOf[c.id]||6;});
   // maszyna jest do kupienia od poziomu pierwszej mąki, która jej potrzebuje
   const need={};FL.forEach(([,id])=>{const ch=chainOf(id),c=ch.find(s=>s.crop),lv=c?c.crop.lvl:1;ch.filter(s=>s.r).forEach(s=>{need[s.r.m]=Math.min(need[s.r.m]||99,lv)})});
-  MACH.forEach(x=>{if(x[3]===0)return;const lv=Math.max(2,need[x[0]]||x[5]);x[5]=lv;x[3]=Math.round(300*Math.pow(1.27,lv-1)/50)*50;M[x[0]].lv=lv;M[x[0]].p=x[3]});
+  MACH.forEach(x=>{if(x[3]===0)return;const ln=MLINE.has(x[0]),lv=Math.max(ln?1:2,need[x[0]]||x[5]);x[5]=lv;x[3]=Math.round((ln?150*Math.pow(1.3,lv-1):300*Math.pow(1.27,lv-1))/50)*50;M[x[0]].lv=lv;M[x[0]].p=x[3]});
 })();
 
 // ---------- WARTOŚCI ----------
-const VAL={wapno:3,otreby:2,olej:6,sok:4,nas_kar:5};
+const VAL={wapno:3,otreby:2,olej:6,sok:4,nas_kar:5,sloma:0.8,poslad:1.5,zan_gr:0.3,odsiew:0.4,plewy_pyl:0.3,pyl:0.2,metal:0.5,kamienie:0.2,fr_kr:0.6,fr_dl:0.9,lekkie:0.8,porazone:0.3,sporysz:0.2,odp_obr:0.8,plewy:0.7,osci:0.2,luska_j:0.5,maczka:1.2,kielki:1.5};
 CROPS.forEach(c=>{const base= c.r ? c.p/(c.y*5)+c.r*0.04 : c.p/c.y*1.25+c.g*0.04; VAL[c.out]=base*(1+0.035*(c.lvl-1));});
 for(let pass=0;pass<14;pass++) RECIPES.forEach(r=>{
   const ins=Object.entries(r.in); if(ins.some(([k])=>VAL[k]==null)) return;
@@ -379,11 +480,12 @@ for(let pass=0;pass<14;pass++) RECIPES.forEach(r=>{
   mains.forEach(([k])=>{if(VAL[k]==null)VAL[k]=Math.max(0.5,(cost*1.22-by*0.5)/units)});
 });
 // cena mąki trzyma się poziomu z Księgi; trudniejszy łańcuch daje najwyżej +60%, prostszy −25%
-const PRICE={};FLOURS.forEach(f=>{const c=chainOf(f).find(s=>s.crop),T=10*Math.pow(1.12,(c?c.crop.lvl:1)-1);PRICE[f]=Math.max(3,Math.round(T*Math.min(1.6,Math.max(0.75,VAL[f]*0.95/T))))});
+// gotowe produkty (kasze, słód, płatki, śruta) wyceniane tak jak mąki: od poziomu uprawy, nie od długości łańcucha
+const PRICE={};[...FLOURS,...Object.keys(ITEMS).filter(i=>ITEMS[i].kind==='prod')].forEach(f=>{const c=chainOf(f).find(s=>s.crop),T=10*Math.pow(1.12,(c?c.crop.lvl:1)-1);PRICE[f]=Math.max(3,Math.round(T*Math.min(1.6,Math.max(0.75,VAL[f]*0.95/T))))});
 // INCOME: ogólny mnożnik zarobków ze sprzedaży (sklep, skup, zamówienia)
 const INCOME=0.75;
 function price(id){const v=VAL[id]||1,k=ITEMS[id].kind;
-  if(k==='flour') return Math.max(2,Math.round(PRICE[id]*INCOME));
+  if(k==='flour'||k==='prod') return Math.max(2,Math.round(PRICE[id]*INCOME));
   if(k==='raw') return Math.max(1,Math.round(v*0.85*INCOME));
   return Math.max(1,Math.round(v*INCOME));}
 

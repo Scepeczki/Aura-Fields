@@ -59,12 +59,12 @@ let S, dirty=true, lastReal=Date.now(), lastRender=0, stageCache=[], silent=fals
 const newPlot=()=>({env:'pole',crop:null,prog:0,need:0,h:0,soil:0,spr:false,last:null});
 function newState(){
   const m={}; MACH.forEach(x=>m[x[0]]={owned:x[3]===0});
-  // hala na start: młocarnia, a za nią żarna (wyjście młocarni jest wejściem żaren)
-  const hall=newHall();hall.cells['2,1']=newCell('mlo',0);hall.cells['4,1']=newCell('zar',0);
+  // hala na start: czyszczalnia wstępna i żarna; resztę linii zboża dokupuje się w Sklepie
+  const hall=newHall();hall.cells['1,1']=newCell('czw',0);hall.cells['9,1']=newCell('zar',0);
   const s={v:3,t:DAY*0.1,coins:100,earned:0,xp:0,lvl:1,speed:1,tab:'pola',cat:0,onlyAvail:true,selM:'mlo',
     plots:Array.from({length:6},newPlot),inv:{},m,made:{},orders:[],dem:{},hot:null,day:-1,wx:'slonce',fc:[],
     res:{},work:{},auto:{},millers:[],ach:{},goal:0,st:{harv:0,sold:0,flourSold:0,orders:0,crafted:0,planted:0,planned:0,cust:0},sound:true,seen:Date.now(),
-    pop:{l:1,p:0,sd:0},shop:[],nextOrd:null,mk:2,halls:[hall],hall:0,hq:5,mag:[]};
+    pop:{l:1,p:0,sd:0},shop:[],nextOrd:null,mk:2,halls:[hall],hall:0,hq:5,mag:[],mp:{},rv:2};
   // gospodarstwo na start: pszenica gotowa do zbioru, żyto w połowie
   Object.assign(s.plots[0],{crop:'pszenica',prog:CR.pszenica.g,need:CR.pszenica.g,last:'pszenica'});
   Object.assign(s.plots[1],{crop:'zyto',prog:CR.zyto.g*0.45,need:CR.zyto.g,last:'zyto'});
@@ -73,6 +73,7 @@ function newState(){
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v===3)return s}catch(e){}return null}
 function save(){if(!S)return;S.seen=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function repair(s){ // uzupełnia brakujące pola
+  const oldR=s.rv!==2;
   const oldMk=s.mk==null&&s.st;
   const d=newState(); for(const k in d) if(s[k]===undefined) s[k]=d[k];
   if(oldMk) migrateMarket(s);
@@ -87,6 +88,8 @@ function repair(s){ // uzupełnia brakujące pola
   if(!Array.isArray(s.halls)||!s.halls.length)s.halls=[newHall()];
   if(!s.halls[s.hall])s.hall=0;
   s.halls.forEach(h=>{h.w=HALL_W;h.items=h.items||{};h.cells=h.cells||{};for(const k in h.cells){const c=h.cells[k];c.q=c.q||[];c.run=c.run||[]}});
+  if(oldR) migrateLines(s);
+  purgeUnknown(s);
   s.millers=(s.millers||[]).map(ml=>({at:ml.at||null,off:!!ml.off}));
   // każdy egzemplarz dostaje poziom swojego typu, a niepostawione egzemplarze trafiają do magazynu
   if(!Array.isArray(s.mag))s.mag=[];
@@ -107,6 +110,31 @@ function repair(s){ // uzupełnia brakujące pola
   if(s.autoPlace===undefined) s.autoPlace=true;
   if(!Array.isArray(s.shelfPos)) s.shelfPos=[];
   return s;}
+
+// linie obróbki zbóż (wersja 1.4): stare półprodukty zbóż glutenowych zamieniamy na odpowiedniki z nowych linii,
+// a partie w maszynach przepisujemy na te same receptury pod nowymi numerami (albo zwracamy wkład do spiżarni)
+const LEGACY_R=["mlo:k_psz1>z_psz2","zar:z_psz2>m_psz1+otreby1","mlo:k_dur1>z_dur2","zar:z_dur2>m_dur1","mlo:k_ork1>p_ork2","lus:p_ork1>z_ork1","zar:z_ork2>m_ork1","mlo:k_pla1>p_pla2","lus:p_pla1>z_pla1","zar:z_pla2>m_pla1","mlo:k_sam1>p_sam2","lus:p_sam1>z_sam1","zar:z_sam2>m_sam1","mlo:k_kho1>z_kho2","zar:z_kho2>m_kho1","mlo:k_zyt1>z_zyt2","zar:z_zyt2>m_zyt1+otreby1","mlo:k_pzy1>z_pzy2","zar:z_pzy2>m_pzy1","mlo:k_jec1>p_jec2","lus:p_jec1>z_jec1","zar:z_jec2>m_jec1","mlo:k_owi1>p_owi2","lus:p_owi1>z_owi1","pra:z_owi1>z_owis1","zar:z_owis2>m_owi1","mlo:k_owc1>p_owc2","lus:p_owc1>z_owc1","pra:z_owc1>z_owcs1","mbg:z_owcs2>m_owc1","mlo:k_ryz1>ryz_nl2","lus:ryz_nl1>ryz_br1","lus:ryz_br1>ryz_bi1+otreby1","zar:ryz_bi2>m_ryzb1","zar:ryz_br2>m_ryzbr1","mlo:k_rkl1>rkl_nl2","lus:rkl_nl1>rkl_br1","lus:rkl_br1>rkl_bi1","kad:rkl_bi1>rkl_m1","zar:rkl_m2>rkl_masa1","sus:rkl_masa1>m_mochi1","mlo:kolby1>z_kuk3","zar:z_kuk2>m_kuk1","koc:z_kuk2+wapno1>nixt2","kad:nixt1>nixt_p1","sus:nixt_p1>nixt_s1","zar:nixt_s2>m_masa1","lus:n_gry1>kasza_g1","zar:kasza_g2>m_gry1","pra:kasza_g1>kasza_gp1","zar:kasza_gp2>m_gry1","mlo:k_pro1>p_pro2","lus:p_pro1>kasza_j1","zar:kasza_j2>m_jag1","mlo:k_ama1>n_ama2","zar:n_ama2>m_ama1","mlo:k_qui1>n_qui2","kad:n_qui1>n_quip1","sus:n_quip1>n_quis1","zar:n_quis2>m_qui1","mlo:k_tef1>n_tef2","zar:n_tef2>m_tef1","mlo:k_sor1>p_sor2","lus:p_sor1>z_sor1","zar:z_sor2>m_sor1","mlo:k_rag1>z_rag2","zar:z_rag2>m_rag1","mlo:k_baj1>z_baj2","zar:z_baj2>m_baj1","mlo:k_fon1>p_fon2","lus:p_fon1>z_fon1","zar:z_fon2>m_fon1","mlo:k_dry1>dry_s2","pra:dry_s1>dry_p1","lus:dry_p1>z_dry1","zar:z_dry2>m_dry1","mlo:s_cie1>n_cie2","lus:n_cie1>cie_dal1","zar:cie_dal2>m_cie1","mlo:s_soc1>n_soc2","zar:n_soc2>m_soc_z1","lus:n_soc1>soc_l1","zar:soc_l2>m_soc_c1","mlo:s_soj1>n_soj2","pra:n_soj1>soj_p1","lus:soj_p1>soj_l1","zar:soj_l2>m_soj1","mlo:s_gro1>n_gro2","lus:n_gro1>gro_l1","zar:gro_l2>m_gro1","mlo:s_bob1>n_bob2","lus:n_bob1>bob_l1","zar:bob_l2>m_bob1","mlo:s_lub1>n_lub2","lus:n_lub1>lub_l1","zar:lub_l2>m_lub1","mlo:s_fas1>n_fas2","pra:n_fas1>fas_p1","zar:fas_p2>m_fas1","mlo:s_mun1>n_mun2","lus:n_mun1>mun_d1","zar:mun_d2>m_mun1","mlo:s_ura1>n_ura2","lus:n_ura1>ura_d1","zar:ura_d2>m_ura1","lup:mig_lup1>mig1","zar:mig2>m_mig1","koc:mig1>mig_b1","zar:mig_b2>m_mig1","lup:wl_lup1>wl1","pre:wl2>wl_mak1+olej1","zar:wl_mak1>m_wl1","lup:las_lup1>las1","pra:las1>las_p1","zar:las_p2>m_las1","lup:ara_lup1>ara1","pra:ara1>ara_p1","pre:ara_p2>ara_mak1+olej1","zar:ara_mak1>m_ara1","mlo:kosz1>n_slo3","lus:n_slo1>slo_l1","pre:slo_l2>slo_mak1+olej1","zar:slo_mak1>m_slo1","mlo:tor_len1>siemie2","zar:siemie2>m_len1","pre:siemie2>len_mak1+olej1","zar:len_mak1>m_len1","obi:dynia1>pestki2+miazsz2","sus:pestki1>pestki_s1","lus:pestki_s1>pestki_l1","pre:pestki_l2>pes_mak1+olej1","zar:pes_mak1>m_pes1","sus:miazsz1>miazsz_s1","zar:miazsz_s2>m_dyn1","mlo:k_kon1>n_kon2","pre:n_kon2>kon_mak1+olej1","zar:kon_mak1>m_kon1","mlo:k_sez1>n_sez2","kad:n_sez1>sez_m1","lus:sez_m1>sez_l1","pre:sez_l2>sez_mak1+olej1","zar:sez_mak1>m_sez1","obi:jab_nerk1>ner_lup1+sok1","pra:ner_lup1>ner_p1","lup:ner_p1>ner1","zar:ner2>m_ner1","lup:mak_lup1>mak1","pre:mak2>mak_mak1+olej1","zar:mak_mak1>m_mak1","sus:kaszt1>kaszt_s1","lup:kaszt_s1>kaszt_l1","zar:kaszt_l2>m_kas1","mlo:k_cza1>n_cza2","pre:n_cza2>cza_mak1+olej1","zar:cza_mak1>m_cza1","mlo:k_wie1>n_wie2","pre:n_wie2>wie_mak1+olej1","zar:wie_mak1>m_wie1","plu:ziem2>skr_z1","sus:skr_z1>m_ziem1","obi:man1>man_ob1","kad:man_ob1>man_m1","sus:man_m1>man_s1","zar:man_s2>m_kasawa1","plu:man_ob2>skr_m1","sus:skr_m1>m_tapioka1","lup:kokos1>kok_m2","obi:kok_m1>kok_w1","sus:kok_w1>kok_ws1","pre:kok_ws2>kok_mak1+olej1","zar:kok_mak1>m_kok1","obi:banan1>ban_pl1","sus:ban_pl1>ban_s1","zar:ban_s2>m_ban1","obi:batat1>bat_pl1","sus:bat_pl1>bat_s1","zar:bat_s2>m_bat1","plu:mar_kl2>skr_mar1","sus:skr_mar1>mar_s1","sit:mar_s1>m_arr1","obi:taro1>taro_pl1","koc:taro_pl1>taro_b1","sus:taro_b1>taro_s1","zar:taro_s2>m_taro1","obi:jam1>jam_pl1","sus:jam_pl1>jam_s1","zar:jam_s2>m_jam1","lup:zol1>zol_l1","zar:zol_l1>zol_sr1","kad:zol_sr1>zol_lg1","sus:zol_lg1>zol_s1","sit:zol_s1>m_zol1","obi:chleb1>chl_pl1","sus:chl_pl1>chl_s1","zar:chl_s2>m_chl1","obi:karob1>kar_m1+nas_kar1","pra:kar_m1>kar_p1","zar:kar_p2>m_kar1","pre:jab3>jab_w2+sok1","sus:jab_w1>jab_ws1","zar:jab_ws2>m_jab1","sus:roza1>roza_s1","zar:roza_s1>roza_sr1","sit:roza_sr1>m_roza1","sus:rok1>rok_s1","zar:rok_s2>m_rok1","pre:aro3>aro_w2+sok1","sus:aro_w1>aro_ws1","zar:aro_ws2>m_aro1","pre:wino3>win_w2+sok1","sit:win_w2>pes_win1","sus:pes_win1>pes_ws1","pre:pes_ws2>win_mak1+olej1","zar:win_mak1>m_win1","obi:burak1>bur_pl1","sus:bur_pl1>bur_s1","zar:bur_s2>m_bur1","obi:kalaf1>kal_r2","sus:kal_r1>kal_s1","zar:kal_s2>m_kal1"];
+const LEG_ITEM={z_psz:'k_psz',z_dur:'k_dur',z_kho:'k_kho',z_zyt:'k_zyt',z_pzy:'k_pzy',p_ork:'k_ork',p_pla:'k_pla',p_sam:'k_sam',z_ork:'ork_zl',z_pla:'pla_zl',z_sam:'sam_zl',p_jec:'k_jec',z_jec:'jec_ls',z_pol:'k_pol',z_per:'k_per',z_zbi:'k_zbi',z_ind:'k_ind',z_trd:'k_trd'};
+const rSig=r=>{const e=o=>Object.entries(o).map(([k,q])=>k+q).join('+');return r.m+':'+e(r.in)+'>'+e(r.out)};
+const legIn=sg=>sg.split(':')[1].split('>')[0].split('+').map(t=>{const m=t.match(/^(.*?)(\d+)$/);return [m[1],+m[2]]});
+function migrateLines(s){const cv=i=>LEG_ITEM[i]||i,SIG={};RECIPES.forEach(r=>{SIG[rSig(r)]=r.id});
+  const mv=o=>{if(!o)return;Object.keys(o).forEach(k=>{const n=cv(k);if(n!==k){o[n]=(o[n]||0)+o[k];delete o[k]}})};
+  mv(s.inv);(s.halls||[]).forEach(h=>{for(const k in (h.items||{}))mv(h.items[k])});
+  ['shelf','tray'].forEach(a=>{if(!Array.isArray(s[a]))return;const seen=new Set();s[a]=s[a].map(x=>{x=x&&cv(x);if(x&&seen.has(x))return null;if(x)seen.add(x);return x})});
+  (s.shop||[]).forEach(x=>{if(x&&x.k)x.k=cv(x.k)});
+  const map=id=>{const sg=LEGACY_R[id];return sg!=null&&SIG[sg]!=null?SIG[sg]:null};
+  (s.halls||[]).forEach(h=>{for(const key in (h.cells||{})){const c=h.cells[key],back=[];
+    c.q=(c.q||[]).filter(q=>{const n=map(q.r);if(n!=null){q.r=n;return true}back.push([q.r,q.n]);return false});
+    c.run=(c.run||[]).filter(j=>{const n=map(j.r);if(n!=null){j.r=n;return true}back.push([j.r,1]);return false});
+    back.forEach(([r,n])=>{const sg=LEGACY_R[r];if(sg)legIn(sg).forEach(([i,q])=>{i=cv(i);if(ITEMS[i])s.inv[i]=(s.inv[i]||0)+q*n})});
+    c.pin=c.pin!=null?map(c.pin):null;c.last=c.last!=null?map(c.last):null}});
+  s.rv=2}
+// przedmioty, których gra już nie zna, znikają z zapisu (zamiast psuć widoki)
+function purgeUnknown(s){for(const k in s.inv)if(!ITEMS[k])delete s.inv[k];
+  (s.halls||[]).forEach(h=>{for(const key in (h.items||{})){const o=h.items[key];for(const k in o)if(!ITEMS[k])delete o[k];if(!Object.keys(o).length)delete h.items[key]}
+    for(const key in (h.cells||{})){const c=h.cells[key];c.q=(c.q||[]).filter(q=>RECIPES[q.r]&&RECIPES[q.r].m===c.m);c.run=(c.run||[]).filter(j=>RECIPES[j.r]&&RECIPES[j.r].m===c.m)}});
+  ['shelf','tray'].forEach(a=>{if(Array.isArray(s[a]))s[a]=s[a].map(x=>x&&ITEMS[x]?x:null)});
+  if(Array.isArray(s.shop))s.shop=s.shop.filter(x=>!x||!x.k||ITEMS[x.k])}
 
 // stary targ (ceny w spiżarni, stragan) -> sklep, zamówienia i renoma
 function migrateMarket(s){const r=s.res||{},cost=(b,m,l)=>{let t=0;for(let i=0;i<l;i++)t+=Math.round(b*Math.pow(m,i));return t};
@@ -162,7 +190,7 @@ function plant(i,cid,quiet){const p=S.plots[i],c=CR[cid]; if(!p||!c||p.crop||!co
   S.coins-=cost; spendFeed(cost,'Nasiona: '+c.n); Object.assign(p,{crop:cid,prog:0,need:c.g,h:0,last:cid}); S.st.planted++; stageCache[i]=-1; dirty=true;
   if(!quiet) snd('plant'); return true;}
 function harvest(i,auto){const p=S.plots[i]; if(!isReady(p)) return 0; const c=CR[p.crop], y=plotYield(p);
-  add(c.out,y); S.st.harv+=y; gainXP(y); gainFeed(c.out,y,auto?'Parobek zebrał':'Zbiór z poletka');
+  add(c.out,y); S.st.harv+=y; if(c.grp==='Zboża glutenowe') add('sloma',Math.max(1,Math.round(y/4))); gainXP(y); gainFeed(c.out,y,auto?'Parobek zebrał':'Zbiór z poletka');
   if(c.r){p.prog=0;p.need=c.r;p.h++} else {p.crop=null;p.h=0; if(working('siewca')&&p.last) plant(i,p.last,true)}
   if(!auto) snd('pop');
   dirty=true; return y;}
@@ -173,6 +201,8 @@ function harvest(i,auto){const p=S.plots[i]; if(!isReady(p)) return 0; const c=C
 const MLVMAX=11, MLV_AUTO=11;
 const mSpeed=l=>(1+0.2*(Math.min(l,10)-1))*(1+0.06*res('maint'));
 const mSlots=l=>l>=8?3:l>=4?2:1;
+const mTier=(id,l)=>{let n=M[id].n;(MTIER[id]||[]).forEach(([lv,nm])=>{if(l>=lv)n=nm});return n};
+const tierUp=(id,l)=>{const t=(MTIER[id]||[]).find(([lv])=>lv===l);return t?` · staje się: ${t[1]}`:''};
 const upDesc=l=>l===MLV_AUTO?'odblokowuje tryb ciągły':l===4?'+20% tempa i drugie stanowisko':l===8?'+20% tempa i trzecie stanowisko':'+20% tempa';
 const qMax=()=>6+3*res('log');
 const mUpCost=c=>Math.round(Math.max(300,M[c.m].p)*0.8*Math.pow(1.7,c.lvl-1)/10)*10;
@@ -221,6 +251,7 @@ function feedM(h,key,want,quiet){const c=h.cells[key],{r,n}=feedable(h,key),room
 // gotowa partia: produkt i uboczny na kratkę wyjścia; nie da się, gdy wyjście jest poza halą albo stoi tam maszyna
 function jobOut(h,c,x,y,r){const [ox,oy]=outXY(c,x,y),ok=hk(ox,oy);if(!hin(h,ox,oy)||h.cells[ok])return false;
   Object.entries(r.out).forEach(([o,q])=>{putH(h,ok,o,q);
+    if(ITEMS[o].kind==='prod'){S.mp[o]=(S.mp[o]||0)+q}
     if(ITEMS[o].kind==='flour'){const first=!S.made[o];S.made[o]=(S.made[o]||0)+q;gainXP(first?25:3*q);if(first){toast(`Nowa mąka w księdze: ${ITEMS[o].n}`,'gold');snd('level')}}});
   S.st.crafted++;return true}
 function hallStep(d){S.halls.forEach(h=>{for(const key in h.cells){const c=h.cells[key],[x,y]=hxy(key),sp=mSpeed(c.lvl),sl=mSlots(c.lvl);
@@ -437,12 +468,12 @@ const ACH=[
 const GOALS=[
  ['Zbierz dojrzałą pszenicę. Kliknij świecące poletko.',()=>S.st.harv>=1,10],
  ['Zasiej coś na wolnym poletku.',()=>S.st.planted>=1,10],
- ['Wymłóć kłosy: w Przetwórni przeciągnij je ze spiżarni (prawa krawędź) przed Młocarnię i kliknij +1.',()=>S.st.crafted>=1,15],
- ['Zmiel pierwszą mąkę na Żarnach.',()=>nMade()>=1,20],
+ ['Oczyść ziarno: w Przetwórni przeciągnij je ze spiżarni przed Czyszczalnię wstępną i kliknij +1.',()=>S.st.crafted>=1,15],
+ ['Złóż w hali linię pszenną (brakujące maszyny są w Sklepie) i zmiel pierwszą mąkę na Żarnach.',()=>nMade()>=1,20],
  ['Wystaw mąkę w sklepie na Targu i poczekaj na klienta.',()=>S.st.flourSold>=1||S.st.orders>=1,25],
  ['Osiągnij 2. poziom gospodarza.',()=>S.lvl>=2,30],
  ['Kup Łuszczarkę w zakładce Sklep.',()=>S.m.lus.owned,40],
- ['Ulepsz Młocarnię albo Żarna do poziomu 2 (prawy przycisk na maszynie).',()=>allMach().some(c=>(c.m==='mlo'||c.m==='zar')&&c.lvl>=2),50],
+ ['Ulepsz Czyszczalnię wstępną albo Żarna do poziomu 2 (prawy przycisk na maszynie).',()=>allMach().some(c=>(c.m==='czw'||c.m==='zar'||c.m==='mlo')&&c.lvl>=2),50],
  ['Użyźnij glebę: prawy przycisk na poletku.',()=>S.plots.some(p=>p.soil>0),40],
  ['Zdobądź renomę 2 i zrealizuj 5 zamówień na Targu.',()=>S.st.orders>=5,80],
  ['Zbuduj szklarnię, zanim przyjdzie zima.',()=>S.plots.some(p=>p.env==='szklarnia'),120],
@@ -531,7 +562,8 @@ function sack(col){return svgw(`<ellipse cx="16" cy="29.5" rx="10" ry="1.8" fill
 const SHAPE_WET=/Mleczko|Masa ryżowa|amoczon|Nixtamal$|Nixtamal wypłukany|odgoryczona/;
 const SHAPE_SLICE=/Plastry|Wiórki|Różyczki|Susz |Miąższ/;
 const imgSvg=src=>`<svg viewBox="0 0 32 32" aria-hidden="true"><image href="${src}" width="32" height="32"/></svg>`;
-const itemSvg=id=>imgSvg('items/'+(IART[id]||id)+'.webp');
+const iSrc=id=>'items/'+((ITEMS[id]&&ITEMS[id].img)||IART[id]||id)+'.webp';
+const itemSvg=id=>imgSvg(iSrc(id));
 function itemSvgOld(id){const it=ITEMS[id],c=it.col;
   if(it.kind==='flour') return sack(c);
   if(it.kind==='raw') return art(CR[it.crop].kind,3,c);
@@ -592,7 +624,10 @@ const MART={
  pre:`<rect x="8" y="4" width="4" height="40" fill="#4a2e1a"/><rect x="36" y="4" width="4" height="40" fill="#4a2e1a"/><rect x="8" y="4" width="32" height="5" fill="#6a4a2e"/><g class="press"><rect x="23" y="2" width="2.5" height="14" fill="#9aa0a6"/><rect x="13" y="16" width="22" height="5" fill="#8a6a40"/></g><rect x="13" y="28" width="22" height="12" fill="#7a3a7a"/><rect x="12" y="40" width="24" height="4" fill="#6a4a2e"/>`,
  mbg:`<ellipse cx="24" cy="36" rx="19" ry="7" fill="#4f6a48"/><ellipse cx="24" cy="33" rx="19" ry="7" fill="#6a8a5a"/><g class="spin" style="transform-origin:24px 24px"><circle cx="24" cy="24" r="15" fill="#c8d8b8" stroke="#4f6a48" stroke-width="2"/><path d="M24 9v30M9 24h30" stroke="#8aa878" stroke-width="1.2"/></g><path d="M18 30L30 18" stroke="#2f5a2a" stroke-width="2.5"/><path d="M24 15c-3 4-3 8 0 13 3-5 3-9 0-13z" fill="#e0b53a" opacity=".9"/>`,
 };
-const mart=(id,cls,on)=>`<span class="mart ${cls||''}"><img src="machines/${id}${on?'-praca':''}.webp" alt="" decoding="async" draggable="false"></span>`;
+// nowe maszyny mają na razie grafikę pokrewnej maszyny
+const MIMG={czw:'sit',sil:'kad',mag:'sit',sep:'sit',odk:'sit',try:'mlo',stg:'sit',sor:'obi',obr:'lus',naw:'kad',odl:'kad',osc:'mlo',kal:'sit',per:'lus',kra:'obi',plr:'lus',plt:'pre',kie:'kad',ssl:'sus',okw:'sit',srt:'zar'};
+const mSrc=(id,on)=>'machines/'+(MIMG[id]||id)+(on?'-praca':'')+'.webp';
+const mart=(id,cls,on)=>`<span class="mart ${cls||''}"><img src="${mSrc(id,on)}" alt="" decoding="async" draggable="false"></span>`;
 const person=id=>`<span class="mart pers"><img src="people/${id}.webp" alt="" decoding="async" draggable="false"></span>`;
 const MILLER_ART=person('mlynarz');
 
@@ -747,14 +782,14 @@ const hqty=()=>S.hq==null?5:S.hq;
 const fmtQ=q=>q>=10000?Math.floor(q/1000)+' tys.':String(q);
 // stos rośnie z ilością (plony): 1–9 jedna ikona, 10–99 trzy, 100–999 pięć, od 1000 kopiec
 function pile(id,q){const n=ITEMS[id].kind==='raw'?(q<10?1:q<100?3:q<1000?5:7):1;
-  return `<span class="pile p${n}">${Array.from({length:n},()=>`<img src="items/${id}.webp" alt="" draggable="false">`).join('')}</span>`}
+  return `<span class="pile p${n}">${Array.from({length:n},()=>`<img src="${iSrc(id)}" alt="" draggable="false">`).join('')}</span>`}
 const stackHtml=(key,id,q,half)=>`<span class="hs ${half?'half':''}" draggable="true" data-hdrag="c:${key}:${id}" data-k="${key}" data-id="${id}" title="${esc(ITEMS[id].n)}: ${q}. Przeciągnij albo kliknij, żeby przenieść">${pile(id,q)}<b class="hq">${fmtQ(q)}</b></span>`;
 function machHtml(h,key,c){const fd=feedable(h,key),q=c.q.reduce((a,b)=>a+b.n,0),sl=mSlots(c.lvl),work=c.run.length>0,ml=millerOf(h,key),auto=(c.auto&&c.lvl>=MLV_AUTO)||!!ml;
   const [x,y]=hxy(key),ik=hk(...inXY(c,x,y)),st=c.block?'block':work?'work':fd.n?'ready':sumQ(h.items[ik])?'nope':'idle';
   const j=c.run[0],t=j?RECIPES[j.r].t:1;
-  return {st,html:`<div class="hm" draggable="true" data-hdrag="m:${key}" title="${esc(M[c.m].n)}${j?': '+esc(RECIPES[j.r].verb):''}">
+  return {st,html:`<div class="hm" draggable="true" data-hdrag="m:${key}" title="${esc(mTier(c.m,c.lvl))}${j?': '+esc(RECIPES[j.r].verb):''}">
     <span class="thr" style="--d:${c.dir*90}deg"><span class="tis">${Array.from({length:sl},(_,i)=>`<i class="${c.run[i]?'on':''}"></i>`).join('')}</span><i class="to"></i></span>
-    <span class="mplate"><img src="machines/${c.m}${work&&!c.block?'-praca':''}.webp" alt="" draggable="false"></span>
+    <span class="mplate"><img src="${mSrc(c.m,work&&!c.block)}" alt="" draggable="false"></span>
     ${q?`<em class="bl q" title="Partie czekające w maszynie">${q}</em>`:auto?`<em class="bl a" title="${ml?'Młynarz dokłada towar i maszyna dobiera partie sama':'Tryb ciągły: maszyna sama dobiera partie z wejścia'}">∞</em>`:''}
     ${c.block?'<em class="br r" title="Wyjście jest poza halą albo stoi na nim maszyna">!</em>':st==='nope'?'<em class="br y" title="Przed maszyną leży coś, czego ona nie przerobi (albo za mało na partię)">?</em>':''}
     <b class="mn">${esc(M[c.m].n)}${c.lvl>1?` <small>${c.lvl}</small>`:''}</b>
@@ -835,7 +870,7 @@ function hallBack(src,e){const h=HL();if(src.k!=='c')return;const n=dropQ(e,(h.i
 // menu pod prawym przyciskiem na kratce hali
 function showHallCtx(key,x,y){const m=$('#ctx'),h=HL(),c=h.cells[key],it=h.items[key],items=[];if(!m)return;
   if(c){const [cx,cy]=hxy(key),ok=hk(...outXY(c,cx,cy)),has=sumQ(h.items[ok])>0,ml=millerOf(h,key);
-    items.push(c.lvl<MLVMAX?['hup','⬆',`Ulepsz do poz. ${c.lvl+1}`,`${upDesc(c.lvl+1)} · ${fmtZ(mUpCost(c))}`,S.coins<mUpCost(c)]:['','✓',`Poziom ${MLVMAX}`,'maksymalny',true]);
+    items.push(c.lvl<MLVMAX?['hup','⬆',`Ulepsz do poz. ${c.lvl+1}`,`${upDesc(c.lvl+1)}${tierUp(c.m,c.lvl+1)} · ${fmtZ(mUpCost(c))}`,S.coins<mUpCost(c)]:['','✓',`Poziom ${MLVMAX}`,'maksymalny',true]);
     const qn=hqty();Object.keys(S.inv).filter(i=>inv(i)>0&&(RBY[c.m]||[]).some(r=>r.in[i])).sort((a,b)=>inv(b)-inv(a)).slice(0,6).forEach(i=>items.push(['hput',icon(i),`Połóż przed: ${ITEMS[i].n}`,`ze spiżarni ${qn==='max'?'wszystko':'×'+qn} · masz ${inv(i)}`,false,i]));
     items.push(['hrot','↻','Obróć','R']);items.push(['hcollect','⤴','Odbierz produkt',has?`${sumQ(h.items[ok])} szt. do spiżarni`:'na wyjściu nic nie leży',!has]);
     items.push(c.lvl>=MLV_AUTO?['hauto','∞',c.auto?'Wyłącz tryb ciągły':'Tryb ciągły','sama dobiera partie z wejścia']:['','∞','Tryb ciągły',`od poziomu ${MLV_AUTO} maszyny`,true]);
@@ -845,7 +880,7 @@ function showHallCtx(key,x,y){const m=$('#ctx'),h=HL(),c=h.cells[key],it=h.items
   else {if(it&&sumQ(it)){Object.keys(it).forEach(i=>items.push(['hback1',icon(i),`${ITEMS[i].n} do spiżarni`,`${it[i]} szt.`,false,i]));if(Object.keys(it).length>1)items.push(['hbackall','⤴','Wszystko do spiżarni',''])}
 }
   if(!items.length)return;
-  m.innerHTML=`<div class="ctxh">${c?`${esc(M[c.m].n)} · poziom ${c.lvl}`:'Kratka'}</div>${items.map(([a,ic,t,s,dis,v])=>`<button class="ctxi" data-act="${a}" data-k="${key}" ${v!=null?`data-v="${v}"`:''} ${dis?'disabled':''}><span class="ci">${/^</.test(ic)?ic:`<span class="x">${ic}</span>`}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
+  m.innerHTML=`<div class="ctxh">${c?`${esc(mTier(c.m,c.lvl))} · poziom ${c.lvl}`:'Kratka'}</div>${items.map(([a,ic,t,s,dis,v])=>`<button class="ctxi" data-act="${a}" data-k="${key}" ${v!=null?`data-v="${v}"`:''} ${dis?'disabled':''}><span class="ci">${/^</.test(ic)?ic:`<span class="x">${ic}</span>`}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}`;
   m.hidden=false;ctxOpen=true;const w=m.offsetWidth,hh=m.offsetHeight;m.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-hh-8))+'px'}
 // menu pod prawym na towarze w szufladzie spiżarni: połóż przed maszyną, która go przerabia, albo wskaż kratkę
 function showPantryCtx(id,x,y){const m=$('#ctx'),h=HL(),qn=hqty(),items=[];if(!m)return;
@@ -859,12 +894,12 @@ let machKey=null;
 function openMach(key){machKey=key;sheetMode='mach';sheetPlot=-1;drawMach();$('#sheet').hidden=false;$('#panel').scrollTop=0}
 function drawMach(){const h=HL(),c=h.cells[machKey];if(!c){closeSheet();return}const [x,y]=hxy(machKey),ik=hk(...inXY(c,x,y)),ok=hk(...outXY(c,x,y)),fd=feedable(h,machKey),q=c.q.reduce((a,b)=>a+b.n,0),ml=millerOf(h,machKey);
   const list=key=>{const it=h.items[key]||{},ids=Object.keys(it);return ids.length?ids.map(i=>`<div class="mrow">${icon(i)}<span>${esc(ITEMS[i].n)}</span><b class="num">${it[i]}</b></div>`).join(''):'<p class="more">pusto</p>'};
-  $('#panel').innerHTML=`<div class="ph"><div><h2>${esc(M[c.m].n)}</h2><p>Poziom ${c.lvl} z ${MLVMAX} · ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(c.lvl).toFixed(2)} · ${c.run.length?`pracuje ${c.run.length} z ${mSlots(c.lvl)}`:c.block?'wyjście zajęte':'czeka'}</p></div><button class="btn sm" data-act="close">Zamknij</button></div>
+  $('#panel').innerHTML=`<div class="ph"><div><h2>${esc(M[c.m].n)}</h2><p>${mTier(c.m,c.lvl)!==M[c.m].n?`<b>${esc(mTier(c.m,c.lvl))}</b> · `:''}Poziom ${c.lvl} z ${MLVMAX} · ${mSlots(c.lvl)} ${plural(mSlots(c.lvl),'stanowisko','stanowiska','stanowisk')} · tempo ×${mSpeed(c.lvl).toFixed(2)} · ${c.run.length?`pracuje ${c.run.length} z ${mSlots(c.lvl)}`:c.block?'wyjście zajęte':'czeka'}</p></div><button class="btn sm" data-act="close">Zamknij</button></div>
    <div class="mgrid"><div><h3>Wejście</h3>${hin(h,...inXY(c,x,y))?list(ik):'<p class="more">poza halą</p>'}<h3>Wyjście</h3>${hin(h,...outXY(c,x,y))?list(ok):'<p class="more">poza halą</p>'}
      <h3>W kolejce</h3><p>${q?`<b class="num">${q}</b> ${plural(q,'partia','partie','partii')} <button class="btn sm" data-act="hunq" data-k="${machKey}">Wyjmij na wejście</button>`:'<span class="more">nic</span>'}</p></div>
    <div><h3>Receptury</h3><p class="more">Maszyna wybiera recepturę z tego, co leży na wejściu. Kliknij, żeby przypiąć jedną.</p>
      ${(RBY[c.m]||[]).map(r=>`<button class="mrec ${c.pin===r.id?'on':''}" data-act="hpin" data-k="${machKey}" data-v="${r.id}">${c.pin===r.id?'✓ ':''}${Object.entries(r.in).map(([i,n])=>`${n}× ${esc(ITEMS[i].n)}`).join(' + ')} → ${Object.entries(r.out).map(([i,n])=>`${n}× ${esc(ITEMS[i].n)}`).join(' + ')}<small class="num">${fmtT(r.t/mSpeed(c.lvl))}</small></button>`).join('')}</div>
-   <div>${c.lvl<MLVMAX?`<button class="btn pri" data-act="hup" data-k="${machKey}" ${S.coins<mUpCost(c)?'disabled':''}>Ulepsz do poz. ${c.lvl+1} · ${fmtZ(mUpCost(c))}</button><p class="more">${upDesc(c.lvl+1)}</p>`:'<p class="more">Poziom maksymalny.</p>'}
+   <div>${c.lvl<MLVMAX?`<button class="btn pri" data-act="hup" data-k="${machKey}" ${S.coins<mUpCost(c)?'disabled':''}>Ulepsz do poz. ${c.lvl+1} · ${fmtZ(mUpCost(c))}</button><p class="more">${upDesc(c.lvl+1)}${tierUp(c.m,c.lvl+1)}</p>`:'<p class="more">Poziom maksymalny.</p>'}
      <label class="mtog ${c.lvl<MLV_AUTO?'off':''}"><input type="checkbox" data-act="hauto" data-k="${machKey}" ${c.auto&&c.lvl>=MLV_AUTO?'checked':''} ${c.lvl<MLV_AUTO?'disabled':''}> Tryb ciągły <small>${c.lvl<MLV_AUTO?`od poziomu ${MLV_AUTO} maszyny`:'maszyna sama dobiera partie z wejścia'}</small></label>
      ${ml?`<p>Pracuje tu <b>Młynarz ${S.millers.indexOf(ml)+1}</b>: dokłada towar ze spiżarni i odnosi to, co wyjdzie.</p>`:''}
      <div class="mbtns"><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="1" ${fd.n?'':'disabled'}>+1</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="5" ${fd.n?'':'disabled'}>+5</button><button class="btn" data-act="hfeed" data-k="${machKey}" data-q="max" ${fd.n?'':'disabled'}>max${fd.n?' ('+fd.n+')':''}</button></div>
@@ -1065,7 +1100,7 @@ function vUlep(){
     <div class="ft">${l>=mx?'<span class="owned">Ukończone</span>':S.lvl<rq?`<span class="req">Następny stopień od poziomu ${rq}</span><span class="num">${fmtZ(c)}</span>`:`<span class="num">${fmtZ(c)}</span><button class="btn sm pri" data-act="research" data-r="${id}" ${S.coins<c?'disabled':''}>Wdroż stopień ${l+1}</button>`}</div></div>`});
   h+=`</div></div><div class="sec"><div class="sechead"><h2>Maszyny</h2><p>Kupiona maszyna czeka w magazynie w Przetwórni, skąd stawiasz ją w hali. Każdą możesz mieć w kilku egzemplarzach. Ulepszasz je w Przetwórni (prawy przycisk na maszynie), każdy egzemplarz osobno: +20% tempa na poziom, drugie stanowisko od poziomu 4, trzecie od 8, a poziom 11 odblokowuje tryb ciągły.</p></div><div class="shop">`;
   MACH.forEach(([id])=>{const mm=M[id],m=S.m[id],lk=S.lvl<mm.lv,n=mCount(id),bc=mBuyCost(id);
-    h+=`<div class="item ${n?'has':''}"><div class="ih">${mart(id)}<div><h3>${mm.n}${n?` <span class="more num">×${n}</span>`:''}</h3>${n?`<small class="more">w halach ${mPlaced(id)} · w magazynie ${mStock(id)}</small>`:''}</div></div><p>${mm.d}</p>
+    h+=`<div class="item ${n?'has':''}"><div class="ih">${mart(id)}<div><h3>${mm.n}${n?` <span class="more num">×${n}</span>`:''}</h3>${n?`<small class="more">w halach ${mPlaced(id)} · w magazynie ${mStock(id)}</small>`:''}</div></div><p>${mm.d}</p>${(MTIER[id]||[]).length>1?`<p class="more tiers">Ulepszana staje się: ${MTIER[id].map(([l,n])=>l>1?`${n} (poz. ${l})`:n).join(' → ')}</p>`:''}
     <div class="ft">${lk?`<span class="req">Od poziomu ${mm.lv}</span><span class="num">${fmtZ(bc)}</span>`:`<span class="num">${fmtZ(bc)}</span><button class="btn sm ${n?'':'pri'}" data-act="buym" data-m="${id}" ${S.coins<bc?'disabled':''}>${n?'Kup kolejną':'Kup'}</button>`}</div>
     </div>`});
   const pc=plotCost();
@@ -1083,17 +1118,18 @@ function vUlep(){
 const GCOL={A:'#e8a848',B:'#e5735c',D:'#6f9fe6',G:'#7cbc62',R:'#c48ed6',H:'#4cbcac',Hch:'#4cbcac'};
 const genTok=s=>s.match(/Hch|[A-Z]/g)||[];
 const genHtml=s=>genTok(s).map(t=>`<b style="color:${GCOL[t]}">${t==='Hch'?'H<sup>ch</sup>':t}</b>`).join('');
-const PKIND=[['flour','Mąki'],['by','Produkty uboczne']];
-function cropProducts(c){const seen=new Set(),out=[];(function w(id){if(seen.has(id))return;seen.add(id);const k=ITEMS[id].kind;if(id!==c.out&&(k==='flour'||k==='by'))out.push(id);(FWD[id]||[]).forEach(w)})(c.out);return out}
-const cropCard=c=>{const lk=!unlocked(c),fl=c.flours,mn=fl.filter(f=>S.made[f]).length,gi=CINFO[c.id]||{};
-  return `<button class="cc ${lk?'lk':''} ${mn?'made':''}" data-act="bcrop" data-c="${c.id}" data-click="1" title="${esc(c.n)}: kliknij, żeby zobaczyć, co z niej powstaje"><span class="cv">${cropThumb(c.id)}</span><span class="ct"><b>${esc(c.n)}</b><i>${esc(c.lat)}</i></span>${gi.g?`<span class="gen">${genHtml(gi.g)}</span>`:''}<span class="cp">${fl.map(f=>`<i class="${S.made[f]?'on':''}" title="${esc(ITEMS[f].n)}${S.made[f]?'':' (jeszcze nie)'}">${itemSvg(f)}</i>`).join('')}</span>${lk?`<span class="clk">od poz. ${c.lvl}</span>`:''}</button>`};
+const PKIND=[['flour','Mąki i semoliny'],['prod','Gotowe produkty'],['by','Produkty uboczne i odpady']];
+const madeN=i=>ITEMS[i].kind==='flour'?S.made[i]||0:(S.mp||{})[i]||0;
+function cropProducts(c){const seen=new Set(),out=[];(function w(id){if(seen.has(id))return;seen.add(id);const k=ITEMS[id].kind;if(id!==c.out&&(k==='flour'||k==='prod'||k==='by'))out.push(id);(FWD[id]||[]).forEach(w)})(c.out);return out}
+const CPROD={};const cropMain=c=>CPROD[c.id]||(CPROD[c.id]=cropProducts(c).filter(i=>ITEMS[i].kind!=='by'));
+const cropCard=c=>{const lk=!unlocked(c),fl=cropMain(c),mn=fl.filter(f=>madeN(f)).length,gi=CINFO[c.id]||{};
+  return `<button class="cc ${lk?'lk':''} ${mn?'made':''}" data-act="bcrop" data-c="${c.id}" data-click="1" title="${esc(c.n)}: kliknij, żeby zobaczyć, co z niej powstaje"><span class="cv">${cropThumb(c.id)}</span><span class="ct"><b>${esc(c.n)}</b><i>${esc(c.lat)}</i></span>${gi.g?`<span class="gen">${genHtml(gi.g)}</span>`:''}<span class="cp">${fl.map(f=>`<i class="${madeN(f)?'on':''}" title="${esc(ITEMS[f].n)}${madeN(f)?'':' (jeszcze nie)'}">${itemSvg(f)}</i>`).join('')}</span>${lk?`<span class="clk">od poz. ${c.lvl}</span>`:''}</button>`};
 // drzewo: [x, y, rodzaj, tytuł, podpis, genom]; rodzaj crop bierze nazwę i genom z uprawy o tym samym kluczu
 const TREE_N={
- root:[560,30,'root','Wspólny przodek pszenicowatych','plemię Triticeae'],
- lT:[170,86,'lbl','Triticum'],lA:[530,86,'lbl','Aegilops (kozieniec)'],lS:[860,86,'lbl','Secale'],lH:[1118,86,'lbl','Hordeum'],
+ root:[350,30,'root','Wspólny przodek Triticum i Aegilops','ok. 3–7 mln lat temu'],
+ lT:[170,86,'lbl','Triticum'],lA:[530,86,'lbl','Aegilops (kozieniec)'],
  boe:[80,140,'wild','T. boeoticum','samopsza dzika','AA'],ura:[235,140,'wild','T. urartu','dawca genomu A','AA'],
  spe:[420,140,'wild','Ae. speltoides','krewny dawcy B','BB'],tau:[640,140,'wild','Ae. tauschii','dawca genomu D','DD'],
- zyto:[860,140,'crop'],jeczmien:[1040,140,'crop'],chi:[1195,140,'wild','H. chilense','jęczmień chilijski','HchHch'],
  samopsza:[80,222,'crop'],
  x1:[330,292,'x'],dco:[330,336,'wild','T. dicoccoides','płaskurka dzika','AABB'],
  x2:[560,292,'x'],ara:[560,336,'wild','T. araraticum','dzika, Timofiejewa','AAGG'],
@@ -1102,15 +1138,14 @@ const TREE_N={
  durum:[200,560,'crop'],
  tur:[70,640,'out','T. turgidum','pszenica angielska','AABB'],aet:[205,640,'out','T. aethiopicum','pszenica etiopska','AABB'],
  polska:[340,640,'crop'],khorasan:[475,640,'crop'],perska:[640,640,'crop'],
- x3:[780,712,'x'],pszenica:[780,755,'crop'],x5:[1060,755,'x'],x6:[1195,755,'x'],
- x4:[557,800,'x'],orkisz:[557,845,'crop'],zbita:[780,845,'crop'],indyjska:[940,845,'crop'],pszenzyto:[1060,845,'crop'],tritordeum:[1195,845,'crop']};
-// krawędzie: [od, do, styl]; e:Y łamana przez wysokość Y, h pozioma z boku, u w górę, d przerywana (prawdopodobne), f daleka i jaśniejsza
-const TREE_E=[['root','lT'],['root','lA'],['root','lS'],['root','lH'],['lT','boe'],['lT','ura'],['lA','spe'],['lA','tau'],['lS','zyto'],['lH','jeczmien'],['lH','chi'],
+ x3:[780,712,'x'],pszenica:[780,755,'crop'],
+ x4:[557,800,'x'],orkisz:[557,845,'crop'],zbita:[780,845,'crop'],indyjska:[940,845,'crop']};
+// krawędzie: [od, do, styl]; e:Y łamana przez wysokość Y, u w górę, d przerywana (prawdopodobne)
+const TREE_E=[['root','lT'],['root','lA'],['lT','boe'],['lT','ura'],['lA','spe'],['lA','tau'],
  ['boe','samopsza'],['ura','x1'],['spe','x1'],['x1','dco'],['ura','x2'],['spe','x2'],['x2','ara'],['ara','tim'],
  ['dco','plaskurka'],['plaskurka','par'],['par','durum'],['durum','tur'],['durum','aet'],['durum','polska'],['durum','khorasan'],
  ['par','perska','e:524'],['par','x3','e:524'],['tau','x3'],['x3','pszenica'],['pszenica','perska','ud'],
- ['pszenica','x4'],['plaskurka','x4','e:450'],['x4','orkisz'],['pszenica','zbita'],['pszenica','indyjska'],
- ['pszenica','x5','h'],['zyto','x5'],['x5','pszenzyto'],['chi','x6'],['durum','x6','e:600f'],['x6','tritordeum']];
+ ['pszenica','x4'],['plaskurka','x4','e:450'],['x4','orkisz'],['pszenica','zbita'],['pszenica','indyjska']];
 const TNW=128,TNH=46,TSHORT={khorasan:'Khorasan (Kamut)',jeczmien:'Jęczmień',zyto:'Żyto',durum:'Pszenica twarda'};
 const tName=k=>{const n=TREE_N[k];return n[2]==='crop'?(TSHORT[k]||CR[k].n):n[3]};
 const tOff=k=>{const t=TREE_N[k][2];return t==='x'?6:t==='lbl'?8:t==='root'?20:TNH/2};
@@ -1119,7 +1154,7 @@ function treeParents(k){const p=TREE_E.filter(e=>e[1]===k&&!/u/.test(e[2]||'')).
   return p.flatMap(x=>TREE_N[x][2]==='x'?TREE_E.filter(e=>e[1]===x).map(e=>e[0]):[x]).filter(x=>!['lbl','root'].includes(TREE_N[x][2]))}
 function treeHtml(){
   const P=k=>TREE_N[k];let s='';
-  [[110,160,'2n = 14 · diploidy'],[270,420,'4n = 28 · tetraploidy'],[690,195,'6n = 42 · heksaploidy']].forEach(([y,h,t],i)=>{s+=`<rect class="tband b${i}" x="-34" y="${y}" width="1304" height="${h}"/><text class="tbl" transform="translate(-14,${y+h/2}) rotate(-90)">${t}</text>`});
+  [[110,160,'2n = 14 · diploidy'],[270,420,'4n = 28 · tetraploidy'],[690,195,'6n = 42 · heksaploidy']].forEach(([y,h,t],i)=>{s+=`<rect class="tband b${i}" x="-34" y="${y}" width="1084" height="${h}"/><text class="tbl" transform="translate(-14,${y+h/2}) rotate(-90)">${t}</text>`});
   TREE_E.forEach(([a,b,st=''])=>{const A=P(a),B=P(b);let dd;
     if(st.startsWith('e:')){const y=parseInt(st.slice(2));dd=`M${A[0]} ${A[1]+tOff(a)} V${y} H${B[0]} V${B[1]-tOff(b)}`}
     else if(st==='h')dd=`M${A[0]+TNW/2} ${A[1]} H${B[0]-tOff(b)}`;
@@ -1135,16 +1170,16 @@ function treeHtml(){
     s+=`<g class="tn ${t} ${lk?'lk':''} ${mn?'made':''}" transform="translate(${x},${y})" ${c?`data-act="bcrop" data-c="${k}" data-click="1"`:''}><title>${esc(c?c.n+(lk?` (od poziomu ${c.lvl})`:'')+': kliknij, żeby zobaczyć szczegóły':ti+', '+sub+(t==='out'?' · uprawiana, ale nie ma jej w grze':t==='ext'?' · wymarła':' · forma dzika'))}</title><rect x="${-TNW/2}" y="${-TNH/2}" width="${TNW}" height="${TNH}" rx="9"/><text class="t1" y="-3">${esc(tName(k))}</text><text class="t2" y="13">${esc(st)}</text>`;
     if(G)s+=`<g class="gb" transform="translate(${TNW/2-4},${-TNH/2})"><rect x="${-gw}" y="-8" width="${gw}" height="15" rx="7.5"/><text x="-4" y="3.5">${gt.map(z=>z==='Hch'?`<tspan fill="${GCOL[z]}">H</tspan><tspan fill="${GCOL[z]}" font-size="7" dy="-3">ch</tspan><tspan dy="3"></tspan>`:`<tspan fill="${GCOL[z]}">${z}</tspan>`).join('')}</text></g>`;
     s+='</g>'}
-  return `<div class="tree"><svg viewBox="-34 0 1304 892" role="img" aria-label="Drzewo pokrewieństwa zbóż glutenowych">${s}</svg></div>
-  <div class="tleg"><span><i class="lg wild"></i>forma dzika</span><span><i class="lg crop"></i>uprawa w grze (kliknij)</span><span><i class="lg out"></i>uprawiana, nie ma jej w grze</span><span><i class="lg ext"></i>wymarła</span><span><i class="lg x"></i>krzyżówka, połączenie genomów</span><span><i class="lg ln"></i>pochodzenie</span><span><i class="lg ln dash"></i>prawdopodobne</span><span class="gens">${['A','B','D','G','R','Hch'].map(z=>`<b style="color:${GCOL[z]}">${z==='Hch'?'H<sup>ch</sup>':z}</b>`).join(' ')} genomy</span></div>`}
+  return `<div class="tree"><svg viewBox="-34 0 1084 892" role="img" aria-label="Drzewo pokrewieństwa pszenic">${s}</svg></div>
+  <div class="tleg"><span><i class="lg wild"></i>forma dzika</span><span><i class="lg crop"></i>uprawa w grze (kliknij)</span><span><i class="lg out"></i>uprawiana, nie ma jej w grze</span><span><i class="lg ext"></i>wymarła</span><span><i class="lg x"></i>krzyżówka, połączenie genomów</span><span><i class="lg ln"></i>pochodzenie</span><span><i class="lg ln dash"></i>prawdopodobne</span><span class="gens">${['A','B','D','G'].map(z=>`<b style="color:${GCOL[z]}">${z==='Hch'?'H<sup>ch</sup>':z}</b>`).join(' ')} genomy</span></div>`}
 
 function vKsiega(){
   const made=nMade(),N=FLOURS.length,bv=S.bookView||'grid';
   let h=`<div class="sec"><div class="prog"><span class="big">${made}<small> / ${N} mąk</small></span><span class="track"><i style="width:${made/N*100}%"></i></span></div>
   <div class="chips">${CATS.map((c,i)=>`<button class="chip ${S.cat===i?'on':''}" data-act="cat" data-v="${i}">${i?c:'Wszystkie'} <span class="num">${i?FLOURS.filter(f=>ITEMS[f].cat===i&&S.made[f]).length+'/'+FLOURS.filter(f=>ITEMS[f].cat===i).length:''}</span></button>`).join('')}</div></div>`;
   BOOK_GROUPS.forEach(([gname,list])=>{const cat=CATS.indexOf(gname);if(S.cat&&S.cat!==cat)return;
-    h+=`<section class="bsec"><div class="bsh"><h3>${esc(gname)}</h3><span class="more num">${list.length} ${plural(list.length,'uprawa','uprawy','upraw')}</span>${cat===1?`<div class="seg-switch">${[['grid','Karty'],['tree','Drzewo pokrewieństwa']].map(([v,n])=>`<button data-act="bview" data-v="${v}" class="${bv===v?'on':''}">${n}</button>`).join('')}</div>`:''}</div>
-    ${cat===1&&bv==='tree'?treeHtml():`<div class="cbook">${list.map(cropCard).join('')}</div>`}</section>`});
+    h+=`<section class="bsec"><div class="bsh"><h3>${esc(gname)}</h3><span class="more num">${list.length} ${plural(list.length,'uprawa','uprawy','upraw')}</span>${cat===1?`<div class="seg-switch">${[['grid','Karty'],['tree','Drzewo pszenic']].map(([v,n])=>`<button data-act="bview" data-v="${v}" class="${bv===v?'on':''}">${n}</button>`).join('')}</div>`:''}</div>
+    ${cat===1&&bv==='tree'?treeHtml()+`<div class="grp">Pozostałe zboża glutenowe</div><div class="cbook">${list.filter(c=>!TREE_N[c.id]).map(cropCard).join('')}</div>`:`<div class="cbook">${list.map(cropCard).join('')}</div>`}</section>`});
   return h;
 }
 // karta uprawy: opis, uprawa, pochodzenie i wszystko, co z niej powstaje
@@ -1155,12 +1190,15 @@ function drawCrop(){const c=CR[bookCrop];if(!c){closeSheet();return}const panel=
   const facts=[['Dział',CATS[c.cat]||c.grp],['Gdzie rośnie',ENV[c.env]],['Wzrost',fmtT(c.g)+(c.r?`, potem co ${fmtT(c.r)}`:'')],['Plon',`${c.y}× ${ITEMS[c.out].n}`],['Nasiona',`${seedCost(c)} zł`],['Dostępna',lk?`od poziomu ${c.lvl}`:'już teraz']];
   if(gi.g)facts.push(['Genom',`<span class="gen">${genHtml(gi.g)}</span>`]);if(gi.pro)facts.push(['Białko glutenowe',gi.pro]);
   if(par.length)facts.push(['Pochodzenie',par.map(pn).join(' × ')]);
+  const ln=ITEMS[c.out].line;if(ln)facts.push(['Linia obróbki',GLINE[ln]]);
+  const fl0=c.flours[0],path=fl0?chainOf(fl0).filter(s=>s.r).map(s=>s.r.m):[];
   let h=`<div class="ph"><div><h2>${esc(c.n)}</h2><p><i>${esc(c.lat)}</i></p></div><button class="btn sm" data-act="close">Zamknij</button></div>
   <div class="cdet"><span class="cv">${cropThumb(c.id)}</span><div>${gi.d?`<p class="cdesc">${esc(gi.d)}</p>`:''}<dl class="cfacts">${facts.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
   ${lk?'':`<button class="btn pri sm" data-act="sowsel" data-c="${c.id}">Siej: ${seedCost(c)} zł</button>`}</div></div>
+  ${ln&&path.length?`<h3 class="cph">Maszyny po kolei, do: ${esc(ITEMS[fl0].n)}</h3><div class="mpath">${path.map((m,i)=>`${i?'<span class="ar">→</span>':''}<span class="mp ${mCount(m)?'':'no'}" title="${esc(M[m].n)}${mCount(m)?'':': nie masz jej jeszcze'}">${mart(m)}<small>${esc(M[m].n)}</small></span>`).join('')}</div>`:''}
   <h3 class="cph">Co z tej uprawy otrzymasz <span class="more num">${pr.length}</span></h3>`;
   PKIND.forEach(([k,n])=>{const l=pr.filter(i=>ITEMS[i].kind===k);if(!l.length)return;
-    h+=`<div class="grp">${n}</div><div class="ptiles">${l.map(i=>{const m=S.made[i]||0,fl=k==='flour';return `<div class="ptile ${!fl||m?'on':''}" title="${esc(ITEMS[i].src||ITEMS[i].n)}">${itemSvg(i)}<span><b>${esc(ITEMS[i].n)}</b><small>${fl?(m?`wyprodukowano ${m}`:'jeszcze nie'):`masz ${inv(i)}`} · ${unitPrice(i)} zł</small></span></div>`}).join('')}</div>`});
+    h+=`<div class="grp">${n}</div><div class="ptiles">${l.map(i=>{const m=madeN(i),fl=k!=='by';return `<div class="ptile ${!fl||m?'on':''}" title="${esc(ITEMS[i].src||ITEMS[i].n)}">${itemSvg(i)}<span><b>${esc(ITEMS[i].n)}</b><small>${fl?(m?`wyprodukowano ${m}`:'jeszcze nie'):`masz ${inv(i)}`} · ${unitPrice(i)} zł</small></span></div>`}).join('')}</div>`});
   panel.innerHTML=h;panel.scrollTop=sc}
 
 function vKron(){
@@ -1364,8 +1402,8 @@ document.addEventListener('dragstart',e=>{const s=e.target.closest&&e.target.clo
   hSplit=[];splitMode=e.shiftKey||shiftOn;hDrag=p[0]==='c'?{k:'c',key:p[1],id:p[2]}:p[0]==='m'?{k:'m',key:p[1]}:p[0]==='s'?{k:'s',id:p[1],lvl:+p[2]||null}:{k:p[0],id:p[1]};dragging=true;carry=null;hideCtx();
   e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','hala')}catch(_){}
   const d=$('#dimg'),h=HL();if(d){let src,n='';
-    if(hDrag.k==='p'){src='items/'+hDrag.id+'.webp';n=dropQ(e,inv(hDrag.id))}else if(hDrag.k==='c'){src='items/'+hDrag.id+'.webp';n=dropQ(e,(h.items[hDrag.key]||{})[hDrag.id]||0)}
-    else src='machines/'+(hDrag.id||h.cells[hDrag.key].m)+'.webp';
+    if(hDrag.k==='p'){src=iSrc(hDrag.id);n=dropQ(e,inv(hDrag.id))}else if(hDrag.k==='c'){src=iSrc(hDrag.id);n=dropQ(e,(h.items[hDrag.key]||{})[hDrag.id]||0)}
+    else src=mSrc(hDrag.id||h.cells[hDrag.key].m);
     d.querySelector('img').src=src;const b=d.querySelector('b');b.textContent=n;b.hidden=n==='';try{e.dataTransfer.setDragImage(d,30,30)}catch(_){}}
   if(hDrag.k==='p'||hDrag.k==='c')snd('pick_'+itemSnd(hDrag.id))});
 const hTarget=e=>e.target.closest&&(e.target.closest('.hc[data-k]')||e.target.closest('[data-hbin]')||e.target.closest('[data-pdrawer]')||e.target.closest('[data-hback]')||e.target.closest('.magbar'));
